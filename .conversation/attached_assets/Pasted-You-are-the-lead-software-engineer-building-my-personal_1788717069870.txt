@@ -1,0 +1,1848 @@
+You are the lead software engineer building my personal AI operating system.
+
+PROJECT NAME:
+JARVIS
+
+PRIMARY GOAL
+
+Build a production-quality, iPad-first personal AI command center that acts
+like one assistant but coordinates multiple specialized capabilities behind
+the scenes.
+
+I want to access JARVIS primarily from my iPad.
+
+Replit will host the application and backend in the cloud.
+
+JARVIS should eventually help manage:
+
+- AI conversations
+- work
+- business operations
+- tasks
+- documents
+- calendar
+- email
+- personal finances
+- budgets
+- savings goals
+- real estate research
+- market research
+- Robinhood Agentic Trading
+- trading strategies
+- reminders
+- research
+- automations
+
+The application should feel like my own private AI operating system rather
+than a generic dashboard.
+
+==================================================
+1. DEVELOPMENT ENVIRONMENT
+==================================================
+
+The entire application must be buildable and manageable from Replit.
+
+Do not require:
+
+- a Mac
+- Windows
+- local Node installation
+- Docker on my device
+- local databases
+- command-line tools outside Replit
+
+Use:
+
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
+- server-side API routes
+- PostgreSQL
+- Prisma or an equivalent typed ORM
+- secure server-side secrets
+- PWA support
+
+If a Replit-native solution is more reliable than one of these technologies,
+use the Replit-compatible solution while keeping the architecture modular.
+
+The Replit Run button must launch the project.
+
+Bind to the port required by Replit.
+
+==================================================
+2. HIGH-LEVEL ARCHITECTURE
+==================================================
+
+JARVIS should consist of:
+
+JARVIS UI
+        |
+        v
+JARVIS ORCHESTRATOR
+        |
+        +----------------+
+        |                |
+        v                v
+WORK AGENT          FINANCE AGENT
+        |
+        +----------------+
+        |
+        v
+MARKETS AGENT
+        |
+        v
+DETERMINISTIC RISK ENGINE
+        |
+        v
+ROBINHOOD MCP CLIENT
+        |
+        v
+ROBINHOOD TRADING MCP
+        |
+        v
+ROBINHOOD AGENTIC ACCOUNT
+
+Additional agents:
+
+PERSONAL AGENT
+RESEARCH AGENT
+AUTOMATION ENGINE
+
+The user should interact with one assistant called JARVIS.
+
+The orchestrator should determine internally which subsystem should handle
+a request.
+
+Do not expose complicated multi-agent terminology to the user unless useful.
+
+==================================================
+3. JARVIS ORCHESTRATOR
+==================================================
+
+Create a central server-side orchestrator.
+
+Responsibilities:
+
+- interpret user intent
+- determine which domain applies
+- gather relevant application context
+- choose appropriate tools
+- delegate to specialized services
+- combine results
+- respond naturally
+
+Domains:
+
+GENERAL
+WORK
+FINANCE
+MARKETS
+PERSONAL
+RESEARCH
+AUTOMATION
+
+Do not let the language model directly execute arbitrary server commands.
+
+All actions must use explicitly defined tools/functions.
+
+==================================================
+4. AI PROVIDER SYSTEM
+==================================================
+
+Build a provider-independent AI layer.
+
+Support the architecture for:
+
+- OpenAI
+- xAI / Grok
+- Anthropic
+- other compatible providers later
+
+Environment variables:
+
+AI_PROVIDER=
+AI_API_KEY=
+AI_MODEL=
+
+Create a provider interface so switching models does not require rewriting
+the application.
+
+Example:
+
+interface AIProvider {
+  chat()
+  streamChat()
+  analyze()
+  toolCall()
+}
+
+Never expose API keys to the browser.
+
+If no API key exists, enter DEMO MODE.
+
+Demo Mode must be clearly labeled.
+
+==================================================
+5. USER INTERFACE
+==================================================
+
+Create a premium AI command-center interface.
+
+STYLE:
+
+- dark charcoal/black
+- futuristic but professional
+- subtle glass panels
+- clean typography
+- restrained animations
+- large touch targets
+- uncluttered
+- premium appearance
+
+Optimize heavily for:
+
+- iPad Air
+- iPad Pro
+- Safari
+- portrait
+- landscape
+
+Navigation:
+
+HOME
+JARVIS
+WORK
+FINANCE
+MARKETS
+PERSONAL
+AUTOMATIONS
+INTEGRATIONS
+SETTINGS
+
+==================================================
+6. HOME SCREEN
+==================================================
+
+Header:
+
+Good morning / afternoon / evening, Shane
+
+Show:
+
+- date
+- JARVIS status
+- connection health
+- notifications
+- settings
+
+Create dashboard cards.
+
+TODAY
+
+- today's tasks
+- appointments
+- reminders
+- priorities
+
+WORK
+
+- active projects
+- upcoming deadlines
+- notes
+- tasks
+
+FINANCE
+
+- income
+- upcoming bills
+- remaining estimated cash
+- savings progress
+
+MARKETS
+
+- watchlist
+- account status
+- active positions
+- paper/live mode
+- daily P/L
+
+JARVIS BRIEFING
+
+Generate a concise daily briefing.
+
+Create a large primary button:
+
+RUN MY DAY
+
+RUN MY DAY should produce:
+
+- calendar summary
+- priority tasks
+- work items
+- financial reminders
+- market summary
+- important alerts
+- recommended next actions
+
+==================================================
+7. JARVIS CHAT
+==================================================
+
+Build a full-screen conversational interface.
+
+Include:
+
+- streaming responses
+- markdown
+- conversation history
+- timestamps
+- new chat
+- stop generation
+- regenerate response
+- copy response
+- tool activity indicators
+
+Add microphone input where browser support exists.
+
+Design the system so real-time voice can be added later.
+
+The user should be able to type things such as:
+
+"What's important today?"
+
+"Review my finances."
+
+"Research this property."
+
+"What's happening with my watchlist?"
+
+"Review my Robinhood account."
+
+"Run my trading strategy."
+
+"Pause trading."
+
+==================================================
+8. MEMORY
+==================================================
+
+Implement persistent memory.
+
+Memory categories:
+
+PROFILE
+PREFERENCE
+PROJECT
+WORK
+FINANCE
+MARKETS
+PERSONAL
+TEMPORARY
+
+Each memory needs:
+
+id
+userId
+category
+content
+importance
+createdAt
+updatedAt
+lastUsedAt
+
+Create settings where I can:
+
+- view memory
+- edit memory
+- delete memory
+- disable categories
+
+Do not silently store credentials.
+
+==================================================
+9. DATABASE
+==================================================
+
+Create persistent models for:
+
+users
+
+sessions
+
+conversations
+
+messages
+
+memories
+
+tasks
+
+projects
+
+notes
+
+calendar_items
+
+financial_accounts
+
+transactions
+
+bills
+
+paychecks
+
+savings_goals
+
+expense_categories
+
+watchlists
+
+watchlist_items
+
+market_snapshots
+
+trade_ideas
+
+paper_positions
+
+live_positions_cache
+
+orders
+
+trade_logs
+
+strategies
+
+strategy_runs
+
+risk_profiles
+
+automation_rules
+
+automation_runs
+
+integrations
+
+oauth_connections
+
+audit_logs
+
+notifications
+
+==================================================
+10. WORK AGENT
+==================================================
+
+The Work module should handle:
+
+- projects
+- tasks
+- notes
+- deadlines
+- documents
+- checklists
+- business operations
+- career tasks
+
+Create views:
+
+PROJECTS
+
+TASKS
+
+NOTES
+
+TODAY
+
+Allow:
+
+- create
+- edit
+- complete
+- delete
+- prioritize
+- assign due dates
+- filter
+
+==================================================
+11. FINANCE AGENT
+==================================================
+
+Build a personal finance system.
+
+Support:
+
+weekly paychecks
+recurring bills
+one-time expenses
+savings goals
+
+Expense categories:
+
+- bills
+- groceries
+- gas
+- miscellaneous
+- transportation
+- entertainment
+- other
+
+Every number must be editable.
+
+Show:
+
+CURRENT CASH
+
+INCOME THIS MONTH
+
+BILLS REMAINING
+
+ESTIMATED MONTH-END CASH
+
+SAVINGS
+
+SAVINGS GOAL %
+
+UPCOMING BILLS
+
+Create paid/unpaid controls.
+
+Allow custom due dates.
+
+Create weekly paycheck projections.
+
+Do NOT autonomously move money.
+
+==================================================
+12. RESEARCH AGENT
+==================================================
+
+Create a modular research system.
+
+Research categories:
+
+- companies
+- markets
+- stocks
+- crypto
+- real estate
+- business opportunities
+- products
+- general research
+
+Store research reports.
+
+Each report should include:
+
+title
+summary
+sources
+key findings
+risks
+opportunities
+date
+
+Architect external web search as a configurable provider.
+
+==================================================
+13. MARKETS AGENT
+==================================================
+
+Build a serious Markets module.
+
+Include:
+
+WATCHLIST
+
+TRADE IDEAS
+
+POSITIONS
+
+ORDERS
+
+STRATEGIES
+
+JOURNAL
+
+RISK
+
+AGENT STATUS
+
+ROBINHOOD
+
+Display:
+
+symbol
+price
+daily %
+position
+average cost
+market value
+P/L
+P/L %
+entry
+stop
+target
+risk/reward
+
+Do not invent live market data.
+
+Clearly label cached/delayed/demo data.
+
+==================================================
+14. ROBINHOOD AGENTIC TRADING
+==================================================
+
+THIS IS A CORE REQUIREMENT.
+
+Use Robinhood's official Agentic Trading MCP.
+
+MCP URL:
+
+https://agent.robinhood.com/mcp/trading
+
+DO NOT USE:
+
+- web scraping
+- browser automation
+- reverse engineered Robinhood APIs
+- stored Robinhood passwords
+- unofficial login automation
+
+Implement JARVIS as an MCP CLIENT capable of communicating with Robinhood's
+official Trading MCP server using Streamable HTTP / the protocol Robinhood
+requires.
+
+Create:
+
+services/robinhood/
+  mcp-client
+  auth
+  tools
+  account
+  positions
+  orders
+  connection
+  errors
+
+Create a dedicated:
+
+RobinhoodTradingAgent
+
+==================================================
+15. ROBINHOOD AUTHENTICATION
+==================================================
+
+Use Robinhood's official authentication process.
+
+Never ask for or save the user's:
+
+- Robinhood password
+- MFA code
+- bank password
+
+Support OAuth/token-based MCP authentication as provided by Robinhood.
+
+Store tokens server-side only.
+
+Encrypt persistent authentication material where appropriate.
+
+Build:
+
+CONNECT ROBINHOOD button
+
+When clicked:
+
+1. initialize MCP connection
+2. obtain authentication URL if required
+3. direct user through Robinhood authorization
+4. handle callback/state securely
+5. save authorized connection
+6. test MCP session
+7. display CONNECTED
+
+If setup cannot be completed on mobile, clearly show:
+
+"Robinhood requires initial Agentic Trading account authentication from a
+desktop browser. Complete the initial authorization there, then return to
+JARVIS."
+
+Do not fake a successful connection.
+
+==================================================
+16. ROBINHOOD ACCOUNT MODEL
+==================================================
+
+Robinhood Agentic Trading must only trade through the dedicated Robinhood
+Agentic account allowed by Robinhood.
+
+The UI can display read-only information from other Robinhood accounts if
+Robinhood's MCP makes it available.
+
+Never attempt to trade a non-Agentic Robinhood account.
+
+==================================================
+17. ROBINHOOD FUNCTIONS
+==================================================
+
+Dynamically discover supported tools from Robinhood MCP rather than
+hard-coding nonexistent capabilities.
+
+Create wrappers around supported tools.
+
+Where available, support:
+
+- account information
+- portfolio value
+- balances
+- buying power
+- positions
+- order history
+- watchlists
+- scans
+- market data
+- instrument information
+- order creation
+- supported order types
+- order status
+
+Robinhood currently supports agent trading for:
+
+- long equities
+- options
+- crypto
+
+Only expose capabilities actually reported by the MCP server.
+
+==================================================
+18. TRADING EXECUTION MODES
+==================================================
+
+Create three execution modes.
+
+MODE 1:
+RESEARCH ONLY
+
+No orders can be submitted.
+
+MODE 2:
+APPROVAL REQUIRED
+
+JARVIS may analyze a trade and create an order proposal.
+
+User must approve before submission.
+
+MODE 3:
+AGENTIC AUTO
+
+JARVIS may place orders without individual confirmation when:
+
+- strategy conditions pass
+- risk engine passes
+- Robinhood connection is valid
+- kill switch is disabled
+- trading is enabled
+
+AGENTIC AUTO must default to OFF.
+
+==================================================
+19. DETERMINISTIC RISK ENGINE
+==================================================
+
+THIS MUST BE SEPARATE FROM THE LANGUAGE MODEL.
+
+The AI must never be able to override risk limits by changing its prompt.
+
+Create:
+
+RiskEngine.validate(orderIntent, accountState, riskProfile)
+
+Risk profile fields:
+
+maxPositionDollars
+
+maxPositionPercent
+
+maxRiskPerTradeDollars
+
+maxRiskPerTradePercent
+
+maxDailyLossDollars
+
+maxDailyLossPercent
+
+maxOpenPositions
+
+maxTradesPerDay
+
+maxTotalExposure
+
+minimumCashReserve
+
+allowedAssetClasses
+
+allowedSymbols
+
+blockedSymbols
+
+allowOptions
+
+allowCrypto
+
+allowedTradingHours
+
+requireStopLoss
+
+killSwitch
+
+Before any live order:
+
+1. obtain fresh account state
+2. obtain current positions
+3. calculate proposed exposure
+4. evaluate every rule
+5. return APPROVED or REJECTED
+6. log every rule evaluation
+
+If ANY required rule fails:
+
+DO NOT SUBMIT THE ORDER.
+
+==================================================
+20. ORDER INTENT MODEL
+==================================================
+
+Create an OrderIntent object.
+
+Fields:
+
+symbol
+assetType
+side
+quantity
+notional
+orderType
+limitPrice
+stopPrice
+timeInForce
+strategyId
+reason
+confidence
+createdBy
+createdAt
+
+Never pass unvalidated free-form model text directly into a brokerage tool.
+
+The LLM should create OrderIntent.
+
+Application code validates it.
+
+Risk engine validates it.
+
+Only then can the broker adapter translate it into an MCP order.
+
+==================================================
+21. TRADING STRATEGIES
+==================================================
+
+Create a Strategy model.
+
+Fields:
+
+name
+description
+enabled
+executionMode
+assetClasses
+symbols
+entryRules
+exitRules
+positionSizing
+stopRules
+profitRules
+maxConcurrentTrades
+schedule
+
+Strategies can initially use structured JSON conditions.
+
+Do not allow arbitrary shell/code execution.
+
+Create example strategies ONLY in disabled/demo form.
+
+Do not claim any strategy is profitable.
+
+==================================================
+22. MARKET RESEARCH BEFORE TRADES
+==================================================
+
+Build a Markets Research Pipeline.
+
+Possible inputs:
+
+- quotes
+- price change
+- volume
+- technical indicators
+- news provider
+- watchlist
+- portfolio exposure
+- existing positions
+
+The system may generate:
+
+BULL CASE
+BEAR CASE
+CATALYSTS
+RISKS
+ENTRY IDEA
+INVALIDATION
+TARGET
+CONFIDENCE
+
+Research output should not bypass risk controls.
+
+==================================================
+23. AUTOMATED STRATEGY LOOP
+==================================================
+
+Build a controlled scheduler.
+
+Do NOT create infinite agent loops.
+
+A scheduled strategy run should:
+
+1. load enabled strategy
+2. verify live trading state
+3. verify Robinhood connectivity
+4. read fresh account information
+5. obtain required market information
+6. evaluate strategy
+7. create candidate OrderIntent
+8. run deterministic risk engine
+9. execute according to execution mode
+10. record result
+11. stop
+
+Each strategy run must have a maximum runtime.
+
+Prevent overlapping executions of the same strategy.
+
+==================================================
+24. KILL SWITCH
+==================================================
+
+Create a global trading kill switch.
+
+Display prominently on Markets screen.
+
+Button:
+
+STOP TRADING
+
+When activated:
+
+- disable new order submissions
+- disable Agentic Auto
+- prevent strategy execution
+- mark system PAUSED
+- create audit log
+- display strong visual status
+
+Create separately controlled actions for:
+
+CANCEL OPEN ORDERS
+
+and
+
+CLOSE POSITIONS
+
+Closing positions should NEVER automatically happen just because the kill
+switch was pressed unless the user explicitly configured that behavior.
+
+==================================================
+25. ROBINHOOD DASHBOARD
+==================================================
+
+Build a dedicated Robinhood page.
+
+Show:
+
+CONNECTION STATUS
+
+AGENTIC ACCOUNT
+
+PORTFOLIO VALUE
+
+BUYING POWER
+
+TODAY'S P/L
+
+OPEN POSITIONS
+
+OPEN ORDERS
+
+RECENT ACTIVITY
+
+CURRENT EXECUTION MODE
+
+TRADING ENABLED / PAUSED
+
+CURRENT RISK LIMITS
+
+STRATEGY STATUS
+
+Create buttons:
+
+CONNECT
+
+DISCONNECT
+
+REFRESH
+
+PAUSE TRADING
+
+RESUME TRADING
+
+STOP TRADING
+
+Do not expose account numbers unnecessarily.
+
+Mask sensitive identifiers.
+
+==================================================
+26. AUDIT LOGGING
+==================================================
+
+Every sensitive operation must be logged.
+
+Audit events include:
+
+login
+
+AI provider request
+
+integration connection
+
+Robinhood connection
+
+account-data request
+
+strategy evaluation
+
+trade proposal
+
+risk check
+
+risk rejection
+
+order submission
+
+order accepted
+
+order rejected
+
+order filled
+
+order canceled
+
+execution-mode change
+
+kill-switch activation
+
+settings change
+
+Log:
+
+timestamp
+user
+action
+source
+status
+metadata
+
+Never log:
+
+passwords
+OAuth secrets
+raw access tokens
+private API keys
+
+==================================================
+27. TRADING NOTIFICATIONS
+==================================================
+
+Create in-app notifications for:
+
+trade proposed
+
+trade submitted
+
+trade filled
+
+trade rejected
+
+risk rejection
+
+daily loss threshold reached
+
+strategy paused
+
+Robinhood disconnected
+
+kill switch activated
+
+Support push notifications later.
+
+==================================================
+28. TRADINGVIEW
+==================================================
+
+Create TradingView webhook support.
+
+Endpoint:
+
+/api/webhooks/tradingview
+
+Implement:
+
+- webhook authentication secret
+- validation
+- rate limiting
+- payload schema
+- logging
+
+Incoming TradingView alerts should NOT directly place orders.
+
+Flow:
+
+TradingView
+     |
+     v
+Webhook
+     |
+     v
+Strategy Evaluation
+     |
+     v
+OrderIntent
+     |
+     v
+Risk Engine
+     |
+     v
+Execution Mode
+     |
+     v
+Robinhood MCP
+
+==================================================
+29. PERSONAL AGENT
+==================================================
+
+Build:
+
+notes
+routines
+reminders
+personal tasks
+
+Create Today view.
+
+Allow recurring routines.
+
+==================================================
+30. CALENDAR ARCHITECTURE
+==================================================
+
+Create integration abstraction for:
+
+Google Calendar
+
+Support:
+
+read events
+daily schedule
+event summaries
+
+Any write actions should require explicit permissions.
+
+==================================================
+31. EMAIL ARCHITECTURE
+==================================================
+
+Prepare modular Gmail integration.
+
+Possible future functions:
+
+read inbox
+search email
+summarize messages
+draft responses
+
+Do not send emails automatically by default.
+
+==================================================
+32. AUTOMATIONS
+==================================================
+
+Build an Automation Rules system.
+
+Each rule has:
+
+NAME
+
+TRIGGER
+
+CONDITIONS
+
+ACTION
+
+ENABLED
+
+LAST RUN
+
+NEXT RUN
+
+STATUS
+
+Example rules:
+
+Every morning:
+Generate JARVIS briefing.
+
+Bill due in 3 days:
+Create urgent notification.
+
+TradingView alert:
+Analyze signal.
+
+Strategy schedule:
+Evaluate strategy.
+
+Upcoming deadline:
+Add to briefing.
+
+==================================================
+33. INTEGRATIONS SCREEN
+==================================================
+
+Create integration cards for:
+
+AI Provider
+
+Robinhood Agentic Trading
+
+TradingView
+
+Google Calendar
+
+Gmail
+
+Google Drive
+
+Web Search
+
+Notifications
+
+Each card displays:
+
+CONNECTED
+
+DISCONNECTED
+
+SETUP REQUIRED
+
+ERROR
+
+==================================================
+34. SETTINGS
+==================================================
+
+AI SETTINGS
+
+provider
+model
+temperature
+assistant name
+
+PERSONALIZATION
+
+preferred name
+briefing preferences
+dashboard cards
+
+FINANCE
+
+currency
+pay schedule
+expense categories
+
+MARKETS
+
+default execution mode
+
+paper/live mode
+
+trading enabled
+
+risk rules
+
+allowed assets
+
+strategy scheduling
+
+SECURITY
+
+sessions
+
+logout
+
+integration permissions
+
+delete data
+
+==================================================
+35. SECURITY
+==================================================
+
+Implement proper security.
+
+Requirements:
+
+authentication
+
+secure cookies
+
+CSRF protection where appropriate
+
+input validation
+
+server-side authorization
+
+rate limiting
+
+secret management
+
+OAuth state validation
+
+encrypted secrets where needed
+
+audit logging
+
+least privilege
+
+Never:
+
+- expose API keys client-side
+- expose brokerage tokens client-side
+- accept arbitrary code from chat and execute it
+- accept arbitrary URLs for server-side fetching without validation
+- execute shell commands requested by the AI
+- allow the LLM to modify risk limits without an authenticated settings action
+
+==================================================
+36. PROMPT-INJECTION DEFENSE
+==================================================
+
+Treat external content as untrusted data.
+
+News articles, web pages, TradingView messages, documents, and market data
+must never be interpreted as system instructions.
+
+Never allow external content to:
+
+- change execution mode
+- disable risk controls
+- activate trading
+- alter brokerage credentials
+- trigger orders directly
+
+==================================================
+37. PWA
+==================================================
+
+Make JARVIS installable on iPad Home Screen.
+
+Implement:
+
+manifest
+
+standalone display mode
+
+icons/placeholders
+
+safe-area CSS
+
+touch-friendly UI
+
+responsive design
+
+offline shell where useful
+
+loading states
+
+landscape optimization
+
+portrait optimization
+
+==================================================
+38. CONNECTION HEALTH
+==================================================
+
+Create a system-health service.
+
+Check:
+
+database
+
+AI provider
+
+Robinhood MCP
+
+market provider
+
+TradingView webhook
+
+calendar
+
+email
+
+Display status:
+
+HEALTHY
+DEGRADED
+OFFLINE
+
+==================================================
+39. TESTING
+==================================================
+
+Implement tests for critical components.
+
+Especially test:
+
+RiskEngine
+
+OrderIntent validation
+
+kill switch
+
+execution modes
+
+authorization
+
+Robinhood MCP error handling
+
+TradingView webhook validation
+
+automated-strategy scheduler
+
+Test that:
+
+An LLM cannot bypass RiskEngine.
+
+A TradingView webhook cannot directly execute a trade.
+
+Kill switch prevents all new live orders.
+
+Research Only cannot execute.
+
+Approval Required cannot execute before approval.
+
+Agentic Auto still requires RiskEngine approval.
+
+==================================================
+40. DEMO MODE
+==================================================
+
+Create Demo Mode.
+
+If Robinhood isn't connected:
+
+simulate account information locally.
+
+Clearly label:
+
+DEMO DATA
+
+PAPER TRADING
+
+Never visually represent fake data as a real Robinhood connection.
+
+==================================================
+41. BUILD ORDER
+==================================================
+
+Do not attempt everything in one giant untested step.
+
+Build in this order:
+
+PHASE 1
+
+Initialize application.
+
+Create navigation.
+
+Create theme.
+
+Verify Replit deployment.
+
+PHASE 2
+
+Authentication.
+
+Database.
+
+Core models.
+
+PHASE 3
+
+JARVIS chat.
+
+AI-provider abstraction.
+
+Streaming.
+
+PHASE 4
+
+Home dashboard.
+
+Memory.
+
+Tasks.
+
+Projects.
+
+PHASE 5
+
+Finance module.
+
+PHASE 6
+
+Markets module.
+
+Paper trading.
+
+Risk engine.
+
+OrderIntent.
+
+PHASE 7
+
+Robinhood MCP client.
+
+Dynamic MCP tool discovery.
+
+Robinhood authentication.
+
+Connection health.
+
+Read-only account integration.
+
+PHASE 8
+
+Approval-based live order architecture.
+
+PHASE 9
+
+Agentic Auto architecture.
+
+Kill switch.
+
+Strategy scheduler.
+
+PHASE 10
+
+TradingView.
+
+Automations.
+
+PHASE 11
+
+Work/Personal/Research integrations.
+
+PHASE 12
+
+PWA polishing.
+
+Testing.
+
+Deployment.
+
+==================================================
+42. ROBINHOOD DEVELOPMENT SAFETY ORDER
+==================================================
+
+When Robinhood is first connected:
+
+START WITH READ-ONLY OPERATIONS.
+
+Verify:
+
+account
+
+balances
+
+buying power
+
+positions
+
+history
+
+Only after read operations work should live order functionality be enabled.
+
+Then test:
+
+approval-required execution
+
+Then allow Agentic Auto configuration.
+
+Never begin development by sending a real order.
+
+==================================================
+43. ERROR HANDLING
+==================================================
+
+Robinhood errors must not crash JARVIS.
+
+Handle:
+
+expired authentication
+
+network timeout
+
+MCP unavailable
+
+tool schema changes
+
+order rejection
+
+insufficient buying power
+
+invalid symbol
+
+market closed
+
+risk rejection
+
+lost connection
+
+Display understandable errors.
+
+==================================================
+44. FINAL USER EXPERIENCE
+==================================================
+
+My ideal iPad experience:
+
+I open JARVIS.
+
+JARVIS says:
+
+"Good morning, Shane."
+
+I see:
+
+today's priorities
+
+my finances
+
+my Robinhood status
+
+my trading strategies
+
+my work tasks
+
+important alerts
+
+I can press the microphone and say:
+
+"JARVIS, brief me."
+
+or
+
+"Review my finances."
+
+or
+
+"What's happening with my portfolio?"
+
+or
+
+"Run my enabled trading strategies."
+
+or
+
+"Pause trading."
+
+JARVIS routes everything automatically.
+
+I should not need to open multiple AI applications during normal use.
+
+==================================================
+45. IMPORTANT REALITY CHECKS
+==================================================
+
+Do not fabricate integrations.
+
+If a capability is unavailable from an API or MCP server, clearly mark it
+unsupported.
+
+Do not claim Robinhood is connected until authentication succeeds.
+
+Do not claim an order was placed unless Robinhood confirms it.
+
+Do not claim a trade filled unless Robinhood reports that status.
+
+Do not fake market prices.
+
+==================================================
+46. REPLIT SECRETS
+==================================================
+
+Create documentation for all required Replit Secrets.
+
+Potential variables:
+
+DATABASE_URL
+
+SESSION_SECRET
+
+AI_PROVIDER
+
+AI_API_KEY
+
+AI_MODEL
+
+TRADINGVIEW_WEBHOOK_SECRET
+
+ENCRYPTION_KEY
+
+NEXT_PUBLIC_APP_URL
+
+Only include Robinhood secrets if Robinhood's official MCP authentication
+actually requires application-side values.
+
+Do not invent Robinhood credentials.
+
+==================================================
+47. README
+==================================================
+
+Create a complete README containing:
+
+What JARVIS is
+
+Architecture
+
+How to start it
+
+How to configure Replit Secrets
+
+How to configure AI
+
+How to configure Robinhood MCP
+
+How to use Demo Mode
+
+How to connect TradingView
+
+How to use paper trading
+
+How to enable Approval Required
+
+How to enable Agentic Auto
+
+How to use the kill switch
+
+Security considerations
+
+Known limitations
+
+==================================================
+48. DEVELOPMENT BEHAVIOR
+==================================================
+
+You are not merely giving me programming instructions.
+
+YOU ARE BUILDING THE APPLICATION.
+
+Create all necessary files.
+
+Install dependencies.
+
+Run migrations.
+
+Start the app.
+
+Inspect errors.
+
+Fix errors.
+
+Rerun.
+
+Continue until the application loads correctly.
+
+Do not stop after creating a landing page.
+
+Do not replace missing functionality with fake UI unless it is clearly
+marked Demo/Placeholder.
+
+At each phase:
+
+1. implement
+2. test
+3. fix
+4. verify
+5. continue
+
+==================================================
+49. COMPLETION REPORT
+==================================================
+
+When the initial build is complete, tell me:
+
+1. What is working
+
+2. What is still Demo Mode
+
+3. What integrations are connected
+
+4. Which Replit Secrets I need to enter
+
+5. Exactly where I enter them
+
+6. How I launch JARVIS
+
+7. How I install it on my iPad Home Screen
+
+8. How I connect Robinhood Agentic Trading
+
+9. Which part of Robinhood setup requires a desktop device
+
+10. How I verify Robinhood is really connected
+
+11. How I test paper trading
+
+12. How I test Approval Required
+
+13. How Agentic Auto is enabled
+
+14. How I configure risk limits
+
+15. How I activate the kill switch
+
+16. Any security issues or limitations still present
+
+==================================================
+50. START NOW
+==================================================
+
+Begin with PHASE 1.
+
+Do not ask me to manually create individual files.
+
+Take ownership of implementing the project inside this Replit workspace.
+
+Build, run, inspect, and repair the application as you proceed.
