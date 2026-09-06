@@ -65,7 +65,9 @@ export class TwelveDataProvider implements MarketDataProvider {
       : new MarketDataRequestBudgetService({ now: () => this.now().getTime() }));
     this.cacheTtlMs = {
       quote: options.cacheTtlMs?.quote ?? 5_000,
-      bars: options.cacheTtlMs?.bars ?? 5_000,
+      // Reuse an equivalent conversational scan within the provider's
+      // one-minute request window. Freshness is still reclassified on every hit.
+      bars: options.cacheTtlMs?.bars ?? 60_000,
       historicalBars: options.cacheTtlMs?.historicalBars ?? 300_000,
       // Instrument metadata is reference data, not a market-price freshness
       // signal. It is cached separately and never used to synthesize quotes.

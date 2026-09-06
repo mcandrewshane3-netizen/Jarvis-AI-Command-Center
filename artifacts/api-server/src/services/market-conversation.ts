@@ -5,6 +5,7 @@ import {
   type TradableAsset,
 } from "./market-intelligence";
 import { AUTONOMOUS_CRYPTO_CORE_UNIVERSE } from "./market-intelligence/universe";
+import { requiresCurrentMarketData } from "./current-market-intent";
 
 export type MarketConversationIntent =
   | { kind: "QUOTE"; symbol: string }
@@ -32,7 +33,10 @@ export function classifyMarketConversation(
       symbol: explicit ?? ({ BITCOIN: "BTC", ETHEREUM: "ETH", SOLANA: "SOL" }[named ?? ""] ?? named),
     };
   }
-  if (/\b(CRYPTO|COIN)\b.*\b(STRENGTH|STRONGEST|MOMENTUM|BEST)\b|\b(STRONGEST|BEST)\b.*\b(CRYPTO|COIN)\b/.test(text)) {
+  const cryptoSubject = /\b(CRYPTO(?:CURRENCY)?|COINS?|BITCOIN|BTC|ETHEREUM|ETH|SOLANA|SOL)\b/.test(text);
+  const comparativeMarketQuestion =
+    /\b(STRENGTH|STRONGEST|WEAKEST|MOMENTUM|BEST|PROMISING|LEADING|LEADER|WATCH|SETUP|OPPORTUNITY|BREAKOUT|TREND|COMPARE)\b/.test(text);
+  if (cryptoSubject && comparativeMarketQuestion && requiresCurrentMarketData(content)) {
     return { kind: "CRYPTO_STRENGTH" };
   }
   const pair = text.match(/\b([A-Z]{2,12})\s*(?:\/|-)\s*USD\b/)?.[1];
@@ -65,6 +69,14 @@ const failure = (error: unknown): MarketFailure => {
   if (/stale/i.test(message)) return "STALE";
   if (/metadata unavailable|unsupported|not found|invalid symbol/i.test(message)) return "UNSUPPORTED";
   return "UNAVAILABLE";
+};
+
+const paperFailure = (error: unknown): string => {
+  const message = error instanceof Error ? error.message : String(error);
+  const safeCode = message.match(
+    /\b(PAPER_PORTFOLIO_NOT_CONFIGURED|PAPER_OPERATIONS_NOT_RUNNING|PAPER_CYCLE_ALREADY_RUNNING|PAPER_CYCLE_CONFLICT_RETRY|KILL_SWITCH_ACTIVE|MARKET_DATA_PROVIDER_NOT_CONFIGURED|AUTHENTICATION_UNAVAILABLE|INTERNAL_LOOPBACK_UNAVAILABLE)\b/,
+  )?.[1];
+  return safeCode ?? failure(error);
 };
 
 const displaySymbol = (asset: TradableAsset): string => {
@@ -131,7 +143,12 @@ export async function resolveMarketConversation(
         "PAPER ONLY. Live trading remains disabled.",
       ].join("\n");
     } catch (error) {
-      return `NO DATA / DEGRADED DATA\nAuthoritative PAPER cycle unavailable (${failure(error)}); no opportunity is asserted.`;
+      return [
+        "NO DATA / DEGRADED DATA",
+        `Authoritative PAPER cycle unavailable (${paperFailure(error)}); no opportunity is asserted.`,
+        "EXECUTION",
+        "PAPER ONLY. Live trading remains disabled.",
+      ].join("\n");
     }
   }
   let health;
@@ -168,11 +185,13 @@ export async function resolveMarketConversation(
   const boundedUniverse = AUTONOMOUS_CRYPTO_CORE_UNIVERSE.slice(0, 3);
   const successful: Array<{
     symbol: string;
+    price: number;
     timestamp: string;
     freshness: DataFreshness;
     score: number;
     status: string;
     evidence: readonly string[];
+    volumeStatus: "AVAILABLE" | "VOLUME_UNAVAILABLE";
   }> = [];
   const failed: string[] = [];
   for (const pair of boundedUniverse) {
@@ -184,26 +203,30 @@ export async function resolveMarketConversation(
         failed.push(`${pair}:${bars.freshness}`);
         continue;
       }
-      const volume = bars.bars.reduce((total, bar) => total + bar.volume, 0) / bars.bars.length;
-      const dollars = bars.bars.reduce((total, bar) => total + bar.volume * bar.close, 0) / bars.bars.length;
-      if (!Number.isFinite(volume) || !Number.isFinite(dollars) || volume <= 0 || dollars <= 0) {
-        throw new Error("MARKET_DATA_UNAVAILABLE");
-      }
+      const hasProviderVolume = bars.bars.some((bar) => Number.isFinite(bar.volume) && bar.volume > 0);
+      const volume = hasProviderVolume
+        ? bars.bars.reduce((total, bar) => total + bar.volume, 0) / bars.bars.length
+        : 0;
+      const dollars = hasProviderVolume
+        ? bars.bars.reduce((total, bar) => total + bar.volume * bar.close, 0) / bars.bars.length
+        : 0;
       const candidate = new OpportunityScanner().scan({
         ...asset,
-        liquidityData: {
+        liquidityData: hasProviderVolume ? {
           averageDailyVolume: volume,
           averageDailyDollarVolume: dollars,
           measuredAt: bars.marketTimestamp,
-        },
+        } : null,
       }, bars.bars);
       successful.push({
         symbol: pair,
+        price: bars.bars.at(-1)!.close,
         timestamp: bars.marketTimestamp,
         freshness: bars.freshness,
         score: candidate.score,
         status: candidate.status,
         evidence: candidate.evidence,
+        volumeStatus: hasProviderVolume ? "AVAILABLE" : "VOLUME_UNAVAILABLE",
       });
     } catch (error) {
       failed.push(`${pair}:${failure(error)}`);
@@ -211,10 +234,41 @@ export async function resolveMarketConversation(
   }
   const ranked = [...successful].sort((left, right) =>
     right.score - left.score || left.symbol.localeCompare(right.symbol));
-  const degraded = failed.length > 0 || successful.some((item) => item.freshness !== "LIVE_OR_CURRENT");
+  const degraded = failed.length > 0 || successful.some((item) =>
+    item.freshness !== "LIVE_OR_CURRENT" || item.volumeStatus === "VOLUME_UNAVAILABLE");
+  const freshness = successful.length
+    ? [...new Set(successful.map((item) => item.freshness))].join(", ")
+    : "UNAVAILABLE";
   return [
-    degraded ? "NO DATA / DEGRADED DATA (PARTIAL CURRENT PROVIDER DATA)" : "CURRENT PROVIDER DATA",
+    "CURRENT CRYPTO STRENGTH",
+    successful.length === 0
+      ? "NO DATA / DEGRADED DATA"
+      : degraded
+        ? "PARTIAL CURRENT PROVIDER DATA"
+        : "CURRENT PROVIDER DATA",
     `Bounded crypto universe evaluated: ${boundedUniverse.join(", ")}.`,
+    ...ranked.map((item, index) => [
+      `${index + 1}. ${item.symbol}`,
+      `   - Current provider-backed 1h close: ${item.price} USD`,
+      `   - Objective signal: score=${item.score}; status=${item.status}`,
+      `   - Momentum / strength evidence: ${item.evidence.join(", ") || "none"}`,
+      `   - Volume / liquidity: ${item.volumeStatus === "AVAILABLE"
+        ? "provider-backed metrics available"
+        : "VOLUME_UNAVAILABLE; score is conservatively price-derived with zero liquidity contribution"}`,
+      `   - Data freshness: ${item.freshness} at ${item.timestamp}`,
+    ].join("\n")),
+    "JARVIS ASSESSMENT:",
+    ranked.length
+      ? `${ranked[0].symbol} has the highest objective OpportunityScanner score among the assets successfully evaluated. This is a market ranking, not a trade instruction.`
+      : "No current asset had sufficient provider-backed data to rank.",
+    "DATA COVERAGE:",
+    `${successful.length}/${boundedUniverse.length} assets successfully evaluated. Failed assets: ${failed.join(", ") || "none"}.`,
+    `Data limitations: ${successful.filter((item) => item.volumeStatus === "VOLUME_UNAVAILABLE")
+      .map((item) => `${item.symbol}:VOLUME_UNAVAILABLE`).join(", ") || "none"}.`,
+    "DATA PROVIDER:",
+    "Twelve Data",
+    "FRESHNESS:",
+    freshness,
     `Successful assets: ${successful.map((item) =>
       `${item.symbol}@${item.timestamp}:${item.freshness}`).join(", ") || "none"}.`,
     `Failed assets: ${failed.join(", ") || "none"}.`,

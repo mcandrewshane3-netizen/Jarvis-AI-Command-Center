@@ -164,6 +164,39 @@ describe("TwelveDataProvider rate-limit-aware boundary", () => {
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
+  it("reuses current bars for one provider request window while reclassifying freshness", async () => {
+    let now = Date.parse("2026-01-01T00:30:00Z");
+    const fetcher = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        meta: { symbol: "SPY", interval: "1h", currency: "USD", exchange: "NYSE" },
+        values: [{
+          datetime: "2026-01-01 00:00:00",
+          open: "500",
+          high: "502",
+          low: "499",
+          close: "501",
+          volume: "1000000",
+        }],
+      }),
+    } as Response));
+    const provider = new TwelveDataProvider({
+      apiKey: "key",
+      fetch: fetcher,
+      now: () => new Date(now),
+    });
+
+    await provider.getBars(asset, "1h", 200);
+    now += 30_000;
+    await provider.getBars(asset, "1h", 200);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+
+    now += 31_000;
+    await provider.getBars(asset, "1h", 200);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
   it("does not call Twelve Data repeatedly while provider backoff is active", async () => {
     let now = Date.parse("2026-01-01T00:00:00Z");
     const fetcher = vi.fn(async () => ({

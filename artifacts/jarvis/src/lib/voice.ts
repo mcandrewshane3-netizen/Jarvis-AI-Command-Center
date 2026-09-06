@@ -85,17 +85,43 @@ export function decideVoiceActivation(state: VoiceState, externalThinking: boole
 
 export type SpokenDetail = 'BRIEF' | 'STANDARD' | 'DETAILED';
 
-// Playback is intentionally unavailable, but summaries remain safe for a future provider:
-// warnings and number-bearing sentences are never removed.
+const SPOKEN_SUMMARY_MAX_CHARS = 900;
+const SPOKEN_SUMMARY_NOTICE = 'Additional details are shown on screen.';
+
+function capSpokenSummary(summary: string, sentences: readonly string[], leadingCount: number): string {
+  if (summary.length <= SPOKEN_SUMMARY_MAX_CHARS) return summary;
+  const safety = sentences.filter((sentence) =>
+    /warning|warn|danger|risk|urgent|critical|error|do not|never/i.test(sentence),
+  );
+  const prioritized = [...new Set([...sentences.slice(0, Math.min(leadingCount, 1)), ...safety])];
+  const selected: string[] = [];
+  for (const sentence of prioritized) {
+    const candidate = [...selected, sentence, SPOKEN_SUMMARY_NOTICE].join(' ');
+    if (candidate.length <= SPOKEN_SUMMARY_MAX_CHARS) selected.push(sentence);
+  }
+  const spoken = [...selected, SPOKEN_SUMMARY_NOTICE].join(' ');
+  return spoken.length <= SPOKEN_SUMMARY_MAX_CHARS
+    ? spoken
+    : `${spoken.slice(0, SPOKEN_SUMMARY_MAX_CHARS - SPOKEN_SUMMARY_NOTICE.length - 1).trimEnd()} ${SPOKEN_SUMMARY_NOTICE}`;
+}
+
+// Short summaries preserve warnings and number-bearing sentences. Overlong
+// speech is reduced to a lead and safety statements; full detail stays on screen.
 export function createSpokenSummary(text: string, detail: SpokenDetail): string {
   const clean = text.replace(/\s+/g, ' ').trim();
-  if (!clean || detail === 'DETAILED') return clean;
-  const sentences = clean.match(/[^.!?]+[.!?]?/g)?.map((part) => part.trim()).filter(Boolean) ?? [];
+  if (!clean) return clean;
+  const sentences = clean
+    .split(/(?<=[!?])\s+|(?<=\.)\s+(?=[A-Z])/)
+    .map((part) => part.trim())
+    .filter(Boolean);
   const required = sentences.filter((sentence) =>
     /\d|[$%]|warning|warn|danger|risk|urgent|critical|error|do not|never/i.test(sentence),
   );
-  const limit = detail === 'BRIEF' ? 1 : 3;
-  return [...new Set([...sentences.slice(0, limit), ...required])].join(' ');
+  const limit = detail === 'BRIEF' ? 1 : detail === 'STANDARD' ? 3 : sentences.length;
+  const summary = detail === 'DETAILED'
+    ? clean
+    : [...new Set([...sentences.slice(0, limit), ...required])].join(' ');
+  return capSpokenSummary(summary, sentences, detail === 'DETAILED' ? 3 : limit);
 }
 
 export class TTSQueue<T> {

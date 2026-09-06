@@ -61,6 +61,32 @@ describe("natural-language specialist routing", () => {
     expect(routeSpecialists("Review stock market price data for my portfolio").specialists)
       .toEqual(["MARKETS"]);
   });
+
+  it.each([
+    "What crypto looks strongest right now?",
+    "What crypto looks most promising right now?",
+    "What's the best crypto setup today?",
+    "Which coin has the strongest momentum?",
+    "What should I watch in crypto right now?",
+    "Which ETF is strongest today?",
+    "What stock looks strongest right now?",
+    "What should I paper trade right now?",
+    "Compare BTC, ETH, and SOL right now.",
+  ])("prioritizes current tradable-market intent over generic research: %s", (request) => {
+    expect(routeSpecialists(request).primary).toBe("MARKETS");
+  });
+
+  it.each([
+    "Research Bitcoin adoption.",
+    "Explain the history of Ethereum.",
+    "Research crypto regulation.",
+  ])("keeps non-current background questions in research: %s", (request) => {
+    expect(routeSpecialists(request).primary).toBe("RESEARCH");
+  });
+
+  it("keeps a basic cryptocurrency definition in general", () => {
+    expect(routeSpecialists("What is cryptocurrency?").primary).toBe("GENERAL");
+  });
 });
 
 describe("context minimization", () => {

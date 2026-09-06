@@ -4,6 +4,7 @@ import {
   resolveMarketConversation,
   type MarketConversationDependencies,
 } from "../services/market-conversation";
+import { requiresCurrentMarketData } from "../services/current-market-intent";
 import type {
   DataFreshness,
   MarketBar,
@@ -77,6 +78,7 @@ function fakeProvider(options: {
   metadataFailure?: string;
   barsFailure?: string;
   quoteFailure?: Error;
+  zeroVolumePairs?: readonly string[];
 } = {}) {
   const calls: string[] = [];
   const provider: MarketDataProvider = {
@@ -104,7 +106,10 @@ function fakeProvider(options: {
       calls.push(`bars:${pair}`);
       if (options.barsFailure === pair) throw new Error("Twelve Data rate limit reached");
       const strength = pair.startsWith("SOL") ? 3 : pair.startsWith("ETH") ? 2 : 1;
-      return barsFor(asset, strength, options.barsFreshness?.[pair]);
+      const result = barsFor(asset, strength, options.barsFreshness?.[pair]);
+      return options.zeroVolumePairs?.includes(pair)
+        ? { ...result, bars: result.bars.map((bar) => ({ ...bar, volume: 0 })) }
+        : result;
     },
     async getHistoricalBars() { throw new Error("not used"); },
     async getMarketStatus() { throw new Error("not used"); },
@@ -126,6 +131,39 @@ function dependencies(provider: MarketDataProvider, overrides: Partial<MarketCon
 }
 
 describe("JARVIS deterministic market conversation routing", () => {
+  it.each([
+    "What crypto looks strongest right now?",
+    "What crypto looks most promising right now?",
+    "What's the best crypto setup today?",
+    "Which coin has the strongest momentum?",
+    "What should I watch in crypto right now?",
+    "What's leading crypto today?",
+    "Find the best crypto opportunity.",
+  ])("routes current crypto comparison through deterministic market data: %s", (prompt) => {
+    expect(requiresCurrentMarketData(prompt)).toBe(true);
+    expect(classifyMarketConversation(prompt)).toEqual({ kind: "CRYPTO_STRENGTH" });
+  });
+
+  it.each([
+    "right now",
+    "currently",
+    "today",
+    "strongest",
+    "weakest",
+    "best setup",
+    "market leader",
+    "momentum",
+    "breakout",
+    "trend",
+    "paper trade",
+    "trade opportunity",
+    "current price",
+    "current volatility",
+    "current regime",
+  ])("detects the current-market signal %s", (signal) => {
+    expect(requiresCurrentMarketData(`Show me the crypto ${signal}`)).toBe(true);
+  });
+
   it("routes typed and voice market questions through the same classifier", () => {
     const prompts = [
       "What is BTC/USD trading at right now?",
@@ -204,7 +242,11 @@ describe("JARVIS deterministic market conversation routing", () => {
     );
 
     expect(answer).toContain("CURRENT PROVIDER DATA");
+    expect(answer).toContain("CURRENT CRYPTO STRENGTH");
     expect(answer).toContain("Bounded crypto universe evaluated: BTC/USD, ETH/USD, SOL/USD");
+    expect(answer).toContain("DATA COVERAGE:\n3/3 assets successfully evaluated");
+    expect(answer).toContain("DATA PROVIDER:\nTwelve Data");
+    expect(answer).toContain("Current provider-backed 1h close:");
     expect(answer).toContain("SOL/USD score=");
     expect(answer).toContain("evidence=[ROC=");
     expect(answer).toContain("AI RESEARCH\nNot invoked.");
@@ -224,11 +266,51 @@ describe("JARVIS deterministic market conversation routing", () => {
       "message-partial",
       dependencies(provider),
     );
-    expect(answer).toContain("NO DATA / DEGRADED DATA (PARTIAL CURRENT PROVIDER DATA)");
+    expect(answer).toContain("PARTIAL CURRENT PROVIDER DATA");
     expect(answer).toContain("Successful assets: BTC/USD@");
     expect(answer).toContain("ETH/USD@");
     expect(answer).toContain("Failed assets: SOL/USD:RATE LIMITED");
+    expect(answer).toContain("DATA COVERAGE:\n2/3 assets successfully evaluated");
     expect(answer).not.toContain("SOL/USD score=");
+  });
+
+  it("uses actual OHLC momentum conservatively when crypto volume is unavailable", async () => {
+    const { provider } = fakeProvider({
+      zeroVolumePairs: ["BTC/USD", "ETH/USD", "SOL/USD"],
+    });
+    const answer = await resolveMarketConversation(
+      { kind: "CRYPTO_STRENGTH" },
+      "message-price-only",
+      dependencies(provider),
+    );
+    expect(answer).toContain("PARTIAL CURRENT PROVIDER DATA");
+    expect(answer).toContain("DATA COVERAGE:\n3/3 assets successfully evaluated");
+    expect(answer).toContain("BTC/USD:VOLUME_UNAVAILABLE");
+    expect(answer).toContain("ETH/USD:VOLUME_UNAVAILABLE");
+    expect(answer).toContain("SOL/USD:VOLUME_UNAVAILABLE");
+    expect(answer).toContain("score is conservatively price-derived with zero liquidity contribution");
+    expect(answer).toContain("SOL/USD score=");
+    expect(answer).not.toMatch(/averageDaily(?:Dollar)?Volume=[1-9]/);
+  });
+
+  it("reports no data rather than partial coverage when every asset is stale", async () => {
+    const { provider } = fakeProvider({
+      barsFreshness: {
+        "BTC/USD": "STALE",
+        "ETH/USD": "STALE",
+        "SOL/USD": "STALE",
+      },
+    });
+    const answer = await resolveMarketConversation(
+      { kind: "CRYPTO_STRENGTH" },
+      "message-all-stale",
+      dependencies(provider),
+    );
+    expect(answer).toContain("CURRENT CRYPTO STRENGTH\nNO DATA / DEGRADED DATA");
+    expect(answer).not.toContain("PARTIAL CURRENT PROVIDER DATA");
+    expect(answer).toContain("DATA COVERAGE:\n0/3 assets successfully evaluated");
+    expect(answer).toContain("FRESHNESS:\nUNAVAILABLE");
+    expect(answer).not.toContain(" score=");
   });
 
   it.each(["PAPER_TRADE", "NO_TRADE"])(
@@ -257,6 +339,22 @@ describe("JARVIS deterministic market conversation routing", () => {
       expect(calls).toEqual([]);
     },
   );
+
+  it("surfaces an authoritative PAPER guard without weakening execution safety", async () => {
+    const { provider, calls } = fakeProvider();
+    const paperCycle = vi.fn(async () => {
+      throw new Error("PAPER_PORTFOLIO_NOT_CONFIGURED");
+    });
+    const answer = await resolveMarketConversation(
+      { kind: "PAPER_OPPORTUNITY" },
+      "message-paper-guard",
+      dependencies(provider, { paperCycle }),
+    );
+    expect(answer).toContain("PAPER_PORTFOLIO_NOT_CONFIGURED");
+    expect(answer).toContain("PAPER ONLY. Live trading remains disabled.");
+    expect(answer).toContain("no opportunity is asserted");
+    expect(calls).toEqual([]);
+  });
 
   it("requests only symbol-specific persisted user-scoped rejection evidence", async () => {
     const { provider } = fakeProvider();

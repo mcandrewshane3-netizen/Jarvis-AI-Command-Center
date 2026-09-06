@@ -1,4 +1,5 @@
 import type { ProviderCapability } from "../ai/provider";
+import { isCurrentTradableMarketRequest } from "../current-market-intent";
 
 export const SPECIALIST_DOMAINS = [
   "GENERAL",
@@ -194,12 +195,12 @@ export const specialists = SPECIALIST_REGISTRY;
 
 const DOMAIN_PATTERNS: Readonly<Record<Exclude<SpecialistDomain, "GENERAL">, RegExp>> = {
   FINANCE: /\b(budget|budgeting|cash ?flow|debt|loan|mortgage|saving|savings|paycheck|personal finances?|financial|expenses?|retirement)\b/i,
-  RESEARCH: /\b(research|investigate|evidence|sources?|fact[- ]?check|due diligence|compare|study|find out|latest)\b/i,
+  RESEARCH: /\b(research|investigate|evidence|sources?|fact[- ]?check|due diligence|compare|study|find out|latest|explain|history|adoption|roadmap|regulation|analysts?)\b/i,
   CAREER: /\b(career|resume|cv|job search|job offer|interview|salary negotiation|promotion|recruiter|employment)\b/i,
   WORK: /\b(work tasks?|work project|deadline|meeting|coworker|client|prioriti[sz]e|project plan|deliverable)\b/i,
   BUSINESS: /\b(business|startup|company strategy|business plan|revenue|pricing|customers?|sales|operations|go-to-market|market fit|profit margin)\b/i,
   SOFTWARE: /\b(code|coding|software|typescript|javascript|python|api|database|debug|bug|deploy|repository|architecture|programming)\b/i,
-  MARKETS: /\b(stocks?|shares?|securit(?:y|ies)|ticker|crypto|options?|bonds?|portfolio|brokerage|trade|trading|market (?:price|data|news)|invest(?:ing|ment|or))\b/i,
+  MARKETS: /\b(stocks?|shares?|securit(?:y|ies)|ticker|options?|bonds?|portfolio|brokerage|trade|trading|market (?:price|data|news)|invest(?:ing|ment|or))\b/i,
   PERSONAL: /\b(personal|habit|routine|family|home|meal plan|wellbeing|remind me|birthday)\b/i,
   AUTOMATIONS: /\b(automat(?:e|ion|ions)|workflow|trigger|recurring|schedule automatically|every (?:day|week|month)|background job)\b/i,
 };
@@ -218,7 +219,10 @@ export type SpecialistRoute = {
 
 function matchedDomains(request: string): SpecialistDomain[] {
   return DOMAIN_PRIORITY.filter((domain) =>
-    domain !== "GENERAL" && DOMAIN_PATTERNS[domain].test(request)
+    domain !== "GENERAL" && (
+      DOMAIN_PATTERNS[domain].test(request) ||
+      (domain === "MARKETS" && isCurrentTradableMarketRequest(request))
+    )
   );
 }
 

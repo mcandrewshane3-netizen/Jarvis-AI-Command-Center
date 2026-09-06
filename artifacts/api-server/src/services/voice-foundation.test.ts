@@ -48,6 +48,19 @@ describe("JARVIS voice foundation", () => {
     expect(spoken).toContain("$500");
   });
 
+  it("keeps long spoken summaries below the voice API limit without changing displayed text", () => {
+    const full = Array.from(
+      { length: 120 },
+      (_, index) => `Asset ${index + 1} has score ${40 + index / 10} and price $${1_000 + index}.`,
+    ).join(" ") + " Warning: this is not a trade instruction.";
+    const spoken = createSpokenSummary(full, "DETAILED");
+    expect(spoken.length).toBeLessThanOrEqual(900);
+    expect(spoken).toContain("Asset 1 has score 40 and price $1000.");
+    expect(spoken).toContain("Warning: this is not a trade instruction.");
+    expect(spoken).toContain("Additional details are shown on screen.");
+    expect(full.length).toBeGreaterThan(2_000);
+  });
+
   it("preserves queued playback order", async () => {
     const queue = new TTSQueue();
     const played: string[] = [];

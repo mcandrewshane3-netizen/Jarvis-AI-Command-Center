@@ -1,0 +1,681 @@
+CONTINUE THE EXISTING JARVIS AI COMMAND CENTER PROJECT.
+
+THIS IS A NARROW MARKET-INTENT ROUTING REPAIR.
+
+DO NOT REDESIGN THE UI.
+DO NOT CHANGE THE IPAD LAYOUT.
+DO NOT CHANGE THE BACKEND ARCHITECTURE.
+DO NOT ADD NEW STRATEGIES.
+DO NOT ADD NEW PROVIDERS.
+DO NOT CONNECT ROBINHOOD.
+DO NOT ENABLE LIVE TRADING.
+DO NOT USE REAL MONEY.
+DO NOT PUBLISH.
+DO NOT CHANGE RISK THRESHOLDS.
+DO NOT CHANGE CAPITAL SURVIVAL.
+DO NOT CHANGE CAPITAL GOVERNOR.
+DO NOT CHANGE RISK ENGINE.
+DO NOT ADD CLAUDE YET.
+
+============================================================
+JARVIS CURRENT-MARKET INTENT ROUTING REPAIR
+============================================================
+
+PRIMARY OBJECTIVE:
+
+Fix the remaining routing inconsistency where direct market questions such as:
+
+"What is BTC/USD trading at right now?"
+
+correctly use Twelve Data,
+
+but broader market questions such as:
+
+"What crypto looks most promising right now?"
+
+"What crypto looks strongest right now?"
+
+"What should I be watching in crypto right now?"
+
+can incorrectly fall back to generic AI/research responses saying that JARVIS
+cannot verify current prices, volume, momentum, or market conditions.
+
+That behavior is incorrect because JARVIS already has an authenticated,
+working Twelve Data market-data pipeline.
+
+Current-market intent must reliably route to the existing Markets system.
+
+============================================================
+CURRENT VERIFIED BEHAVIOR
+============================================================
+
+Already working:
+
+- direct BTC/USD conversational quote retrieval
+- direct ETH/USD conversational quote retrieval
+- Twelve Data current market-data access
+- truthful timestamps/freshness
+- MARKET DATA status separate from LIVE WEB
+- simple quotes avoid unnecessary OpenAI/Grok calls
+- voice/text use the same conversational pipeline
+- iPad responsive layout repair completed
+- Robinhood NOT CONNECTED
+- live trading DISABLED
+- execution PAPER ONLY
+
+Do not regress these.
+
+============================================================
+PART 1 — TRACE THE FAILED REQUEST
+============================================================
+
+Trace the complete production conversational route for broad current-market
+questions.
+
+Example failed intent:
+
+"What crypto looks most promising right now?"
+
+Inspect:
+
+user input
+→ deterministic intent classification
+→ specialist/domain selection
+→ current/freshness requirement detection
+→ Markets specialist
+→ MarketDataProvider
+→ OpportunityScanner / relative-strength / strategy services
+→ JARVIS synthesis
+
+Determine exactly why the request can fall into generic RESEARCH or GENERAL
+instead of current MARKETS analysis.
+
+Do not guess.
+
+============================================================
+PART 2 — CURRENT-MARKET INTENT CLASSIFICATION
+============================================================
+
+Strengthen deterministic routing for phrases that clearly request CURRENT
+market comparison or opportunity analysis.
+
+Examples should include semantically similar forms of:
+
+"What crypto looks strongest right now?"
+
+"What crypto looks best right now?"
+
+"What crypto looks most promising right now?"
+
+"What should I watch in crypto right now?"
+
+"What's leading crypto today?"
+
+"Which coin has the strongest setup?"
+
+"Find the best crypto opportunity."
+
+"What's the strongest stock right now?"
+
+"Which ETF looks strongest today?"
+
+"What looks like the best paper trade?"
+
+These should route to:
+
+MARKETS
+
+when the question is about current tradable markets, comparative strength,
+trading opportunity, current price action, momentum, trend, setup, or market
+leadership.
+
+Do NOT route these to generic RESEARCH simply because they contain words like
+"promising", "best", "research", or "opportunity".
+
+============================================================
+PART 3 — DISTINGUISH RESEARCH FROM MARKETS
+============================================================
+
+Preserve the distinction:
+
+RESEARCH examples:
+
+"Research Bitcoin's long-term adoption."
+
+"Explain Ethereum's roadmap."
+
+"Research the history of Solana."
+
+"What are analysts saying about crypto regulation?"
+
+MARKETS examples:
+
+"What crypto is strongest right now?"
+
+"What should I paper trade today?"
+
+"Which crypto has the best momentum?"
+
+"Compare BTC, ETH, and SOL right now."
+
+"What stocks are leading today?"
+
+Current tradable-market state should take precedence over generic research
+routing when the user asks about NOW/TODAY/current setup/strength/opportunity.
+
+============================================================
+PART 4 — CURRENT DATA REQUIREMENT
+============================================================
+
+Add or strengthen a clear:
+
+requiresCurrentMarketData
+
+intent signal.
+
+This should become TRUE for questions involving:
+
+right now
+currently
+today
+strongest
+weakest
+best setup
+market leader
+momentum
+breakout
+trend
+paper trade
+trade opportunity
+current price
+current volatility
+current regime
+
+When TRUE:
+
+JARVIS must not answer using static model knowledge alone.
+
+It must use the authoritative market-data path or explicitly report why current
+market data cannot be obtained.
+
+============================================================
+PART 5 — BOUNDED MARKET COMPARISON
+============================================================
+
+For broad questions such as:
+
+"What crypto looks strongest right now?"
+
+do NOT require the full autonomous paper-trading pipeline unless the question
+asks for a trade.
+
+Use a cost-efficient comparison pipeline:
+
+CURRENT MARKET DATA
+→ bounded supported crypto universe
+→ deterministic comparative metrics
+→ OpportunityScanner / Relative Strength / Momentum / Regime where relevant
+→ concise ranked answer
+
+Use the existing supported bounded universe and rate-limit controls.
+
+Do not fetch unlimited assets.
+
+Respect Twelve Data request budgeting and cache.
+
+============================================================
+PART 6 — TRADE INTENT VS MARKET-RANKING INTENT
+============================================================
+
+Differentiate:
+
+MARKET RANKING:
+
+"What crypto looks strongest right now?"
+
+Expected:
+rank current candidates using real objective market data.
+No trade required.
+No RiskEngine required unless needed by existing architecture.
+No expensive AI unless justified.
+
+TRADE INTENT:
+
+"What should I paper trade right now?"
+
+Expected:
+run the full existing authoritative trading decision pipeline:
+
+market data
+→ scanner
+→ strategy competition
+→ AI Research Gate where warranted
+→ TradeQuality
+→ RiskEngine
+→ CapitalSurvival
+→ CapitalGovernor
+→ PAPER_TRADE or NO_TRADE
+
+Do not confuse these intents.
+
+============================================================
+PART 7 — GENERIC AI FALLBACK MUST NOT LIE
+============================================================
+
+If a current-market route fails:
+
+DO NOT fall back to language such as:
+
+"I can't verify current prices from here"
+
+when the system actually has market-data capability.
+
+Instead report the actual condition:
+
+MARKET DATA RATE LIMITED
+
+MARKET DATA TEMPORARILY UNAVAILABLE
+
+INSUFFICIENT CURRENT DATA
+
+SUPPORTED UNIVERSE PARTIALLY AVAILABLE
+
+or other truthful state.
+
+Static OpenAI/Grok knowledge may provide background context,
+but it must NEVER masquerade as current market evidence.
+
+============================================================
+PART 8 — CURRENT CRYPTO RESPONSE FORMAT
+============================================================
+
+For:
+
+"What crypto looks strongest right now?"
+
+return a concise response using actual evaluated assets.
+
+Example structure:
+
+CURRENT CRYPTO STRENGTH
+
+1. ETH/USD
+   - current price
+   - primary objective signal
+   - relative strength / momentum evidence
+   - regime fit
+   - data freshness
+
+2. BTC/USD
+   ...
+
+3. SOL/USD
+   ...
+
+Then:
+
+JARVIS ASSESSMENT:
+[short synthesis]
+
+DATA COVERAGE:
+[x assets evaluated]
+
+DATA PROVIDER:
+Twelve Data
+
+FRESHNESS:
+[current status]
+
+Do not display an asset that was not actually evaluated.
+
+============================================================
+PART 9 — OPTIONAL AI ANALYSIS
+============================================================
+
+Do not automatically call OpenAI/Grok for simple ranking.
+
+Use AI only when the existing AIResearchGate says additional research is useful.
+
+For example:
+
+"What crypto looks strongest right now?"
+
+may not need AI.
+
+"Which of these strongest candidates has the best catalyst-supported paper
+trade setup?"
+
+may justify selective OpenAI/Grok research.
+
+Preserve cost controls.
+
+============================================================
+PART 10 — RATE-LIMIT-AWARE PARTIAL ANSWERS
+============================================================
+
+If Twelve Data limits prevent full-universe evaluation:
+
+do not fail the entire answer if useful valid data exists.
+
+Example:
+
+"Based on the 4 assets I could evaluate before the provider request budget was
+reached..."
+
+Then rank only those 4.
+
+Do not pretend the result is exhaustive.
+
+============================================================
+PART 11 — MARKET MEMORY / MOST RECENT DECISION
+============================================================
+
+For questions such as:
+
+"Why did you reject BTC?"
+
+use:
+
+the most recent persisted relevant Markets decision/outcome record for the
+authenticated user.
+
+Do not invent a reason.
+
+If no persisted decision exists:
+
+say so.
+
+============================================================
+PART 12 — VOICE
+============================================================
+
+Verify spoken versions of these questions follow identical routing:
+
+"What crypto looks strongest right now?"
+
+"What should I paper trade right now?"
+
+Voice should not use a different intent classifier.
+
+============================================================
+PART 13 — ROUTING TEST MATRIX
+============================================================
+
+Add focused deterministic routing tests.
+
+These MUST route to MARKETS:
+
+"What crypto looks strongest right now?"
+
+"What crypto looks most promising right now?"
+
+"What's the best crypto setup today?"
+
+"Which coin has the strongest momentum?"
+
+"What should I watch in crypto right now?"
+
+"Which ETF is strongest today?"
+
+"What stock looks strongest right now?"
+
+"What should I paper trade right now?"
+
+These SHOULD route to RESEARCH:
+
+"Research Bitcoin adoption."
+
+"Explain the history of Ethereum."
+
+"Research crypto regulation."
+
+These SHOULD remain GENERAL when appropriate:
+
+"What is cryptocurrency?"
+
+============================================================
+PART 14 — LIVE AUTHENTICATED TEST
+============================================================
+
+After repair, perform authenticated conversational tests through the SAME route
+used by the iPad application.
+
+Test:
+
+1.
+"What crypto looks strongest right now?"
+
+Expected:
+real provider-backed bounded comparative analysis.
+
+2.
+"What crypto looks most promising right now?"
+
+Expected:
+same Markets route, not generic research fallback.
+
+3.
+"What should I paper trade right now?"
+
+Expected:
+existing paper decision pipeline and PAPER_TRADE or NO_TRADE.
+
+4.
+"Research Bitcoin adoption."
+
+Expected:
+RESEARCH route.
+
+5.
+"What is BTC/USD trading at right now?"
+
+Expected:
+direct current-market quote.
+
+============================================================
+PART 15 — FAIL CLOSED
+============================================================
+
+Explicitly test:
+
+Twelve Data healthy
+
+Twelve Data partially rate limited
+
+Twelve Data unavailable
+
+stale market data
+
+unsupported asset
+
+AI unavailable
+
+No condition may cause a fabricated current market answer.
+
+============================================================
+PART 16 — REGRESSION
+============================================================
+
+Preserve:
+
+iPad layout repair
+voice
+market-data quote routing
+OpenAI
+Grok
+Finance
+Research
+Career
+Business
+Software
+Markets
+paper portfolio
+learning engine
+strategy system
+RiskEngine
+CapitalSurvival
+CapitalGovernor
+kill switch
+authentication
+user isolation
+
+============================================================
+PART 17 — VALIDATION
+============================================================
+
+Run:
+
+FULL RELEVANT TEST SUITE
+TYPESCRIPT VALIDATION
+API PRODUCTION BUILD
+JARVIS PRODUCTION BUILD
+
+Do not call this complete if anything critical fails.
+
+============================================================
+ACCEPTANCE CRITERIA
+============================================================
+
+Complete only if:
+
+1. The root cause is identified.
+
+2. Broad CURRENT market questions reliably route to MARKETS.
+
+3. "What crypto looks strongest right now?" uses actual current market data.
+
+4. "What crypto looks most promising right now?" no longer falls into generic
+model-only research.
+
+5. Market rankings use a bounded actual universe.
+
+6. Partial rate-limited data produces an explicit partial answer.
+
+7. Market-ranking requests do not automatically invoke expensive AI.
+
+8. Trade requests use the full PAPER trading pipeline.
+
+9. Research-only crypto questions still route to RESEARCH.
+
+10. Direct quote requests still work.
+
+11. Voice follows the same corrected route.
+
+12. No current market answer is fabricated from model memory.
+
+13. User isolation remains intact.
+
+14. iPad layout remains fixed.
+
+15. Robinhood remains NOT CONNECTED.
+
+16. Live trading remains DISABLED.
+
+17. Execution remains PAPER ONLY.
+
+18. Nothing is published.
+
+============================================================
+FINAL REPORT
+============================================================
+
+RETURN:
+
+JARVIS CURRENT-MARKET ROUTING REPAIR
+[COMPLETE / PARTIAL / BLOCKED]
+
+ROOT CAUSE:
+[exact explanation]
+
+CURRENT-MARKET INTENT DETECTION:
+[status]
+
+MARKETS VS RESEARCH SEPARATION:
+[status]
+
+"WHAT CRYPTO LOOKS STRONGEST RIGHT NOW?" TEST:
+[status/result]
+
+"WHAT CRYPTO LOOKS MOST PROMISING RIGHT NOW?" TEST:
+[status/result]
+
+"WHAT SHOULD I PAPER TRADE RIGHT NOW?" TEST:
+[status/result]
+
+"RESEARCH BITCOIN ADOPTION" TEST:
+[routed specialist]
+
+BTC/USD QUOTE TEST:
+[status]
+
+BOUNDED CRYPTO UNIVERSE:
+[status / actual assets evaluated]
+
+RATE-LIMIT PARTIAL RESPONSE:
+[status]
+
+SIMPLE RANKING AI USAGE:
+[OpenAI calls / Grok calls]
+
+VOICE ROUTING:
+[status]
+
+PERSISTED DECISION LOOKUP:
+[status]
+
+TWELVE DATA:
+[status]
+
+OPENAI:
+[status]
+
+GROK:
+[status]
+
+IPAD LAYOUT REGRESSION:
+[PASS/FAIL]
+
+USER ISOLATION:
+[PASS/FAIL]
+
+ROBINHOOD:
+NOT CONNECTED
+
+LIVE TRADING:
+DISABLED
+
+EXECUTION:
+PAPER ONLY
+
+TESTS:
+[x/x]
+
+TYPESCRIPT:
+[PASS/FAIL]
+
+API BUILD:
+[PASS/FAIL]
+
+JARVIS BUILD:
+[PASS/FAIL]
+
+NEW COST:
+NONE
+
+NEW SECRETS:
+NONE
+
+PUBLISHED:
+NO
+
+READY FOR FINAL IPAD RETEST:
+[YES/NO]
+
+READY FOR GITHUB CHECKPOINT:
+[YES/NO]
+
+STOP AFTER THIS REPORT.
+
+DO NOT PUBLISH.
+DO NOT ADD CLAUDE YET.
+DO NOT START ANOTHER DEVELOPMENT PHASE.

@@ -4,3 +4,4 @@
 - [Interval-aware freshness](interval-aware-market-freshness.md) — OHLCV freshness starts at interval close; quote freshness remains tied to its exact provider timestamp.
 - [Economic schema synchronization](economic-schema-synchronization.md) — rebuild shared DB declarations and verify live columns after schema pushes.
 - [Viewport-contained app shells](viewport-contained-app-shells.md) — bound grid rows and separate layout resizes from keyboard-only VisualViewport contraction.
+- [Crypto volume boundaries](crypto-volume-boundaries.md) — missing provider volume may degrade read-only rankings, but must never bypass executable liquidity gates.
