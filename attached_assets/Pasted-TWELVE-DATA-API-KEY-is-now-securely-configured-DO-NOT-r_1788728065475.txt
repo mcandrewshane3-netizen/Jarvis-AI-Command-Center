@@ -1,0 +1,80 @@
+TWELVE_DATA_API_KEY is now securely configured.
+
+DO NOT redesign, rebuild, publish, connect Robinhood, or enable live trading.
+DO NOT add another provider or paid service.
+DO NOT expose or log any secret.
+
+Perform a focused REAL MARKET DATA verification of the existing JARVIS Economic Engine I implementation.
+
+1. Verify Twelve Data authentication and provider health.
+
+2. Retrieve genuine current/recent market data for representative assets from all three supported classes:
+   - STOCK: AAPL
+   - ETF: SPY
+   - CRYPTO: BTC/USD
+
+3. Verify:
+   - symbol normalization
+   - asset classification
+   - timestamps
+   - freshness state
+   - quote/recent price data
+   - historical OHLCV retrieval
+   - stale/unavailable handling
+
+4. Feed REAL provider data through the existing pipeline far enough to verify:
+   MarketDataProvider
+   → MarketDataQualityService
+   → OpportunityScanner
+   → StrategyEngine
+   → MarketRegimeEngine
+   → TradeQualityEngine
+   → RiskEngine
+   → CapitalGovernor
+
+5. Do NOT force a trade.
+
+NO_TRADE is a successful result if the evidence does not justify a paper trade.
+
+6. If the existing AutonomousPaperTradingService can safely run with the available Twelve Data plan/rate limits, execute ONE bounded PAPER-ONLY evaluation cycle.
+
+If it produces a qualified trade, it may create only a PAPER trade using the existing PaperBroker.
+
+If it produces no qualified trade, report NO_TRADE and the rejection reasons.
+
+7. Verify that no live brokerage call is possible:
+   Robinhood = NOT CONNECTED
+   Live trading = DISABLED
+   Execution = PAPER ONLY
+
+8. Do not make unrelated code changes.
+
+9. If a Twelve Data subscription/rate-limit/data-entitlement limitation is encountered, STOP and report the exact limitation rather than working around it, fabricating data, upgrading a plan, or adding another provider.
+
+Return:
+
+TWELVE DATA: [CONNECTED/FAILED]
+PROVIDER HEALTH:
+STOCK DATA:
+ETF DATA:
+CRYPTO DATA:
+HISTORICAL DATA:
+DATA FRESHNESS:
+SCANNER:
+STRATEGIES:
+MARKET REGIME:
+TRADE QUALITY:
+RISK ENGINE:
+CAPITAL GOVERNOR:
+PAPER CYCLE:
+DECISION: [PAPER_TRADE / NO_TRADE / BLOCKED]
+DECISION REASON:
+PAPER ORDER CREATED: [YES/NO]
+ROBINHOOD: NOT CONNECTED
+LIVE TRADING: DISABLED
+EXECUTION: PAPER ONLY
+RATE-LIMIT/PLAN LIMITATIONS:
+ERRORS:
+CODE CHANGES MADE:
+TESTS RUN:
+NEXT RECOMMENDED ACTION:
