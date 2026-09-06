@@ -24,6 +24,8 @@ import {
   tradingStateContext,
   validateExecutionModeTransition,
 } from "../services/trading/trading-state";
+import { TwelveDataProvider } from "../services/market-intelligence";
+import { classifyMarketConversation, resolveMarketConversation } from "../services/market-conversation";
 
 const router: IRouter = Router();
 router.use(requireAuth);
@@ -492,8 +494,58 @@ router.post("/conversations/:id/messages/stream", async (req, res, next) => {
 
     const specialistRoute = routeSpecialists(content);
     const domain = specialistRoute.primary;
-    await db.insert(messages).values({ conversationId: conversation.id, role: "user", content, domain });
+    const [userMessage] = await db.insert(messages).values({ conversationId: conversation.id, role: "user", content, domain }).returning();
     await db.update(conversations).set({ domain, updatedAt: new Date() }).where(eq(conversations.id, conversation.id));
+    const marketIntent = classifyMarketConversation(content);
+    const deterministicReply = marketIntent.kind !== "NONE"
+      ? await resolveMarketConversation(marketIntent, userMessage.id, {
+        provider: new TwelveDataProvider({ apiKey: process.env.TWELVE_DATA_API_KEY }),
+        paperCycle: async (messageId) => {
+          const authorization = req.header("authorization"); const cookie = req.header("cookie");
+          if (!authorization && !cookie) throw new Error("AUTHENTICATION_UNAVAILABLE");
+          const port = Number(process.env.PORT);
+          if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("INTERNAL_LOOPBACK_UNAVAILABLE");
+          const response = await fetch(`http://127.0.0.1:${port}/api/economic-engine/paper/autonomous-cycle`, {
+            method: "POST", headers: {
+              ...(authorization ? { authorization } : {}), ...(cookie ? { cookie } : {}),
+              "x-idempotency-key": `jarvis-message-${messageId}`,
+            },
+          });
+          const body = await response.json() as Record<string, unknown>;
+          if (!response.ok) throw new Error(String(body.error ?? response.status));
+          return body;
+        },
+        recentDecision: async (symbol) => {
+          const rows = await db.select().from(strategyDecisionOutcomes).where(and(
+            eq(strategyDecisionOutcomes.userId, user.id),
+            eq(strategyDecisionOutcomes.decision, "NO_TRADE"),
+          )).orderBy(desc(strategyDecisionOutcomes.decidedAt)).limit(symbol ? 50 : 1);
+          if (!symbol) return rows[0];
+          const normalized = symbol.replace(/\/USD$/i, "").toUpperCase();
+          return rows.find((row) =>
+            row.symbol.replace(/\/USD$/i, "").toUpperCase() === normalized);
+        },
+      })
+      : null;
+    if (deterministicReply !== null) {
+      // Market facts and paper lifecycle outcomes are deliberately emitted before
+      // any model/context setup. This preserves the existing AIResearchGate budget
+      // for its authoritative cycle and prevents an AI fallback from inventing facts.
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      res.write(`data: ${JSON.stringify({ content: deterministicReply })}\n\n`);
+      await db.insert(messages).values({
+        conversationId: conversation.id, role: "assistant", content: deterministicReply, domain,
+      });
+      await db.update(conversations).set({ updatedAt: new Date() }).where(eq(conversations.id, conversation.id));
+      res.write(`data: ${JSON.stringify({
+        done: true,
+        run: { domain, specialists: specialistRoute.specialists, providers: [], fallbackUsed: false, deterministic: true },
+      })}\n\n`);
+      res.end();
+      return;
+    }
     const history = await db.select().from(messages).where(eq(messages.conversationId, conversation.id)).orderBy(messages.createdAt);
     const settings = await getOrCreateUserSettings(user.id);
     const intelligenceMode = isIntelligenceMode(settings.intelligenceMode) ? settings.intelligenceMode : "SMART";

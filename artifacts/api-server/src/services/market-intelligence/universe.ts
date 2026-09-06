@@ -1,4 +1,14 @@
 import type { AssetClass, TradableAsset } from "./types";
+export const AUTONOMOUS_CRYPTO_CORE_UNIVERSE = [
+  "BTC/USD",
+  "ETH/USD",
+  "SOL/USD",
+  "XRP/USD",
+  "ADA/USD",
+  "DOGE/USD",
+  "AVAX/USD",
+  "LINK/USD",
+] as const;
 
 export interface LiquidityRules {
   minimumAverageDailyVolume: number;

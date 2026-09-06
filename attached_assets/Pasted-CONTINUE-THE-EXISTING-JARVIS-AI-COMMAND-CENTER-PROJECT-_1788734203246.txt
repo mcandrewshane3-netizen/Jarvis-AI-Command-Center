@@ -1,0 +1,496 @@
+CONTINUE THE EXISTING JARVIS AI COMMAND CENTER PROJECT.
+
+THIS IS A NARROW INTEGRATION REPAIR.
+
+DO NOT REDESIGN THE UI.
+DO NOT ADD NEW TRADING STRATEGIES.
+DO NOT CONNECT ROBINHOOD.
+DO NOT ENABLE LIVE TRADING.
+DO NOT USE REAL MONEY.
+DO NOT PUBLISH.
+DO NOT BUY OR ADD NEW SERVICES.
+DO NOT CHANGE RISK THRESHOLDS.
+DO NOT CHANGE CAPITAL SURVIVAL OR CAPITAL GOVERNOR RULES.
+
+============================================================
+JARVIS MARKET CONVERSATION INTEGRATION REPAIR
+============================================================
+
+PRIMARY OBJECTIVE:
+
+Fix the gap where conversational JARVIS can have a functioning Twelve Data
+market-data/trading backend, but still replies to market questions as though it
+cannot access current market data.
+
+Example observed on iPad:
+
+A user asks a question such as:
+
+"What crypto looks best right now?"
+
+JARVIS responds that it cannot verify current crypto prices or market leadership
+from here and asks the user to provide charts/data.
+
+That is incorrect if the authenticated Markets backend already has access to
+current Twelve Data data.
+
+The conversational Markets specialist must use the EXISTING authoritative market
+data / scanner / strategy services when appropriate.
+
+============================================================
+PART 1 — VERIFY THE ACTUAL ROOT CAUSE
+============================================================
+
+Inspect the current routing path for normal conversational requests.
+
+Trace:
+
+user message
+→ domain routing
+→ Markets specialist
+→ available tools/services
+→ market-data access
+→ response synthesis
+
+Determine why market questions are not reaching the existing current market-data
+pipeline.
+
+Do not guess.
+
+Report the actual root cause in the final report.
+
+Possible areas to inspect include:
+
+- specialist tool registration
+- service dependency wiring
+- conversation orchestrator permissions
+- tool availability/capability declarations
+- current-data/freshness routing
+- Markets specialist system instructions
+- structured tool-result handoff into OpenAI/Grok synthesis
+- auth/user context propagation
+- production/preview environment configuration
+
+============================================================
+PART 2 — CONNECT MARKETS SPECIALIST TO EXISTING MARKET SERVICES
+============================================================
+
+The Markets specialist should be able to invoke the existing server-authoritative
+market services for conversational market questions.
+
+Reuse EXISTING services.
+
+Do NOT create a second market-data client.
+
+Do NOT bypass:
+
+MarketDataCacheService
+MarketDataRequestBudgetService
+MarketRegimeEngine
+OpportunityScanner
+StrategyRegistry
+TradeQuality
+RiskEngine
+CapitalSurvival
+CapitalGovernor
+
+For current market questions, JARVIS should use only the subset necessary for the
+question.
+
+Example:
+
+"What is BTC trading at?"
+
+should use current market-data lookup.
+
+"What crypto looks strongest right now?"
+
+may require:
+
+current market data
+→ bounded scanner
+→ relative strength / momentum / regime evidence
+→ concise Markets response
+
+"What should I paper trade right now?"
+
+must use the full existing decision pipeline and may return NO_TRADE.
+
+============================================================
+PART 3 — DO NOT FORCE FULL TRADING PIPELINE FOR SIMPLE QUESTIONS
+============================================================
+
+Use cost-efficient routing.
+
+Examples:
+
+PRICE / QUOTE REQUEST
+→ direct authoritative market-data lookup
+
+MARKET STATUS / TREND QUESTION
+→ market data + relevant regime/strategy evidence
+
+BEST OPPORTUNITY / TRADE QUESTION
+→ full existing candidate and risk pipeline
+
+Do not invoke OpenAI + Grok + every strategy simply to answer a current price.
+
+============================================================
+PART 4 — CURRENT DATA MUST BE TRUTHFUL
+============================================================
+
+If current Twelve Data data is available:
+
+use it.
+
+If it is stale:
+
+say it is stale.
+
+If unsupported:
+
+say unsupported.
+
+If rate limited:
+
+say rate limited.
+
+If unavailable:
+
+say current data is unavailable.
+
+Never fabricate:
+
+prices
+volume
+bid/ask
+news
+market leadership
+strategy evidence
+
+Never tell the user to manually supply charts when the system already has
+sufficient authoritative data.
+
+============================================================
+PART 5 — MARKETS RESPONSE CONTRACT
+============================================================
+
+For current-market conversational responses, make the Markets specialist clearly
+distinguish:
+
+CURRENT PROVIDER DATA
+HISTORICAL DATA
+MODELED PAPER EXECUTION
+AI RESEARCH
+NO DATA / DEGRADED DATA
+
+Do not expose internal chain-of-thought.
+
+A concise structured rationale is fine.
+
+============================================================
+PART 6 — PROVIDER STATUS UI
+============================================================
+
+The existing right-side system/provider status should distinguish general web
+research from dedicated market data.
+
+Do NOT falsely mark "LIVE WEB" connected just because Twelve Data works.
+
+Add or expose a truthful provider status such as:
+
+MARKET DATA
+Twelve Data
+CONNECTED / DEGRADED / RATE LIMITED / UNAVAILABLE
+
+Preserve:
+
+LIVE WEB
+
+as its own separate capability/state.
+
+Finance Data remains separate.
+
+Do not redesign the panel beyond what is needed.
+
+============================================================
+PART 7 — CONVERSATIONAL EXAMPLES THAT MUST WORK
+============================================================
+
+After repair, test authenticated conversational requests such as:
+
+1.
+"What is BTC/USD trading at right now?"
+
+Expected:
+current provider-backed BTC/USD data if available, with freshness.
+
+2.
+"What is ETH/USD trading at right now?"
+
+Expected:
+current provider-backed ETH/USD data if available.
+
+3.
+"What crypto looks strongest right now?"
+
+Expected:
+use supported current crypto universe and existing deterministic evidence.
+If only some assets are available because of rate limits, explicitly state the
+bounded set actually evaluated.
+
+4.
+"What looks like the best paper-trade opportunity right now?"
+
+Expected:
+run the existing authoritative paper opportunity pipeline.
+PAPER_TRADE or NO_TRADE are both valid.
+
+5.
+"Why did you reject BTC?"
+
+Expected:
+use current or most recent persisted decision evidence, not invented rationale.
+
+============================================================
+PART 8 — MULTI-AI BEHAVIOR
+============================================================
+
+Preserve existing selective AI research gating.
+
+Do not call OpenAI/Grok unnecessarily.
+
+If a current opportunity survives deterministic gates and policy requires AI
+research:
+
+allow the existing AIResearchGate to invoke OpenAI/Grok.
+
+If it does not qualify:
+
+do not spend AI tokens merely because the request came from chat.
+
+============================================================
+PART 9 — USER CONTEXT / AUTH
+============================================================
+
+Verify authenticated user context reaches the Markets services.
+
+Conversational JARVIS must not accidentally use another user's:
+
+paper portfolio
+positions
+decisions
+journal
+strategy performance
+settings
+
+Test user isolation.
+
+============================================================
+PART 10 — VOICE PATH
+============================================================
+
+Verify the same corrected routing works when the market question arrives through
+voice transcription.
+
+Voice should feed the same JARVIS conversation/orchestration path.
+
+Do not create separate voice-only market logic.
+
+============================================================
+PART 11 — FAIL-CLOSED BEHAVIOR
+============================================================
+
+Test:
+
+Twelve Data unavailable
+Twelve Data rate limited
+stale quote
+unsupported symbol
+missing auth
+AI unavailable
+partial crypto-universe data
+
+The response should degrade truthfully.
+
+Do NOT silently fall back to model memory for "current" market facts.
+
+============================================================
+PART 12 — REGRESSION TESTS
+============================================================
+
+Add focused tests for:
+
+Markets specialist routes current-price question to authoritative market-data
+service
+
+Markets specialist routes best-opportunity question to existing paper decision
+pipeline
+
+simple quote does not invoke unnecessary AI research
+
+rate-limited market data returns explicit degraded status
+
+stale market data is labeled stale
+
+unsupported symbol does not fabricate substitution
+
+user isolation is preserved
+
+voice transcription follows same market routing
+
+MARKET DATA provider status is separate from LIVE WEB
+
+live trading remains disabled
+
+Robinhood remains disconnected
+
+============================================================
+PART 13 — VALIDATION
+============================================================
+
+Run:
+
+FULL TEST SUITE
+TYPESCRIPT VALIDATION
+API PRODUCTION BUILD
+JARVIS PRODUCTION BUILD
+
+Do not call the repair complete if any critical validation fails.
+
+============================================================
+ACCEPTANCE CRITERIA
+============================================================
+
+Complete only if:
+
+1. Root cause is identified.
+
+2. Conversational Markets can use existing Twelve Data market services.
+
+3. BTC/USD current-data question works when provider data is available.
+
+4. ETH/USD current-data question works when provider data is available.
+
+5. "What crypto looks strongest right now?" uses actual bounded market evidence.
+
+6. "Best paper-trade opportunity" uses the existing authoritative paper pipeline.
+
+7. NO_TRADE remains valid.
+
+8. Simple quote requests do not unnecessarily call expensive AI providers.
+
+9. Current market facts are never answered from stale model memory.
+
+10. MARKET DATA status is shown separately from LIVE WEB.
+
+11. User isolation remains intact.
+
+12. Voice uses the same corrected routing.
+
+13. Robinhood remains NOT CONNECTED.
+
+14. Live trading remains DISABLED.
+
+15. Execution remains PAPER ONLY.
+
+16. All tests/builds pass.
+
+17. Nothing is published.
+
+============================================================
+FINAL REPORT
+============================================================
+
+RETURN:
+
+JARVIS MARKET CONVERSATION INTEGRATION REPAIR
+[COMPLETE / PARTIAL / BLOCKED]
+
+ROOT CAUSE:
+[exact explanation]
+
+MARKETS SPECIALIST CURRENT-DATA ACCESS:
+[status]
+
+TWELVE DATA:
+[status]
+
+BTC/USD CHAT TEST:
+[status/result]
+
+ETH/USD CHAT TEST:
+[status/result]
+
+CRYPTO STRENGTH CHAT TEST:
+[status and assets actually evaluated]
+
+BEST PAPER OPPORTUNITY CHAT TEST:
+[status / PAPER_TRADE / NO_TRADE]
+
+SIMPLE QUOTE INVOKES AI:
+[YES/NO]
+
+AI RESEARCH GATE:
+[status]
+
+MARKET DATA STATUS PANEL:
+[status]
+
+LIVE WEB STATUS REMAINS SEPARATE:
+[YES/NO]
+
+VOICE MARKET ROUTING:
+[status]
+
+STALE-DATA FAILURE:
+[status]
+
+RATE-LIMIT FAILURE:
+[status]
+
+USER ISOLATION:
+[status]
+
+ROBINHOOD:
+NOT CONNECTED
+
+LIVE TRADING:
+DISABLED
+
+EXECUTION:
+PAPER ONLY
+
+TOTAL TESTS:
+[x/x]
+
+TYPESCRIPT:
+[PASS/FAIL]
+
+API PRODUCTION BUILD:
+[PASS/FAIL]
+
+JARVIS PRODUCTION BUILD:
+[PASS/FAIL]
+
+NEW REQUIRED COST:
+NONE
+
+NEW SECRETS REQUIRED:
+NONE
+
+PUBLISHED:
+NO
+
+READY TO RE-TEST FROM IPAD:
+[YES/NO]
+
+NEXT HIGHEST-ROI ACTION:
+[one recommendation]
+
+STOP AFTER THIS REPORT.
+
+DO NOT PUBLISH.
+DO NOT CONNECT ROBINHOOD.
+DO NOT ENABLE LIVE TRADING.
+DO NOT START ANOTHER DEVELOPMENT PHASE.

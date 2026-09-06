@@ -13,7 +13,7 @@ import {
 import { ProjectEconomicsService, type EconomicScope, type ProjectEconomicEntry } from "../services/economics";
 import {
   AIResearchGate, BacktestEngine, createExecutableStrategy, DailyLearningReview, INITIAL_STRATEGIES, JarvisLearningEngine, MarketDataQualityService, OpportunityScanner, TradeQualityEngine,
-  TwelveDataProvider, TradingUniverse, synthesizeResearch, type MarketDataProvider,
+  TwelveDataProvider, TradingUniverse, AUTONOMOUS_CRYPTO_CORE_UNIVERSE, synthesizeResearch, type MarketDataProvider,
   WeeklyStrategyReview,
 } from "../services/market-intelligence";
 import {
@@ -964,16 +964,7 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
      */
     // Discovery is intentionally bounded.  Open positions above always consume the
     // high-priority path before this staggerable, crypto-only core universe.
-    const requested = [
-      { symbol: "BTC/USD", assetClass: "CRYPTO" as const },
-      { symbol: "ETH/USD", assetClass: "CRYPTO" as const },
-      { symbol: "SOL/USD", assetClass: "CRYPTO" as const },
-      { symbol: "XRP/USD", assetClass: "CRYPTO" as const },
-      { symbol: "ADA/USD", assetClass: "CRYPTO" as const },
-      { symbol: "DOGE/USD", assetClass: "CRYPTO" as const },
-      { symbol: "AVAX/USD", assetClass: "CRYPTO" as const },
-      { symbol: "LINK/USD", assetClass: "CRYPTO" as const },
-    ];
+    const requested = AUTONOMOUS_CRYPTO_CORE_UNIVERSE.map((symbol) => ({ symbol, assetClass: "CRYPTO" as const }));
     // Core is rotated by the CAS version, so a constrained provider budget cannot
     // repeatedly hammer the same cold universe.  Open positions returned earlier
     // always take precedence and use the provider's high-priority option.

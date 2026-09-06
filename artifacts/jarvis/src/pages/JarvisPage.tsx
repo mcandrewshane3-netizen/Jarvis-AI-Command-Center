@@ -1,15 +1,69 @@
 import { useEffect, useState, useRef } from 'react';
-import { HolographicPanel, TechLabel, TechValue, Button, StatusDot, JARVISCore } from '@/components/primitives';
+import { HolographicPanel, TechLabel, Button, StatusDot, JARVISCore } from '@/components/primitives';
 import { Database, CreditCard, Globe2, Sparkles, Send, BrainCircuit, Mic, MicOff, AlertTriangle, RotateCcw } from 'lucide-react';
 import { useSettings } from '@/hooks/use-settings';
 import { useVoice } from '@/hooks/use-voice';
 import { VoiceState } from '@/lib/voice';
+import { usePaperOperationsHealth } from '@/hooks/use-jarvis-api';
 
 type AIActivity = {
   stage: 'ROUTING' | 'ANALYZING' | 'SEARCHING' | 'CHALLENGING' | 'SYNTHESIZING' | 'FALLBACK';
   provider?: string;
   domain?: string;
   detail?: string;
+};
+
+type MarketDataStatus = 'HEALTHY' | 'RATE_LIMIT_WARNING' | 'RATE_LIMITED' | 'DEGRADED' | 'NOT_CONFIGURED' | 'UNAVAILABLE';
+
+const marketDataStatusPresentation: Record<MarketDataStatus, {
+  dot: 'online' | 'amber' | 'red' | 'offline';
+  cardClassName: string;
+  iconClassName: string;
+  labelClassName: string;
+  detailClassName: string;
+}> = {
+  HEALTHY: {
+    dot: 'online',
+    cardClassName: 'border-primary/10 bg-black/20',
+    iconClassName: 'text-primary',
+    labelClassName: '',
+    detailClassName: '',
+  },
+  RATE_LIMIT_WARNING: {
+    dot: 'amber',
+    cardClassName: 'border-amber-500/20 bg-amber-500/5',
+    iconClassName: 'text-amber-500',
+    labelClassName: 'text-amber-500',
+    detailClassName: 'text-amber-100/70',
+  },
+  RATE_LIMITED: {
+    dot: 'red',
+    cardClassName: 'border-red-500/20 bg-red-500/5',
+    iconClassName: 'text-red-500',
+    labelClassName: 'text-red-500',
+    detailClassName: 'text-red-100/70',
+  },
+  DEGRADED: {
+    dot: 'amber',
+    cardClassName: 'border-amber-500/20 bg-amber-500/5',
+    iconClassName: 'text-amber-500',
+    labelClassName: 'text-amber-500',
+    detailClassName: 'text-amber-100/70',
+  },
+  NOT_CONFIGURED: {
+    dot: 'offline',
+    cardClassName: 'border-amber-500/20 bg-amber-500/5',
+    iconClassName: 'text-amber-500',
+    labelClassName: 'text-amber-500',
+    detailClassName: 'text-amber-100/70',
+  },
+  UNAVAILABLE: {
+    dot: 'offline',
+    cardClassName: 'border-red-500/20 bg-red-500/5',
+    iconClassName: 'text-red-500',
+    labelClassName: 'text-red-500',
+    detailClassName: 'text-red-100/70',
+  },
 };
 
 export function JarvisPage() {
@@ -22,6 +76,11 @@ export function JarvisPage() {
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const { reducedMotion, voiceSettings } = useSettings();
+  const { data: operationsHealth, isLoading: isLoadingOperationsHealth } = usePaperOperationsHealth();
+  const marketDataStatus = isLoadingOperationsHealth
+    ? null
+    : (operationsHealth?.marketData?.status as MarketDataStatus | undefined) ?? 'UNAVAILABLE';
+  const marketDataPresentation = marketDataStatus ? marketDataStatusPresentation[marketDataStatus] ?? marketDataStatusPresentation.UNAVAILABLE : null;
 
   useEffect(() => {
     void (async () => {
@@ -304,6 +363,16 @@ export function JarvisPage() {
                 <StatusDot status="amber" />
               </div>
             </div>
+            <div className={`flex gap-4 p-3 border ${marketDataPresentation?.cardClassName ?? 'border-primary/10 bg-black/20'}`} data-testid="status-market-data">
+              <Database className={`${marketDataPresentation?.iconClassName ?? 'text-primary'} mt-1`} size={16} />
+              <div className="flex-1">
+                <TechLabel className={marketDataPresentation?.labelClassName ?? ''}>Market Data // Twelve Data</TechLabel>
+                <div className={`text-sm mt-1 ${marketDataPresentation?.detailClassName ?? 'text-muted-foreground'}`}>
+                  {marketDataStatus ?? 'CHECKING STATUS'}
+                </div>
+                <StatusDot status={marketDataPresentation?.dot ?? 'amber'} pulse={isLoadingOperationsHealth} />
+              </div>
+            </div>
             <div className="flex gap-4 p-3 border border-red-500/20 bg-red-500/5">
               <Globe2 className="text-red-500 mt-1" size={16} />
               <div className="flex-1">
@@ -320,7 +389,7 @@ export function JarvisPage() {
           <div className="flex items-center gap-2 mb-2 font-mono text-[10px] tracking-widest text-amber-500">
             <Sparkles size={12} /> PROTOCOL ZERO
           </div>
-          Provider routing and trading authority are server-enforced. External data remains unavailable until connected.
+          Provider routing and trading authority are server-enforced. Twelve Data status is shown above; Finance Data and Live Web remain separate connections.
         </div>
       </div>
     </div>
