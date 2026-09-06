@@ -56,7 +56,7 @@ export class GrokProvider implements AIProvider {
       configured: true,
       available: grokRuntimeHealth?.health === "AVAILABLE",
       health: grokRuntimeHealth?.health ?? "DEGRADED",
-      reason: grokRuntimeHealth?.reason ?? "RUNTIME_HEALTH_NOT_VERIFIED",
+      reason: grokRuntimeHealth ? grokRuntimeHealth.reason : "RUNTIME_HEALTH_NOT_VERIFIED",
       capabilities: [...this.capabilities],
     };
   }

@@ -129,7 +129,7 @@ export class OpenAIProvider implements AIProvider {
       configured: true,
       available: runtime?.health === "AVAILABLE",
       health: runtime?.health ?? "DEGRADED",
-      reason: runtime?.reason ?? "RUNTIME_HEALTH_NOT_VERIFIED",
+      reason: runtime ? runtime.reason : "RUNTIME_HEALTH_NOT_VERIFIED",
       capabilities: [...this.capabilities],
     };
   }
