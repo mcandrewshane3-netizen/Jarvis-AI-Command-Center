@@ -1,0 +1,542 @@
+CONTINUE THE EXISTING JARVIS AI COMMAND CENTER PROJECT.
+
+THIS IS A DEPLOYMENT-ONLY PHASE.
+
+DO NOT ADD NEW TRADING FEATURES.
+DO NOT REDESIGN.
+DO NOT CONNECT ROBINHOOD.
+DO NOT ENABLE LIVE TRADING.
+DO NOT USE REAL MONEY.
+DO NOT CHANGE STRATEGY OR RISK THRESHOLDS.
+DO NOT CREATE ANY UNRELATED SERVICES.
+
+============================================================
+JARVIS PHASE IV
+PRODUCTION DEPLOYMENT + IPAD VERIFICATION
++ CONTROLLED PAPER OPERATIONS ACTIVATION
+============================================================
+
+VERIFIED BASELINE:
+
+JARVIS PHASE III: COMPLETE
+
+206/206 tests passed across 21 files
+
+TypeScript: PASS
+API production build: PASS
+JARVIS production build: PASS
+Scheduler bundle: PASS
+Database schema push: PASS
+Production API startup: PASS
+iPad landscape preview: PASS
+iPad portrait preview: PASS
+
+Recommended architecture:
+
+Frontend:
+STATIC DEPLOYMENT
+
+Interactive API:
+AUTOSCALE DEPLOYMENT
+
+PAPER scheduler:
+HOURLY SCHEDULED DEPLOYMENT
+
+State:
+SHARED POSTGRESQL DATABASE
+
+Robinhood:
+NOT CONNECTED
+
+Live trading:
+DISABLED
+
+Execution:
+PAPER ONLY
+
+Current status:
+
+READY TO DEPLOY: YES
+
+READY FOR LONG-RUN PAPER OPERATIONS: NO
+
+Reason:
+production deployments and live scheduler do not yet exist.
+
+============================================================
+IMPORTANT BILLING RULE
+============================================================
+
+BEFORE creating any billable deployment/resource:
+
+show the exact Replit-provided account-specific estimated pricing/usage
+information available in the deployment flow.
+
+Do not invent prices.
+
+Do not automatically approve a paid plan upgrade.
+
+If Replit requires explicit billing confirmation from me:
+
+STOP and tell me exactly what confirmation is required.
+
+Do not attempt to bypass billing confirmation.
+
+============================================================
+PART 1 — REVERIFY BEFORE DEPLOYMENT
+============================================================
+
+Before publishing, rerun only the necessary final safety checks:
+
+full test suite
+TypeScript
+API production build
+JARVIS production build
+scheduler build/bundle
+schema validation
+
+Verify again:
+
+Robinhood NOT CONNECTED
+liveTradingEnabled false
+execution PAPER ONLY
+kill switch operational
+
+If any critical check fails:
+
+STOP.
+
+Do not deploy a failing build.
+
+============================================================
+PART 2 — DEPLOY INTERACTIVE API
+============================================================
+
+Prepare the existing API as an AUTOSCALE deployment.
+
+Use the existing production build/start configuration.
+
+Do not use a Reserved VM unless the validated architecture can no longer work.
+
+Preserve:
+
+authentication
+database access
+server-authoritative controls
+voice endpoints
+OpenAI integration
+Grok integration
+Twelve Data integration
+Paper Broker
+Learning Engine
+
+============================================================
+PART 3 — DEPLOY STATIC JARVIS FRONTEND
+============================================================
+
+Publish the existing JARVIS frontend using STATIC deployment.
+
+Preserve the existing design.
+
+Verify:
+
+production API URL configuration
+HTTPS
+authentication
+manifest
+service worker
+safe areas
+landscape
+portrait
+Home Screen installability
+
+Do not cache authenticated /api/ responses.
+
+============================================================
+PART 4 — CREATE PAPER SCHEDULER
+============================================================
+
+Create the HOURLY Scheduled Deployment using the Phase III validated worker.
+
+Build command:
+
+pnpm --filter @workspace/api-server run build
+
+Run command:
+
+pnpm --filter @workspace/api-server run start:paper-scheduler
+
+Configure:
+
+JARVIS_API_URL
+
+and secure:
+
+PAPER_SCHEDULER_SECRET
+
+Use Replit Secrets / deployment secret management.
+
+DO NOT print or expose the secret.
+
+DO NOT ask me to paste the actual secret into Agent chat.
+
+Generate/configure it using the secure supported mechanism if possible.
+
+If manual secure secret creation is required:
+
+tell me exactly where to create it in Replit Secrets,
+but never request the value in chat.
+
+============================================================
+PART 5 — SCHEDULER SAFETY VERIFICATION
+============================================================
+
+After deployment verify:
+
+scheduler can authenticate
+invalid scheduler authentication fails
+one-shot worker exits cleanly
+lease acquisition works
+duplicate due slot does not duplicate execution
+overlapping scheduler invocation does not duplicate orders
+failed/stale claims recover safely
+kill switch dominates execution
+
+Do not intentionally create a PAPER trade merely to test the scheduler.
+
+NO_TRADE is valid.
+
+============================================================
+PART 6 — PRODUCTION PAPER SESSION
+============================================================
+
+Create or identify the authenticated persistent PAPER operations session.
+
+Do not change starting capital silently.
+
+If no starting PAPER capital exists:
+
+STOP and request explicit configuration through the existing authenticated UI.
+
+Do not invent live or paper capital.
+
+============================================================
+PART 7 — CONTROLLED VERIFICATION CYCLE 1
+============================================================
+
+Run ONE controlled production PAPER cycle.
+
+Use:
+
+real Twelve Data market data
+existing strategies
+existing AI gate
+existing risk engine
+existing Capital Survival
+existing Capital Governor
+
+Do not force a trade.
+
+Report:
+
+data provider state
+assets evaluated
+rate-limit state
+strategies evaluated
+AI calls used
+AI budget remaining
+final PAPER_TRADE or NO_TRADE
+paper portfolio impact
+learning record created
+scheduler/session state
+
+============================================================
+PART 8 — CONTROLLED VERIFICATION CYCLE 2
+============================================================
+
+Only if Cycle 1 completes safely:
+
+run ONE additional controlled PAPER verification cycle.
+
+Confirm idempotency and persistence across cycles.
+
+Do not run more than two manual verification cycles in this phase.
+
+============================================================
+PART 9 — IPAD PRODUCTION VERIFICATION
+============================================================
+
+Verify the production JARVIS URL is suitable for iPad.
+
+Provide exact user instructions:
+
+1. Open Safari on iPad.
+2. Visit the production JARVIS URL.
+3. Sign in.
+4. Verify dashboard.
+5. Verify PAPER labels.
+6. Tap Share.
+7. Tap Add to Home Screen.
+8. Launch JARVIS from Home Screen.
+9. Grant microphone access when prompted.
+10. Test one tap-to-talk request.
+
+Do not claim microphone behavior passed until actual device permission/testing occurs.
+
+============================================================
+PART 10 — PRODUCTION VOICE CHECK
+============================================================
+
+Verify the deployed HTTPS voice endpoints are reachable.
+
+Preserve:
+
+tap-to-talk
+text fallback
+audio failure fallback
+rate limits
+authentication
+
+Physical iPad microphone permission remains USER VERIFICATION if not directly testable.
+
+============================================================
+PART 11 — OPERATIONS HEALTH
+============================================================
+
+Verify production Operations Health shows actual state for:
+
+API runtime
+scheduler
+last successful cycle
+next expected cycle
+database
+Twelve Data
+OpenAI
+Grok
+Paper Broker
+Learning Engine
+kill switch
+live trading state
+
+============================================================
+PART 12 — PROJECT ECONOMICS
+============================================================
+
+Capture any actual Replit deployment pricing/estimate shown during publishing.
+
+Record where available:
+
+static deployment cost
+autoscale API cost
+scheduled deployment cost
+database cost
+
+Do not fabricate missing values.
+
+Also preserve:
+
+AI cost tracking
+market data cost
+voice cost
+paper P/L separation
+
+Paper P/L is NOT real revenue.
+
+============================================================
+PART 13 — DO NOT ACTIVATE LIVE TRADING
+============================================================
+
+After deployment:
+
+Robinhood MUST remain NOT CONNECTED.
+
+Live trading MUST remain DISABLED.
+
+Execution MUST remain PAPER ONLY.
+
+Deployment must not alter these states.
+
+============================================================
+ACCEPTANCE CRITERIA
+============================================================
+
+This phase completes only if:
+
+1. Final validation passes.
+
+2. Production API is deployed.
+
+3. Static JARVIS frontend is deployed.
+
+4. Hourly Scheduled Deployment exists.
+
+5. Scheduler authentication works.
+
+6. Duplicate scheduler execution is prevented.
+
+7. Persistent PAPER session works.
+
+8. At least one controlled production PAPER cycle succeeds.
+
+9. No real money is used.
+
+10. PAPER data persists.
+
+11. Learning record persists.
+
+12. Operations Health reflects production.
+
+13. Production JARVIS is accessible by HTTPS.
+
+14. PWA is installable on iPad.
+
+15. Voice backend is production reachable.
+
+16. Robinhood remains disconnected.
+
+17. Live trading remains disabled.
+
+18. Execution remains PAPER only.
+
+19. Actual Replit cost information is reported where available.
+
+============================================================
+FINAL REPORT
+============================================================
+
+RETURN:
+
+JARVIS PHASE IV
+[COMPLETE / PARTIAL / BLOCKED]
+
+FINAL TESTS:
+[x/x]
+
+TYPESCRIPT:
+[PASS/FAIL]
+
+API BUILD:
+[PASS/FAIL]
+
+JARVIS BUILD:
+[PASS/FAIL]
+
+SCHEDULER BUILD:
+[PASS/FAIL]
+
+API DEPLOYMENT:
+[status]
+
+FRONTEND DEPLOYMENT:
+[status]
+
+SCHEDULER DEPLOYMENT:
+[status]
+
+PRODUCTION URL:
+[value]
+
+HTTPS:
+[status]
+
+PWA INSTALLABLE:
+[status]
+
+IPAD LANDSCAPE:
+[status]
+
+IPAD PORTRAIT:
+[status]
+
+IPAD PHYSICAL MICROPHONE TEST:
+[PASS / USER VERIFICATION REQUIRED]
+
+PAPER OPERATIONS SESSION:
+[status]
+
+CONTROLLED PAPER CYCLE 1:
+[status and decision]
+
+CONTROLLED PAPER CYCLE 2:
+[status and decision OR NOT RUN]
+
+PAPER PORTFOLIO PERSISTENCE:
+[status]
+
+LEARNING RECORD PERSISTENCE:
+[status]
+
+SCHEDULER AUTH:
+[status]
+
+SCHEDULER IDEMPOTENCY:
+[status]
+
+NEXT EXPECTED SCHEDULED CYCLE:
+[time/status]
+
+OPERATIONS HEALTH:
+[status]
+
+TWELVE DATA:
+[status]
+
+OPENAI:
+[status]
+
+GROK:
+[status]
+
+AI BUDGET:
+[status]
+
+PROJECT ECONOMICS:
+[status]
+
+REPLIT STATIC COST:
+[actual estimate or UNKNOWN]
+
+REPLIT AUTOSCALE COST:
+[actual estimate or UNKNOWN]
+
+REPLIT SCHEDULER COST:
+[actual estimate or UNKNOWN]
+
+DATABASE COST:
+[actual estimate or UNKNOWN]
+
+NEW REQUIRED MONTHLY COST:
+[actual estimate/range or UNKNOWN]
+
+PAPER P/L COUNTED AS REAL REVENUE:
+NO
+
+ROBINHOOD:
+NOT CONNECTED
+
+LIVE TRADING:
+DISABLED
+
+EXECUTION:
+PAPER ONLY
+
+READY FOR IPAD USE:
+[YES/NO]
+
+READY FOR LONG-RUN PAPER OPERATIONS:
+[YES/NO]
+
+USER ACTION REQUIRED:
+[list]
+
+KNOWN LIMITATIONS:
+[list]
+
+NEXT HIGHEST-ROI ACTION:
+[one recommendation]
+
+STOP AFTER THIS REPORT.
+
+DO NOT CONNECT ROBINHOOD.
+DO NOT ENABLE LIVE TRADING.
+DO NOT START ANOTHER DEVELOPMENT PHASE.
