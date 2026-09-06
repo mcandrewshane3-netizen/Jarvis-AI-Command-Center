@@ -17,7 +17,7 @@ import {
   FileText,
   GitBranch,
   Globe2,
-  Home,
+  Home as HomeIcon,
   KeyRound,
   Link2,
   LockKeyhole,
@@ -48,12 +48,26 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 
 const queryClient = new QueryClient();
+const now = new Date();
+const fullDate = new Intl.DateTimeFormat('en-US', {
+  weekday: 'long',
+  month: 'long',
+  day: 'numeric',
+  year: 'numeric',
+}).format(now);
+const dayAndTime = new Intl.DateTimeFormat('en-US', {
+  weekday: 'long',
+  month: 'long',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+}).format(now);
 
 const navGroups = [
   {
     label: 'Command',
     items: [
-      { href: '/', label: 'Overview', icon: Home },
+      { href: '/', label: 'Overview', icon: HomeIcon },
       { href: '/jarvis', label: 'JARVIS', icon: Bot },
     ],
   },
@@ -159,7 +173,7 @@ function Shell({ children }: { children: ReactNode }) {
       <main className="main-stage">
         <header className="topbar">
           <div>
-            <div className="topbar-kicker">Tuesday · October 15, 2024</div>
+            <div className="topbar-kicker">{fullDate}</div>
             <div className="topbar-title">{pageTitle}</div>
           </div>
           <div className="topbar-actions">
@@ -195,7 +209,7 @@ function Home() {
     <>
       <div className="home-hero">
         <div className="hero-copy">
-          <div className="eyebrow">Tuesday, October 15 · 08:42</div>
+          <div className="eyebrow">{dayAndTime}</div>
           <h1 className="display-title" style={{ margin: '13px 0 13px' }}>Good morning, <em>Shane.</em></h1>
           <p className="lede">Your day is clear enough to make a dent. JARVIS has condensed the moving parts into one quiet place.</p>
           <div className="hero-actions">
@@ -334,7 +348,7 @@ function FinancePage() {
 
 function MarketsPage() {
   const [paused, setPaused] = useState(false);
-  const watchlist = [
+  const watchlist: Array<[string, string, string, string, boolean]> = [
     ['SPY', 'S&P 500 ETF', '$582.11', '+0.41%', false],
     ['QQQ', 'Nasdaq 100 ETF', '$495.03', '+0.68%', false],
     ['NVDA', 'NVIDIA Corporation', '$138.07', '−0.82%', true],
