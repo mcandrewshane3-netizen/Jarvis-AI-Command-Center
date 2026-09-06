@@ -1,5 +1,8 @@
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ClerkProvider, Show, SignIn, SignUp } from '@clerk/react';
+import { publishableKeyFromHost } from '@clerk/react/internal';
+import { shadcn } from '@clerk/themes';
 import {
   ArrowUpRight,
   Bell,
@@ -41,13 +44,19 @@ import {
   WalletCards,
   Zap,
 } from 'lucide-react';
-import { Link, Route, Router as WouterRouter, Switch, useLocation } from 'wouter';
+import { Link, Redirect, Route, Router as WouterRouter, Switch, useLocation } from 'wouter';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 
 const queryClient = new QueryClient();
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+const clerkPubKey = publishableKeyFromHost(
+  window.location.hostname,
+  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
+);
+const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
 const now = new Date();
 const fullDate = new Intl.DateTimeFormat('en-US', {
   weekday: 'long',
@@ -97,6 +106,7 @@ function Button({
   testId,
   type = 'button',
   style,
+  disabled = false,
 }: {
   children: ReactNode;
   variant?: 'primary' | 'secondary' | 'quiet';
@@ -104,9 +114,10 @@ function Button({
   testId: string;
   type?: 'button' | 'submit';
   style?: CSSProperties;
+  disabled?: boolean;
 }) {
   return (
-    <button className={`button-${variant}`} data-testid={testId} onClick={onClick} type={type} style={style}>
+    <button className={`button-${variant}`} data-testid={testId} onClick={onClick} type={type} style={style} disabled={disabled}>
       {children}
     </button>
   );
@@ -281,23 +292,87 @@ function Home() {
 
 function JarvisPage() {
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState([
-    { author: 'JARVIS', text: 'Good morning, Shane. I have the day in view. Your highest-leverage move is the Q4 product brief before the 10:30 design review.' },
-    { author: 'SHANE', text: 'What should I protect time for today?' },
-    { author: 'JARVIS', text: 'Protect 90 minutes after lunch for deep work. The market is quiet, your inbox is contained, and the launch thread only needs a 15-minute reply.' },
-  ]);
-  const send = (value = message) => {
-    if (!value.trim()) return;
-    setMessages((current) => [...current, { author: 'SHANE', text: value.trim() }, { author: 'JARVIS', text: 'Noted. This is a demo response while your private model connection is being configured.' }]);
+  const [messages, setMessages] = useState<Array<{ author: string; text: string }>>([]);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
+
+  useEffect(() => {
+    void (async () => {
+      const conversations = await fetch('/api/conversations').then((response) => response.ok ? response.json() : []);
+      const active = conversations[0];
+      if (!active) return;
+      setConversationId(active.id);
+      const history = await fetch(`/api/conversations/${active.id}/messages`).then((response) => response.ok ? response.json() : []);
+      setMessages(history.map((item: { role: string; content: string }) => ({
+        author: item.role === 'assistant' ? 'JARVIS' : 'SHANE',
+        text: item.content,
+      })));
+    })();
+  }, []);
+
+  const send = async (value = message) => {
+    const content = value.trim();
+    if (!content || isStreaming) return;
     setMessage('');
+    setMessages((current) => [...current, { author: 'SHANE', text: content }, { author: 'JARVIS', text: '' }]);
+    setIsStreaming(true);
+    try {
+      let id = conversationId;
+      if (!id) {
+        const created = await fetch('/api/conversations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: content.slice(0, 60), domain: 'GENERAL' }),
+        }).then((response) => {
+          if (!response.ok) throw new Error('Could not create conversation');
+          return response.json();
+        });
+        id = created.id;
+        setConversationId(id);
+      }
+      const response = await fetch(`/api/conversations/${id}/messages/stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+      });
+      if (!response.ok || !response.body) throw new Error('JARVIS is unavailable');
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let pending = '';
+      while (true) {
+        const { value: chunk, done } = await reader.read();
+        if (done) break;
+        pending += decoder.decode(chunk, { stream: true });
+        const events = pending.split('\n\n');
+        pending = events.pop() ?? '';
+        for (const event of events) {
+          const line = event.split('\n').find((part) => part.startsWith('data: '));
+          if (!line) continue;
+          const data = JSON.parse(line.slice(6)) as { content?: string; error?: string };
+          if (data.error) throw new Error(data.error);
+          if (data.content) {
+            setMessages((current) => current.map((item, index) =>
+              index === current.length - 1 ? { ...item, text: item.text + data.content } : item,
+            ));
+          }
+        }
+      }
+    } catch {
+      setMessages((current) => current.map((item, index) =>
+        index === current.length - 1 ? { ...item, text: 'I could not complete that response. Please try again.' } : item,
+      ));
+    } finally {
+      setIsStreaming(false);
+    }
   };
   return (
     <div className="two-col">
       <div>
-        <div className="page-header"><div><div className="eyebrow">Private assistant · demo mode</div><h1 className="display-title" style={{ margin: '11px 0 10px' }}>Talk it through.</h1><p className="lede">A focused surface for decisions, not a noisy chat feed.</p></div><StatusPill tone="amber">Demo responses</StatusPill></div>
+        <div className="page-header"><div><div className="eyebrow">Private assistant · persistent history</div><h1 className="display-title" style={{ margin: '11px 0 10px' }}>Talk it through.</h1><p className="lede">A focused surface for decisions, not a noisy chat feed.</p></div><StatusPill>{isStreaming ? 'Thinking' : 'AI ready'}</StatusPill></div>
         <Panel className="panel-pad" testId="panel-conversation">
           <div className="chat-thread">
-            {messages.map((item, index) => <div className={`chat-bubble ${item.author === 'SHANE' ? 'shane' : 'jarvis'}`} key={`${item.author}-${index}`} data-testid={`message-${index}`}><div className="chat-author">{item.author}</div>{item.text}</div>)}
+            {messages.length === 0 && <div className="chat-bubble jarvis"><div className="chat-author">JARVIS</div>Your private conversation history is ready. What should we work through?</div>}
+            {messages.map((item, index) => <div className={`chat-bubble ${item.author === 'SHANE' ? 'shane' : 'jarvis'}`} key={`${item.author}-${index}`} data-testid={`message-${index}`}><div className="chat-author">{item.author}</div>{item.text || 'Thinking…'}</div>)}
           </div>
           <div className="divider" style={{ margin: '22px 0 15px' }} />
           <div className="chips" style={{ marginBottom: 13 }}>
@@ -305,12 +380,12 @@ function JarvisPage() {
           </div>
           <form className="form-row" onSubmit={(event) => { event.preventDefault(); send(); }}>
             <input className="text-input" value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Ask JARVIS anything about your cockpit" aria-label="Message JARVIS" data-testid="input-jarvis-message" />
-            <Button type="submit" testId="button-send-message"><Send /></Button>
+            <Button type="submit" testId="button-send-message" disabled={isStreaming}><Send /></Button>
           </form>
         </Panel>
       </div>
       <div className="dashboard-stack">
-        <Panel className="panel-pad" testId="panel-assistant-context"><SectionHeading title="Context window" detail="What JARVIS can see" /><div className="list-row"><Database size={16} className="teal" /><div><div className="row-title">Local demo workspace</div><div className="row-meta">Tasks, routines, preferences</div></div><StatusPill>Ready</StatusPill></div><div className="list-row"><CreditCard size={16} className="teal" /><div><div className="row-title">Finance snapshot</div><div className="row-meta">Demo data only</div></div><StatusPill tone="amber">Demo</StatusPill></div><div className="list-row"><Globe2 size={16} className="teal" /><div><div className="row-title">Live web context</div><div className="row-meta">Not connected in Phase 1</div></div><StatusPill tone="amber">Off</StatusPill></div></Panel>
+        <Panel className="panel-pad" testId="panel-assistant-context"><SectionHeading title="Context window" detail="What JARVIS can see" /><div className="list-row"><Database size={16} className="teal" /><div><div className="row-title">Private database</div><div className="row-meta">Conversations and memories</div></div><StatusPill>Ready</StatusPill></div><div className="list-row"><CreditCard size={16} className="teal" /><div><div className="row-title">Finance snapshot</div><div className="row-meta">Demo data only</div></div><StatusPill tone="amber">Demo</StatusPill></div><div className="list-row"><Globe2 size={16} className="teal" /><div><div className="row-title">Live web context</div><div className="row-meta">Not connected</div></div><StatusPill tone="amber">Off</StatusPill></div></Panel>
         <Panel className="panel-pad" testId="panel-assistant-note"><Sparkles className="gold" size={18} /><div className="row-title" style={{ marginTop: 12 }}>A useful boundary</div><p className="row-meta" style={{ lineHeight: 1.6 }}>JARVIS will show its source and confidence before making recommendations. It will never place a trade or move money in this demo.</p></Panel>
       </div>
     </div>
@@ -318,19 +393,42 @@ function JarvisPage() {
 }
 
 function WorkPage() {
-  const [tasks, setTasks] = useState([
-    { id: 1, title: 'Review the Q4 product brief', project: 'Northstar launch', done: true },
-    { id: 2, title: 'Send revised launch timeline', project: 'Northstar launch', done: false },
-    { id: 3, title: 'Reply to vendor security review', project: 'Operations', done: false },
-    { id: 4, title: 'Draft Thursday newsletter', project: 'Writing cadence', done: false },
-  ]);
+  const [tasks, setTasks] = useState<Array<{ id: string; title: string; project: string; done: boolean }>>([]);
   const [newTask, setNewTask] = useState('');
-  const addTask = () => { if (newTask.trim()) { setTasks((current) => [...current, { id: Date.now(), title: newTask.trim(), project: 'Inbox', done: false }]); setNewTask(''); } };
+  useEffect(() => {
+    void fetch('/api/tasks').then((response) => response.ok ? response.json() : []).then((items) => {
+      setTasks(items.map((item: { id: string; title: string; project: string; completed: boolean }) => ({
+        id: item.id,
+        title: item.title,
+        project: item.project,
+        done: item.completed,
+      })));
+    });
+  }, []);
+  const addTask = async () => {
+    const title = newTask.trim();
+    if (!title) return;
+    const item = await fetch('/api/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, project: 'Inbox' }),
+    }).then((response) => response.json());
+    setTasks((current) => [{ id: item.id, title: item.title, project: item.project, done: item.completed }, ...current]);
+    setNewTask('');
+  };
+  const toggleTask = async (task: { id: string; done: boolean }) => {
+    const updated = await fetch(`/api/tasks/${task.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ completed: !task.done }),
+    }).then((response) => response.json());
+    setTasks((current) => current.map((item) => item.id === task.id ? { ...item, done: updated.completed } : item));
+  };
   return (
     <>
       <div className="page-header"><div><div className="eyebrow">Work system · 3 active projects</div><h1 className="display-title" style={{ margin: '11px 0 10px' }}>Make progress visible.</h1><p className="lede">A small, honest view of the work that deserves your attention today.</p></div><div className="page-header-actions"><Button variant="secondary" testId="button-filter-work"><SlidersHorizontal /> Filter</Button><Button onClick={addTask} testId="button-add-task"><Plus /> Add task</Button></div></div>
       <div className="three-col" style={{ marginBottom: 22 }}><Panel className="metric-card"><span className="mini-label">Open tasks</span><div className="value-lg">{tasks.filter((task) => !task.done).length}</div><div className="metric-foot"><span className="row-meta">across 3 projects</span><span className="metric-change green">−2 this week</span></div></Panel><Panel className="metric-card"><span className="mini-label">Focus this week</span><div className="value-lg">6h 35m</div><div className="metric-foot"><span className="row-meta">of 8h planned</span><span className="metric-change green">82%</span></div></Panel><Panel className="metric-card"><span className="mini-label">Needs a reply</span><div className="value-lg">01</div><div className="metric-foot"><span className="row-meta">vendor security</span><span className="metric-change red">2 days</span></div></Panel></div>
-      <div className="two-col"><Panel className="panel-pad"><SectionHeading title="Tasks" detail="Local demo list" /><div className="form-row" style={{ marginBottom: 15 }}><input className="text-input" value={newTask} onChange={(event) => setNewTask(event.target.value)} placeholder="Add a task to your inbox" aria-label="New task" data-testid="input-new-task" /><Button onClick={addTask} testId="button-save-task"><Plus /></Button></div>{tasks.map((task) => <div className="list-row" key={task.id}><button className={`check-button ${task.done ? 'checked' : ''}`} onClick={() => setTasks((current) => current.map((item) => item.id === task.id ? { ...item, done: !item.done } : item))} data-testid={`button-task-${task.id}`}><Check /></button><div><div className="row-title" style={task.done ? { textDecoration: 'line-through', color: 'hsl(var(--muted-foreground))' } : undefined}>{task.title}</div><div className="row-meta">{task.project}</div></div><button className="button-quiet row-end" aria-label={`More options for ${task.title}`} data-testid={`button-task-more-${task.id}`}><MoreHorizontal /></button></div>)}</Panel><div className="dashboard-stack"><Panel className="panel-pad"><SectionHeading title="Projects" action={<Button variant="quiet" testId="button-view-projects">All <ChevronRight /></Button>} /><div className="list-row"><span className="row-icon"><GitBranch /></span><div style={{ flex: 1 }}><div className="row-title">Northstar launch</div><div className="row-meta">8 tasks · target Oct 28</div><div className="progress-track" style={{ marginTop: 9 }}><div className="progress-fill" style={{ width: '72%' }} /></div></div><span className="mono muted" style={{ fontSize: 10 }}>72%</span></div><div className="list-row"><span className="row-icon"><FileText /></span><div style={{ flex: 1 }}><div className="row-title">Writing cadence</div><div className="row-meta">2 sessions · target weekly</div><div className="progress-track" style={{ marginTop: 9 }}><div className="progress-fill" style={{ width: '50%' }} /></div></div><span className="mono muted" style={{ fontSize: 10 }}>50%</span></div></Panel><Panel className="panel-pad"><div className="mini-label">Next calendar block</div><div className="value-lg" style={{ marginTop: 9 }}>Design review</div><div className="row-meta" style={{ marginTop: 4 }}>10:30–11:15 · Studio room</div><Button variant="secondary" testId="button-open-calendar" style={{ marginTop: 17 } as never}><CalendarClock /> Open calendar</Button></Panel></div></div>
+      <div className="two-col"><Panel className="panel-pad"><SectionHeading title="Tasks" detail="Saved securely" /><div className="form-row" style={{ marginBottom: 15 }}><input className="text-input" value={newTask} onChange={(event) => setNewTask(event.target.value)} placeholder="Add a task to your inbox" aria-label="New task" data-testid="input-new-task" /><Button onClick={() => void addTask()} testId="button-save-task"><Plus /></Button></div>{tasks.length === 0 && <p className="row-meta">No tasks yet. Add the first item to your private inbox.</p>}{tasks.map((task) => <div className="list-row" key={task.id}><button className={`check-button ${task.done ? 'checked' : ''}`} onClick={() => void toggleTask(task)} data-testid={`button-task-${task.id}`}><Check /></button><div><div className="row-title" style={task.done ? { textDecoration: 'line-through', color: 'hsl(var(--muted-foreground))' } : undefined}>{task.title}</div><div className="row-meta">{task.project}</div></div><button className="button-quiet row-end" aria-label={`More options for ${task.title}`} data-testid={`button-task-more-${task.id}`}><MoreHorizontal /></button></div>)}</Panel><div className="dashboard-stack"><Panel className="panel-pad"><SectionHeading title="Projects" action={<Button variant="quiet" testId="button-view-projects">All <ChevronRight /></Button>} /><div className="list-row"><span className="row-icon"><GitBranch /></span><div style={{ flex: 1 }}><div className="row-title">Project persistence</div><div className="row-meta">Project records arrive in the next module pass</div><div className="progress-track" style={{ marginTop: 9 }}><div className="progress-fill" style={{ width: '35%' }} /></div></div><span className="mono muted" style={{ fontSize: 10 }}>35%</span></div></Panel><Panel className="panel-pad"><div className="mini-label">Calendar</div><div className="value-lg" style={{ marginTop: 9 }}>Not connected</div><div className="row-meta" style={{ marginTop: 4 }}>Google Calendar authorization will be requested when needed.</div><Button variant="secondary" testId="button-open-calendar" style={{ marginTop: 17 } as never}><CalendarClock /> Setup required</Button></Panel></div></div>
     </>
   );
 }
@@ -418,12 +516,49 @@ function RoutedErrorBoundary({ children }: { children: ReactNode }) {
   return <ErrorBoundary resetKey={location}>{children}</ErrorBoundary>;
 }
 
+function AuthWelcome() {
+  return (
+    <div className="auth-welcome">
+      <div className="auth-welcome-card">
+        <div className="brand-mark"><Command /></div>
+        <div className="eyebrow">Private personal command center</div>
+        <h1 className="display-title">Welcome to <em>JARVIS.</em></h1>
+        <p className="lede">Sign in to keep your conversations, settings, and memories securely available across devices.</p>
+        <div className="hero-actions">
+          <Link className="button-primary" href="/sign-in">Sign in</Link>
+          <Link className="button-secondary" href="/sign-up">Create account</Link>
+        </div>
+        <p className="row-meta">Live trading remains disabled. Demo Mode is available after sign-in.</p>
+      </div>
+    </div>
+  );
+}
+
+function SignInPage() {
+  return <div className="auth-welcome"><SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} /></div>;
+}
+
+function SignUpPage() {
+  return <div className="auth-welcome"><SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} /></div>;
+}
+
+function ProtectedShell() {
+  return (
+    <>
+      <Show when="signed-in">
+        <RoutedErrorBoundary><Shell><Switch><Route path="/" component={Home} /><Route path="/jarvis" component={JarvisPage} /><Route path="/work" component={WorkPage} /><Route path="/finance" component={FinancePage} /><Route path="/markets" component={MarketsPage} /><Route path="/personal" component={PersonalPage} /><Route path="/automations" component={AutomationsPage} /><Route path="/integrations" component={IntegrationsPage} /><Route path="/settings" component={SettingsPage} /><Route component={NotFound} /></Switch></Shell></RoutedErrorBoundary>
+      </Show>
+      <Show when="signed-out"><Redirect to="/" /></Show>
+    </>
+  );
+}
+
 function Router() {
-  return <RoutedErrorBoundary><Shell><Switch><Route path="/" component={Home} /><Route path="/jarvis" component={JarvisPage} /><Route path="/work" component={WorkPage} /><Route path="/finance" component={FinancePage} /><Route path="/markets" component={MarketsPage} /><Route path="/personal" component={PersonalPage} /><Route path="/automations" component={AutomationsPage} /><Route path="/integrations" component={IntegrationsPage} /><Route path="/settings" component={SettingsPage} /><Route component={NotFound} /></Switch></Shell></RoutedErrorBoundary>;
+  return <Switch><Route path="/sign-in/*?" component={SignInPage} /><Route path="/sign-up/*?" component={SignUpPage} /><Route path="/"><Show when="signed-in"><ProtectedShell /></Show><Show when="signed-out"><AuthWelcome /></Show></Route><Route component={ProtectedShell} /></Switch>;
 }
 
 function App() {
-  return <QueryClientProvider client={queryClient}><TooltipProvider><WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}><Router /></WouterRouter><Toaster /></TooltipProvider></QueryClientProvider>;
+  return <ClerkProvider publishableKey={clerkPubKey} proxyUrl={clerkProxyUrl} appearance={{ theme: shadcn, cssLayerName: 'clerk', variables: { colorPrimary: '#d7a73f', colorForeground: '#173238', colorMutedForeground: '#697b7f', colorBackground: '#f4efe7', colorInput: '#ffffff', colorInputForeground: '#173238', colorDanger: '#b7463f', colorNeutral: '#c9c3b9', fontFamily: 'DM Sans, sans-serif', borderRadius: '0.75rem' } }} signInUrl={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`}><QueryClientProvider client={queryClient}><TooltipProvider><WouterRouter base={basePath}><Router /></WouterRouter><Toaster /></TooltipProvider></QueryClientProvider></ClerkProvider>;
 }
 
 export default App;

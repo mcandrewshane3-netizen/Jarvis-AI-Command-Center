@@ -1,5 +1,7 @@
+@layer theme, base, clerk, components, utilities;
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
 @import 'tailwindcss';
+@import '@clerk/themes/shadcn.css';
 @import 'tw-animate-css';
 @plugin "@tailwindcss/typography";
 
@@ -321,6 +323,22 @@ button { cursor: pointer; }
 .switch-copy { min-width: 0; }
 .switch-copy strong { display: block; font-size: 13px; }
 .switch-copy span { display: block; color: hsl(var(--muted-foreground)); font-size: 11px; line-height: 1.45; margin-top: 3px; }
+
+.auth-welcome {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+  background: radial-gradient(circle at 18% 18%, hsl(var(--accent) / .18), transparent 34%), hsl(var(--background));
+}
+.auth-welcome-card {
+  width: min(560px, 100%);
+  padding: clamp(28px, 6vw, 56px);
+  border: 1px solid hsl(var(--border));
+  border-radius: 24px;
+  background: hsl(var(--card));
+  box-shadow: 0 24px 80px rgb(14 39 44 / 12%);
+}
 
 @media (max-width: 980px) {
   .app-shell { grid-template-columns: 1fr; }
