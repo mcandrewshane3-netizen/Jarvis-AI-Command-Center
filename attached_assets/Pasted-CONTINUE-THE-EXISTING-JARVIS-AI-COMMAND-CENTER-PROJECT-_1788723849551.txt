@@ -1,0 +1,1131 @@
+CONTINUE THE EXISTING JARVIS AI COMMAND CENTER PROJECT.
+
+DO NOT create a new project.
+DO NOT redesign the app.
+DO NOT publish.
+DO NOT connect Robinhood yet.
+DO NOT enable live trading.
+
+This phase is:
+
+JARVIS VOICE + DAILY ASSISTANT EXPERIENCE
+
+The goal is to make JARVIS feel like a real daily-use assistant on iPad:
+
+TAP JARVIS CORE
+→ SPEAK NATURALLY
+→ TRANSCRIBE
+→ ROUTE THROUGH EXISTING ORCHESTRATOR
+→ USE SPECIALISTS / TOOLS
+→ SYNTHESIZE ONE JARVIS RESPONSE
+→ SPEAK RESPONSE BACK
+→ SUPPORT INTERRUPTION / FOLLOW-UP
+
+Preserve all existing architecture and safety systems.
+
+==================================================
+CURRENT VERIFIED BASELINE
+==================================================
+
+Preserve:
+
+- cinematic iPad-first JARVIS UI
+- Clerk authentication
+- PostgreSQL persistence
+- persistent conversations
+- streaming chat
+- OpenAI provider
+- Grok provider
+- multi-AI orchestration
+- specialist registry
+- GENERAL
+- FINANCE
+- RESEARCH
+- CAREER
+- WORK
+- BUSINESS
+- SOFTWARE
+- MARKETS
+- PERSONAL
+- AUTOMATIONS
+- cross-specialist collaboration
+- ActionPlan / persistent plans
+- deterministic Finance calculations
+- Business project architecture
+- Software project architecture
+- Markets strategy architecture
+- StrategyEngine
+- MarketRegimeEngine
+- TradeQualityEngine
+- CapitalSurvivalEngine
+- CapitalGovernor
+- StrategyPerformanceTracker
+- TradingJournal
+- Paper Strategy Lab
+- server-authoritative execution mode
+- server-authoritative kill switch
+- RiskEngine
+- Robinhood NOT CONNECTED
+- live trading DISABLED
+- current full test suite: 98 PASSING
+- TypeScript validation passing
+- production builds passing
+
+Do not regress any of these systems.
+
+==================================================
+FOUNDATIONAL VOICE PRINCIPLE
+==================================================
+
+Voice is an interface to the EXISTING JARVIS brain.
+
+Do NOT create a separate voice assistant.
+
+Architecture:
+
+USER VOICE
+→ audio capture
+→ speech-to-text
+→ JARVIS orchestrator
+→ specialist/provider/tool routing
+→ JARVIS synthesis
+→ text response
+→ text-to-speech
+→ audio playback
+
+Voice and text must use the SAME:
+
+- conversations
+- memory
+- specialist routing
+- plans
+- safety controls
+- finance data
+- trading controls
+- provider architecture
+
+==================================================
+PHASE 1 — INSPECT EXISTING VOICE-READY UI
+==================================================
+
+Inspect existing:
+
+- JARVISCore component
+- core states
+- chat UI
+- streaming architecture
+- audio-related placeholders
+- voice state enums if already created
+- settings
+- accessibility support
+- iPad/PWA behavior
+
+Reuse what exists.
+
+Do not duplicate state machines.
+
+==================================================
+PHASE 2 — VOICE STATE MACHINE
+==================================================
+
+Implement a real voice state machine.
+
+Required states:
+
+VOICE_IDLE
+VOICE_REQUESTING_PERMISSION
+VOICE_LISTENING
+VOICE_TRANSCRIBING
+VOICE_THINKING
+VOICE_SPEAKING
+VOICE_INTERRUPTED
+VOICE_ERROR
+VOICE_UNAVAILABLE
+
+The central JARVIS core should reflect these states truthfully.
+
+Do not animate LISTENING unless the microphone is actually capturing audio.
+
+Do not animate SPEAKING unless audio is actually playing.
+
+==================================================
+PHASE 3 — IPAD AUDIO CAPTURE
+==================================================
+
+Implement microphone capture appropriate for iPad Safari/PWA.
+
+Prefer:
+
+navigator.mediaDevices.getUserMedia()
+
+and MediaRecorder where supported.
+
+Requirements:
+
+- explicit microphone permission flow
+- clear denied-permission state
+- clear unavailable-device state
+- no fake background listening
+- no hidden continuous recording
+- visible listening state
+- stop capture cleanly
+- handle orientation changes
+- handle app background/foreground
+- handle browser interruptions
+- handle Bluetooth/audio-route changes where feasible
+
+==================================================
+PHASE 4 — TAP-TO-TALK
+==================================================
+
+Primary interaction:
+
+TAP JARVIS CORE
+
+If idle:
+→ begin listening
+
+If listening:
+→ stop capture and transcribe
+
+If speaking:
+→ interrupt playback
+→ return to listening where appropriate
+
+If thinking:
+→ allow user to cancel the request where feasible
+
+The iPad interaction should be simple enough to use one-handed.
+
+==================================================
+PHASE 5 — SPEECH-TO-TEXT ENGINE
+==================================================
+
+Create an abstraction:
+
+SpeechToTextEngine
+
+Possible backends may include:
+
+- self-hosted Whisper-compatible implementation
+- current OpenAI transcription capability
+- browser speech recognition fallback
+- another maintained provider only if legitimately configured
+
+Choose the most reliable practical implementation for the existing Replit environment.
+
+Do NOT claim fully local speech recognition unless it truly runs locally.
+
+Do NOT install a huge model that makes Replit unusable.
+
+Prioritize:
+
+accuracy
+latency
+iPad compatibility
+maintainability
+cost awareness
+
+==================================================
+PHASE 6 — TRANSCRIPTION FALLBACKS
+==================================================
+
+Preferred order should be based on actual capability.
+
+Example:
+
+primary STT
+→ fallback STT
+→ typed input
+
+If voice transcription fails:
+
+preserve the conversation
+show a concise error
+allow immediate retry
+never invent transcription text
+
+==================================================
+PHASE 7 — VOICE CONTEXT
+==================================================
+
+Voice input must become a normal JARVIS user message.
+
+Examples:
+
+"What's coming out of my account this week?"
+
+→ FINANCE
+
+"Research this company."
+
+→ RESEARCH
+
+"Help me prepare for this interview."
+
+→ CAREER
+
+"Build me a pressure washing business."
+
+→ BUSINESS
+
+"Design me an app for coating inspectors."
+
+→ SOFTWARE
+
+"Find the strongest paper trading opportunities today."
+
+→ MARKETS
+
+No voice-specific routing shortcuts that bypass the orchestrator.
+
+==================================================
+PHASE 8 — TEXT-TO-SPEECH ENGINE
+==================================================
+
+Create:
+
+TextToSpeechEngine
+
+Support a provider abstraction.
+
+Prefer a maintained, legally usable voice engine.
+
+Evaluate practical options for the current Replit environment, such as:
+
+- OpenAI TTS if already available/configured
+- Kokoro-style maintained TTS
+- Piper-compatible TTS
+- browser speech synthesis as fallback
+
+Do NOT use unauthorized celebrity cloning.
+
+Do NOT imitate Paul Bettany.
+
+Do NOT use copyrighted character voice samples.
+
+==================================================
+PHASE 9 — JARVIS ORIGINAL VOICE
+==================================================
+
+Create a voice preset:
+
+JARVIS ORIGINAL
+
+Desired characteristics:
+
+- adult masculine
+- refined British English
+- calm
+- intelligent
+- sophisticated
+- precise pronunciation
+- lower-mid pitch
+- measured pace
+- restrained emotion
+- subtle warmth
+- occasional dry wit
+- professional
+- not theatrical
+- not cartoonish
+- not overly enthusiastic
+
+Suggested tuning target:
+
+locale:
+en-GB
+
+pace:
+approximately 0.90–0.98 of neutral
+
+pitch:
+slightly below neutral
+
+energy:
+restrained
+
+clarity:
+high
+
+Do not claim this is the Iron Man movie voice.
+
+It must remain an original synthetic voice.
+
+==================================================
+PHASE 10 — SPOKEN RESPONSE LAYER
+==================================================
+
+JARVIS should maintain two response layers:
+
+FULL RESPONSE
+shown in the UI
+
+SPOKEN RESPONSE
+optimized for listening
+
+The spoken response should usually be shorter.
+
+Examples:
+
+Full UI:
+detailed budget breakdown
+
+Spoken:
+"You have three bills due before Thursday totaling $1,402. I’ve put the full breakdown on screen."
+
+Full UI:
+long research report
+
+Spoken:
+"The strongest evidence favors option A, but there are two important risks. I’ve summarized both on screen."
+
+Do not read huge tables or long URLs aloud.
+
+==================================================
+PHASE 11 — SPOKEN RESPONSE GENERATION
+==================================================
+
+Create a safe spoken-summary layer.
+
+It should preserve:
+
+- conclusions
+- important warnings
+- requested numbers
+- action status
+- uncertainty
+
+It should omit unnecessary:
+
+- raw citations
+- formatting syntax
+- code blocks
+- huge tables
+- internal metadata
+
+Do not alter the meaning of safety-critical information.
+
+==================================================
+PHASE 12 — STREAMING VOICE
+==================================================
+
+Reduce perceived latency.
+
+Target architecture:
+
+LLM stream
+→ sentence/chunk buffer
+→ TTS queue
+→ begin speaking before entire answer is complete where safe
+
+Requirements:
+
+- preserve sentence order
+- stop queued speech on interruption
+- never speak stale response chunks after user cancels
+- do not speak partial high-impact actions as if completed
+- allow final UI response to continue rendering
+
+==================================================
+PHASE 13 — BARGE-IN / INTERRUPTION
+==================================================
+
+Implement real interruption.
+
+If JARVIS is speaking and user taps the core:
+
+- immediately stop current audio
+- clear pending TTS queue
+- mark response interrupted
+- begin listening again
+
+If microphone hardware/API limitations prevent immediate transition:
+
+state that truthfully and use best safe fallback.
+
+==================================================
+PHASE 14 — CONTINUOUS CONVERSATION MODE
+==================================================
+
+Add an optional setting:
+
+CONVERSATION MODE
+
+OFF by default initially.
+
+When enabled:
+
+after JARVIS finishes speaking,
+offer a short listening window for follow-up if platform behavior allows.
+
+Do NOT implement fake always-listening.
+
+Do NOT record indefinitely.
+
+Respect iPad/browser lifecycle limitations.
+
+==================================================
+PHASE 15 — WAKE-WORD PREPARATION
+==================================================
+
+Do NOT implement always-on "Hey JARVIS" if iPad Safari/PWA cannot reliably and safely support it.
+
+Instead:
+
+prepare an extension point for future wake-word support through:
+
+- native companion app
+- local bridge
+- Apple ecosystem automation
+- supported background audio architecture
+
+Current experience should remain tap-to-talk.
+
+==================================================
+PHASE 16 — VOICE SETTINGS
+==================================================
+
+Add a Voice section to Settings.
+
+Include:
+
+VOICE
+ON / OFF
+
+VOICE PRESET
+JARVIS ORIGINAL
+
+SPEECH RATE
+
+SPOKEN DETAIL
+BRIEF
+BALANCED
+DETAILED
+
+CONVERSATION MODE
+ON / OFF
+
+AUTO-SPEAK RESPONSES
+ON / OFF
+
+SAVE VOICE HISTORY
+OFF by default
+
+TEST VOICE button
+
+Display actual provider status.
+
+Do not expose secrets.
+
+==================================================
+PHASE 17 — STARTUP / GREETING
+==================================================
+
+Allow an optional short JARVIS greeting when the authenticated app is opened.
+
+Use only real system state.
+
+Examples:
+
+"Good morning. JARVIS is online."
+
+"Good afternoon. You have two active tasks."
+
+"Markets remain in Research Only mode."
+
+Do not fabricate:
+
+weather
+calendar
+finance
+market conditions
+tasks
+alerts
+
+unless actual data exists.
+
+Keep greeting short.
+
+Allow user to disable it.
+
+==================================================
+PHASE 18 — PERSONALITY THROUGH VOICE
+==================================================
+
+Voice responses should reinforce the existing JARVIS personality.
+
+Prefer:
+
+"Understood."
+
+"I've completed the analysis."
+
+"There are two issues worth your attention."
+
+"The numbers don't support that decision."
+
+"Research Only mode remains active."
+
+Avoid repetitive:
+
+"Awesome!"
+"Great question!"
+"Absolutely!"
+"Let's go!"
+"Sure thing!"
+
+Use the user's name only occasionally.
+
+==================================================
+PHASE 19 — FINANCE VOICE SAFETY
+==================================================
+
+Finance voice requests may:
+
+- retrieve
+- calculate
+- analyze
+- create plans
+- update manual finance data when clearly requested
+
+Do NOT verbally claim a bank transaction occurred without a real integration.
+
+For important modifications to persistent finance records:
+
+repeat critical values before saving when ambiguity exists.
+
+Example:
+
+"You want the Toyota payment set to $1,330 due on the 16th. Confirm?"
+
+Use confirmation only when necessary.
+
+==================================================
+PHASE 20 — BUSINESS VOICE
+==================================================
+
+Voice should support commands like:
+
+"JARVIS, start a business project for mobile detailing."
+
+"Build the launch plan."
+
+"What's the next action?"
+
+"Make the pricing model."
+
+"Design the app this business needs."
+
+Use existing Business and Software specialists.
+
+Do not falsely claim external execution.
+
+==================================================
+PHASE 21 — CAREER / WORK VOICE
+==================================================
+
+Support:
+
+"Interview me for this job."
+
+"Ask me the next question."
+
+"Rate that answer."
+
+"Rewrite it using STAR."
+
+"Help me explain my coating experience."
+
+"Create a task for tomorrow."
+
+Mock interview mode should behave conversationally.
+
+Allow user interruption.
+
+==================================================
+PHASE 22 — RESEARCH VOICE
+==================================================
+
+Support natural research questions.
+
+If JARVIS performs deep/multi-source research:
+
+spoken response should summarize the result.
+
+Full evidence/sources remain in UI.
+
+Do not read citations aloud unless specifically requested.
+
+==================================================
+PHASE 23 — SOFTWARE VOICE
+==================================================
+
+Support requests such as:
+
+"Design an app for field inspectors."
+
+"Add offline reporting."
+
+"Create the project plan."
+
+"Explain the architecture."
+
+Voice may create/modify SoftwareProject records.
+
+Do NOT silently modify the JARVIS application because the user casually described an unrelated app.
+
+Keep current-project modifications explicit.
+
+==================================================
+PHASE 24 — MARKETS VOICE SAFETY
+==================================================
+
+Voice must NEVER bypass trading protections.
+
+Examples:
+
+"Turn off the kill switch."
+
+"Enable Agentic Auto."
+
+"Ignore the RiskEngine."
+
+"Buy it anyway."
+
+must NOT be executed simply because they were spoken.
+
+The same authoritative rules apply to voice and text.
+
+Current hierarchy remains:
+
+voice/text
+→ JARVIS
+→ Markets
+→ strategy/order intent
+→ RiskEngine
+→ CapitalGovernor
+→ execution policy
+→ brokerage adapter later
+
+==================================================
+PHASE 25 — HIGH-RISK VOICE ACTIONS
+==================================================
+
+Prepare a generic confirmation boundary for future high-risk actions.
+
+Examples:
+
+- financial transfers
+- brokerage execution
+- unlocking doors
+- security-system changes
+- sending important external communications
+- purchases
+- contracts
+
+Voice recognition alone is not sufficient authorization for sensitive actions.
+
+Support future:
+
+authenticated confirmation
+device confirmation
+passkey/biometric confirmation
+explicit UI approval
+
+Do not implement fake biometric verification.
+
+==================================================
+PHASE 26 — AUDIO PRIVACY
+==================================================
+
+Privacy requirements:
+
+- do not permanently store raw audio by default
+- SAVE VOICE HISTORY default OFF
+- temporary audio should be deleted when no longer required
+- no secrets in audio logs
+- no transcript leakage across users
+- authenticated user isolation
+- rate limit voice endpoints
+- validate uploaded audio type and size
+
+If transcripts are saved as normal conversation messages,
+that must be clear in product behavior.
+
+==================================================
+PHASE 27 — AUDIO SECURITY
+==================================================
+
+Treat TTS output as output only.
+
+Audio generated by JARVIS must never trigger JARVIS commands automatically.
+
+Prevent speaker-to-microphone feedback loops where feasible.
+
+During TTS playback:
+
+do not interpret JARVIS's own audio as a user command.
+
+==================================================
+PHASE 28 — LATENCY MEASUREMENT
+==================================================
+
+Measure:
+
+audio capture completion
+STT latency
+routing latency
+first model token
+first TTS chunk
+total response time
+
+Do not fabricate latency metrics.
+
+Use measurements to identify bottlenecks.
+
+==================================================
+PHASE 29 — DEGRADED MODES
+==================================================
+
+Support truthful degraded operation.
+
+Examples:
+
+STT unavailable
+→ text remains available
+
+TTS unavailable
+→ show text response only
+
+OpenAI unavailable
+→ Grok/provider fallback if supported
+
+Grok unavailable
+→ OpenAI fallback
+
+Voice provider unavailable
+→ text JARVIS remains fully usable
+
+Voice failure must never break the main assistant.
+
+==================================================
+PHASE 30 — IPAD UX
+==================================================
+
+Optimize specifically for iPad.
+
+Landscape:
+
+central JARVIS core remains primary voice control
+
+Portrait:
+
+core remains easily tappable
+
+Ensure:
+
+- safe-area insets
+- no accidental zoom
+- keyboard/mic transitions
+- no clipping
+- accessible hit targets
+- speaker/mic status visible
+- permission prompts explained clearly
+
+==================================================
+PHASE 31 — ACCESSIBILITY
+==================================================
+
+Preserve reduced-motion setting.
+
+Voice controls need:
+
+ARIA labels
+keyboard accessibility
+visible state labels
+captions/transcripts
+text alternative for every spoken response
+
+Do not require audio to use JARVIS.
+
+==================================================
+PHASE 32 — AUTHENTICATED API ISOLATION TESTS
+==================================================
+
+The prior specialist phase identified HTTP isolation testing as a worthwhile follow-up.
+
+Add authenticated integration tests for specialist APIs.
+
+At minimum test:
+
+FINANCE
+RESEARCH
+CAREER
+WORK
+BUSINESS
+SOFTWARE
+MARKETS
+PLANS
+
+Verify:
+
+- unauthenticated requests rejected
+- user A cannot read user B data
+- user A cannot modify user B data
+- client-supplied forged user IDs ignored/rejected
+- records are scoped from authenticated server identity
+
+==================================================
+PHASE 33 — VOICE TESTS
+==================================================
+
+Keep the entire current test suite.
+
+Current baseline:
+
+98 TESTS PASSING
+
+Add tests covering at minimum:
+
+1. voice state begins IDLE
+2. mic permission denied handled
+3. listening state only while actual capture active
+4. captured audio reaches STT
+5. transcription becomes normal JARVIS message
+6. Finance voice routes to Finance
+7. Research voice routes to Research
+8. Career voice routes to Career
+9. Business voice routes to Business
+10. Software voice routes to Software
+11. Markets voice routes to Markets
+12. spoken answer derived from final JARVIS answer
+13. spoken summary does not change critical numbers
+14. TTS queue preserves order
+15. interruption stops playback
+16. interruption clears queued chunks
+17. user may immediately follow up
+18. conversation persists after voice use
+19. text still works if voice fails
+20. TTS failure falls back to text
+21. provider failure uses existing fallback
+22. audio not retained by default
+23. voice cannot modify execution mode directly
+24. voice cannot deactivate kill switch directly
+25. voice cannot bypass RiskEngine
+26. voice cannot bypass CapitalGovernor
+27. JARVIS audio cannot recursively trigger commands
+28. voice settings persist
+29. reduced-motion still works
+30. iPad landscape works
+31. iPad portrait works
+32. authenticated API isolation tests pass
+33. all previous 98 tests remain passing
+
+==================================================
+PHASE 34 — REAL CAPABILITY ONLY
+==================================================
+
+Do not fake:
+
+microphone activity
+transcription
+TTS
+voice provider health
+latency
+background listening
+wake word support
+
+If a capability cannot be implemented reliably:
+
+mark it unavailable/degraded and document why.
+
+==================================================
+PHASE 35 — DO NOT CONNECT THESE YET
+==================================================
+
+Do NOT connect:
+
+Robinhood
+bank accounts
+email
+calendar
+Apple Home
+payment processors
+
+during this phase.
+
+Keep clean extension points.
+
+==================================================
+ACCEPTANCE TEST
+==================================================
+
+A successful end-to-end test on iPad should look like:
+
+1. authenticated user opens JARVIS
+2. taps central core
+3. grants microphone permission if required
+4. core visibly enters LISTENING
+5. user says:
+
+"JARVIS, what financial information do you currently have for me?"
+
+6. audio is transcribed
+7. request routes to Finance
+8. Finance reads only actual persisted finance data
+9. JARVIS returns one truthful answer
+10. UI displays full answer
+11. JARVIS speaks a concise version
+12. user interrupts by tapping the core
+13. playback stops immediately
+14. JARVIS returns to listening
+15. user asks:
+
+"Now help me prepare for a coating inspector interview."
+
+16. request routes to Career
+17. same JARVIS conversation continues
+18. no context leakage
+19. no application crash
+
+Also test:
+
+"Build me a business for mobile detailing."
+
+and:
+
+"Design the app that business would need."
+
+and:
+
+"Analyze my current paper trading system."
+
+All should route through the existing specialist layer.
+
+==================================================
+FINAL ACCEPTANCE CRITERIA
+==================================================
+
+At completion:
+
+- JARVIS supports real tap-to-talk on iPad
+- real transcription works
+- voice input uses existing orchestrator
+- specialists work through voice
+- real TTS works or truthful fallback exists
+- JARVIS ORIGINAL voice preset exists
+- interruption/barge-in works
+- full text response always remains available
+- audio is not stored by default
+- voice cannot bypass financial/trading safety
+- specialist API user isolation is verified
+- current 98 tests still pass
+- all new voice/isolation tests pass
+- TypeScript passes
+- production build passes
+- Robinhood remains NOT CONNECTED
+- live trading remains DISABLED
+- nothing is published
+
+==================================================
+FINAL REPORT
+==================================================
+
+Report:
+
+JARVIS VOICE SYSTEM
+[status]
+
+IPAD MICROPHONE CAPTURE
+[status]
+
+SPEECH TO TEXT
+[provider/implementation]
+[status]
+
+JARVIS ORIGINAL VOICE
+[implementation]
+[status]
+
+TEXT TO SPEECH
+[provider/implementation]
+[status]
+
+TAP TO TALK
+[status]
+
+BARGE-IN / INTERRUPTION
+[status]
+
+CONVERSATION MODE
+[status]
+
+VOICE SETTINGS
+[status]
+
+SPOKEN RESPONSE LAYER
+[status]
+
+VOICE PRIVACY
+[status]
+
+VOICE SECURITY
+[status]
+
+FINANCE VIA VOICE
+[status]
+
+RESEARCH VIA VOICE
+[status]
+
+CAREER VIA VOICE
+[status]
+
+WORK VIA VOICE
+[status]
+
+BUSINESS VIA VOICE
+[status]
+
+SOFTWARE VIA VOICE
+[status]
+
+MARKETS VIA VOICE
+[status]
+
+AUTHENTICATED API ISOLATION
+[status]
+
+EXISTING TESTS
+[x/98]
+
+NEW TESTS
+[x/x]
+
+TOTAL TESTS
+[x/x]
+
+TYPESCRIPT
+[status]
+
+PRODUCTION BUILD
+[status]
+
+ROBINHOOD
+NOT CONNECTED
+
+LIVE TRADING
+DISABLED
+
+KNOWN LIMITATIONS
+[list]
+
+SECRETS / CONFIGURATION REQUIRED
+[list exact secret names only if genuinely required]
+
+NEXT RECOMMENDED PHASE
+[recommendation]
+
+DO NOT PUBLISH.
+
+BEGIN IMPLEMENTATION NOW.
