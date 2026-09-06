@@ -1,1 +1,2 @@
 - [Trading UI truthfulness](trading-ui-truthfulness.md) — never infer live financial or execution state; show unavailable until the server provides it.
+- [AI orchestration safety](ai-orchestration-safety.md) — verify provider health at runtime and minimize context across domain boundaries.

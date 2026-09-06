@@ -10,7 +10,7 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { 
   Menu, X, Command, Home as HomeIcon, Bot, BriefcaseBusiness, 
   CircleDollarSign, TrendingUp, CalendarClock, Microscope, 
-  Zap, Link2, Settings as SettingsIcon, Bell, RefreshCw
+  Zap, Link2, Settings as SettingsIcon, Bell, RefreshCw, Network
 } from 'lucide-react';
 
 // Pages
@@ -21,6 +21,7 @@ import { FinancePage } from '@/pages/FinancePage';
 import { MarketsPage } from '@/pages/MarketsPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { ResearchPage, EmptyModulePage } from '@/pages/EmptyPages';
+import { SystemMapPage } from '@/pages/SystemMapPage';
 
 // Primitives
 import { StatusDot, TechValue, Button, JARVISCore } from '@/components/primitives';
@@ -54,6 +55,7 @@ const navGroups = [
     items: [
       { href: '/automations', label: 'Automations', icon: Zap },
       { href: '/integrations', label: 'Integrations', icon: Link2 },
+      { href: '/system-map', label: 'System Map', icon: Network },
       { href: '/settings', label: 'Settings', icon: SettingsIcon },
     ],
   },
@@ -244,6 +246,7 @@ function AuthenticatedApp() {
         <Route path="/markets" component={MarketsPage} />
         <Route path="/research" component={ResearchPage} />
         <Route path="/settings" component={SettingsPage} />
+        <Route path="/system-map" component={SystemMapPage} />
         <Route path="/personal">
           <EmptyModulePage title="Personal" id="personal" />
         </Route>

@@ -38,6 +38,8 @@ export const userSettings = pgTable(
     assistantName: text("assistant_name").notNull().default("JARVIS"),
     aiProvider: text("ai_provider").notNull().default("openai"),
     aiModel: text("ai_model").notNull().default("gpt-5.6-terra"),
+    intelligenceMode: text("intelligence_mode").notNull().default("SMART"),
+    providerMode: text("provider_mode").notNull().default("AUTO"),
     currency: text("currency").notNull().default("USD"),
     briefingPreferences: jsonb("briefing_preferences").$type<Record<string, unknown>>().notNull().default({}),
     disabledMemoryCategories: text("disabled_memory_categories").array().notNull().default([]),
@@ -60,6 +62,7 @@ export const messages = pgTable("messages", {
   conversationId: uuid("conversation_id").references(() => conversations.id, { onDelete: "cascade" }).notNull(),
   role: text("role").notNull(),
   content: text("content").notNull(),
+  domain: text("domain"),
   toolActivity: jsonb("tool_activity").$type<Record<string, unknown>[]>(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -131,4 +134,24 @@ export const auditLogs = pgTable("audit_logs", {
   status: text("status").notNull(),
   metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const aiRuns = pgTable("ai_runs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  conversationId: uuid("conversation_id").references(() => conversations.id, { onDelete: "cascade" }).notNull(),
+  domain: text("domain").notNull(),
+  intelligenceMode: text("intelligence_mode").notNull(),
+  providerMode: text("provider_mode").notNull(),
+  providers: text("providers").array().notNull().default([]),
+  models: text("models").array().notNull().default([]),
+  contextCategories: text("context_categories").array().notNull().default([]),
+  status: text("status").notNull().default("RUNNING"),
+  fallbackUsed: boolean("fallback_used").notNull().default(false),
+  inputTokens: integer("input_tokens"),
+  outputTokens: integer("output_tokens"),
+  latencyMs: integer("latency_ms"),
+  errorCode: text("error_code"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
 });

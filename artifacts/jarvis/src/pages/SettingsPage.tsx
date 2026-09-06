@@ -1,11 +1,41 @@
 import { HolographicPanel, TechLabel, TechValue, Button, StatusDot } from '@/components/primitives';
 import { useSettings } from '@/hooks/use-settings';
-import { Monitor, Volume2, Shield, Eye, Settings2 } from 'lucide-react';
+import { Monitor, Volume2, Shield, BrainCircuit, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useClerk } from '@clerk/react';
+import { AIProvider, IntelligenceMode, ProviderMode, useAIStatus } from '@/hooks/use-ai-status';
+
+const intelligenceDescriptions: Record<IntelligenceMode, string> = {
+  NORMAL: 'Baseline assistance for direct commands and routine work.',
+  SMART: 'Broader reasoning depth when the request warrants it.',
+  MAX: 'Highest available deliberation policy. Provider availability still applies.',
+};
+
+const providerDescriptions: Record<ProviderMode, string> = {
+  AUTO: 'Select from available providers according to server policy.',
+  OPENAI_ONLY: 'Restrict intelligence routing to OpenAI.',
+  GROK_ONLY: 'Restrict intelligence routing to Grok.',
+  MULTI_AI: 'Allow coordinated routing across configured providers.',
+};
+
+function providerLabel(provider: AIProvider) {
+  return provider.health;
+}
+
+function dot(label: string): 'online' | 'amber' | 'red' | 'offline' {
+  if (label === 'AVAILABLE') return 'online';
+  if (label === 'DEGRADED') return 'amber';
+  if (label === 'NOT CONFIGURED') return 'offline';
+  return 'red';
+}
 
 export function SettingsPage() {
   const { reducedMotion, setReducedMotion } = useSettings();
   const { signOut } = useClerk();
+  const { status, loading, saving, error, refresh, update } = useAIStatus();
+  const grok = status?.providers.find((provider) => provider.id.toLowerCase() === 'grok' || provider.name.toLowerCase().includes('grok'));
+  const openai = status?.providers.find((provider) => provider.id === 'openai');
+  const grokAvailable = Boolean(grok?.configured && grok?.available && providerLabel(grok) === 'AVAILABLE');
+  const openAIAvailable = Boolean(openai?.configured && openai?.available && providerLabel(openai) === 'AVAILABLE');
 
   return (
     <div className="page-enter stagger-1 pb-12 max-w-4xl mx-auto">
@@ -23,6 +53,42 @@ export function SettingsPage() {
         </div>
         
         <div className="space-y-6">
+          <HolographicPanel title="AI INTELLIGENCE">
+            {error ? <div className="settings-error"><AlertTriangle size={14} /> {error}</div> : null}
+            {loading ? <div className="py-10 text-center font-mono text-[10px] text-primary tracking-widest animate-pulse">LOADING INTELLIGENCE AUTHORITY...</div> : !status ? <div className="py-10 text-center font-mono text-[10px] text-muted-foreground tracking-widest">INTELLIGENCE CONTROLS UNAVAILABLE</div> : (
+              <div className="space-y-7">
+                <section>
+                  <div className="settings-section-heading"><BrainCircuit size={17} /><div><div className="font-mono text-sm text-white tracking-wider">INTELLIGENCE MODE</div><p>Sets the reasoning policy exposed to the orchestration layer.</p></div></div>
+                  <div className="mode-grid mt-4">
+                    {(Object.keys(intelligenceDescriptions) as IntelligenceMode[]).map((mode) => <button type="button" key={mode} disabled={saving || status.intelligenceMode === mode} onClick={() => void update({ intelligenceMode: mode })} className={`intelligence-mode ${status.intelligenceMode === mode ? 'selected' : ''}`}><strong>{mode}</strong><small>{status.intelligenceMode === mode ? 'CURRENT SERVER STATE' : intelligenceDescriptions[mode]}</small></button>)}
+                  </div>
+                </section>
+                <section>
+                  <div className="settings-section-heading"><div className="w-4 h-4 border border-primary/60 grid place-items-center"><div className="w-1 h-1 bg-primary" /></div><div><div className="font-mono text-sm text-white tracking-wider">PROVIDER ROUTING</div><p>Modes are available only where the required provider reports availability.</p></div></div>
+                  <div className="space-y-2 mt-4">
+                    {(Object.keys(providerDescriptions) as ProviderMode[]).map((mode) => {
+                      const unavailable =
+                        (mode === 'OPENAI_ONLY' && !openAIAvailable) ||
+                        (mode === 'GROK_ONLY' && !grokAvailable) ||
+                        (mode === 'MULTI_AI' && !(openAIAvailable && grokAvailable));
+                      const unavailableReason =
+                        mode === 'OPENAI_ONLY'
+                          ? `OPENAI REQUIRED // ${openai?.health ?? 'UNAVAILABLE'}`
+                          : mode === 'GROK_ONLY'
+                            ? `GROK REQUIRED // ${grok?.health ?? 'NOT_CONFIGURED'}`
+                            : `TWO AVAILABLE PROVIDERS REQUIRED`;
+                      return <button type="button" key={mode} disabled={saving || unavailable || status.providerMode === mode} onClick={() => void update({ providerMode: mode })} className={`mode-select ${status.providerMode === mode ? 'selected' : ''} ${unavailable ? 'unavailable' : ''}`}><span><strong>{mode.replaceAll('_', ' ')}</strong><small>{status.providerMode === mode ? 'CURRENT SERVER STATE' : unavailable ? unavailableReason : providerDescriptions[mode]}</small></span><StatusDot status={status.providerMode === mode ? 'online' : unavailable ? 'red' : 'amber'} /></button>;
+                    })}
+                  </div>
+                </section>
+                <section className="provider-roster">
+                  <div className="flex justify-between items-center mb-3"><TechLabel>Provider availability // Server authority</TechLabel><Button testId="button-refresh-ai-status" onClick={() => void refresh()} disabled={saving} className="h-8 px-3 text-[10px]"><RefreshCw size={12} /> REFRESH</Button></div>
+                  {status.providers.map((provider) => { const label = providerLabel(provider); return <div className="provider-row" key={provider.id}><div><strong>{provider.name}</strong><small>{provider.reason || provider.capabilities?.join(' // ') || 'NO DETAIL REPORTED'}</small></div><div className="text-right"><StatusDot status={dot(label)} /><small>{label}</small></div></div>; })}
+                  <div className="mt-3 font-mono text-[9px] tracking-widest text-muted-foreground uppercase">Last server report {new Date(status.updatedAt).toLocaleString()}</div>
+                </section>
+              </div>
+            )}
+          </HolographicPanel>
           <HolographicPanel title="DISPLAY & INTERFACE">
             <div className="space-y-6">
               <div className="flex items-center justify-between">
@@ -37,7 +103,7 @@ export function SettingsPage() {
                 </div>
                 <button 
                   onClick={() => setReducedMotion(!reducedMotion)}
-                  aria-label="Enable cinematic motion"
+                  aria-label={reducedMotion ? 'Enable cinematic motion' : 'Disable cinematic motion'}
                   aria-pressed={!reducedMotion}
                   className={`w-14 h-6 border rounded-full relative transition-colors ${!reducedMotion ? 'border-primary bg-primary/20' : 'border-muted bg-muted'}`}
                 >

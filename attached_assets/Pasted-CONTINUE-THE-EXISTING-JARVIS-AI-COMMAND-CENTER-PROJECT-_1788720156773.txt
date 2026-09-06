@@ -1,0 +1,1228 @@
+CONTINUE THE EXISTING JARVIS AI COMMAND CENTER PROJECT.
+
+DO NOT create a new project.
+DO NOT rebuild the application.
+DO NOT redesign the cinematic UI.
+DO NOT publish.
+DO NOT connect Robinhood in this phase.
+DO NOT enable live trading.
+
+This is the next sequential development phase:
+
+JARVIS CORE INTELLIGENCE
++
+MULTI-AI ORCHESTRATION
+
+==================================================
+CURRENT VERIFIED BASELINE
+==================================================
+
+The existing project already contains and must preserve:
+
+- Cinematic iPad-first JARVIS command-center UI
+- Responsive iPad landscape / portrait layouts
+- Clerk authentication
+- PostgreSQL persistence
+- User-isolated data
+- Persistent conversations
+- Streaming JARVIS chat
+- Work task creation/completion
+- Finance truthful unavailable states
+- Markets / paper-order infrastructure
+- Deterministic RiskEngine
+- Server-authoritative execution mode
+- Server-authoritative kill switch
+- Authenticated trading-state APIs
+- Audit logging
+- Research Only
+- Approval Required
+- Agentic Auto architecture
+- Agentic Auto currently unavailable
+- Robinhood currently NOT CONNECTED
+- Existing 8/8 trading-safety tests
+- Existing 10/10 state-control tests
+- Total existing safety suite: 18/18
+- Reduced-motion support
+- PWA/iPad support
+
+Current execution mode:
+
+RESEARCH_ONLY
+
+Current kill switch:
+
+INACTIVE
+
+Do not regress any of these systems.
+
+==================================================
+FOUNDATIONAL PRODUCT PRINCIPLE
+==================================================
+
+JARVIS IS NOT A TRADING BOT.
+
+JARVIS is the user's permanent general-purpose personal AI system.
+
+Trading is ONE specialist capability beneath JARVIS.
+
+The architecture must support JARVIS helping with essentially any legitimate
+personal or professional request the user gives it.
+
+Examples:
+
+- general questions
+- research
+- planning
+- writing
+- coding
+- calculations
+- document creation
+- project management
+- career assistance
+- scheduling
+- reminders
+- personal organization
+- financial analysis
+- budgeting
+- market research
+- investing research
+- trading research
+- business analysis
+- future business operations
+- future opportunity discovery
+- future automations
+- future integrations
+
+The user should normally interact with ONE identity:
+
+JARVIS
+
+The user should NOT need to manually choose:
+
+"GPT"
+"Grok"
+"Markets Agent"
+"Research Agent"
+etc.
+
+JARVIS decides how to handle the task.
+
+==================================================
+TARGET ARCHITECTURE
+==================================================
+
+Implement the foundation for:
+
+                         USER
+                           |
+                           v
+                        JARVIS
+                  PERSONAL AI SYSTEM
+                           |
+                           v
+                  INTENT / TASK ROUTER
+                           |
+                           v
+                  MULTI-AI ORCHESTRATOR
+                           |
+            +--------------+--------------+
+            |                             |
+            v                             v
+        OPENAI                         xAI GROK
+            |                             |
+            +--------------+--------------+
+                           |
+                           v
+                    JARVIS SYNTHESIS
+                           |
+        +---------+--------+--------+---------+
+        |         |        |        |         |
+       WORK    FINANCE   MARKETS  RESEARCH  PERSONAL
+                           |
+                           v
+                    SPECIALIST SYSTEMS
+
+Future providers and agents must be addable without redesigning JARVIS.
+
+==================================================
+CRITICAL ARCHITECTURAL RULE
+==================================================
+
+JARVIS owns:
+
+- user interaction
+- task understanding
+- orchestration
+- relevant context selection
+- canonical memory
+- specialist routing
+- tool routing
+- provider routing
+- synthesis
+- final response
+
+Individual AI providers do NOT become the user's assistant.
+
+OpenAI is not JARVIS.
+
+Grok is not JARVIS.
+
+Future Grok Bots are not JARVIS.
+
+They are intelligence resources JARVIS may use.
+
+==================================================
+PHASE 1 — INSPECT EXISTING AI IMPLEMENTATION
+==================================================
+
+Before modifying code:
+
+Inspect the current:
+
+- AI provider abstraction
+- Replit AI Integration
+- streaming implementation
+- chat routes
+- conversation persistence
+- intent routing
+- memory architecture
+- specialist routing
+- system prompts
+- tool interfaces
+- authentication boundaries
+
+Reuse working systems.
+
+Do not create unnecessary duplicate architecture.
+
+Report internally what can be extended versus what requires modification.
+
+==================================================
+PHASE 2 — COMMON PROVIDER INTERFACE
+==================================================
+
+Create or extend a clean provider abstraction.
+
+Example conceptual interface:
+
+AIProvider
+
+Properties/capabilities:
+
+id
+name
+providerType
+available
+configured
+health
+capabilities
+
+Methods conceptually supporting:
+
+streamResponse()
+structuredResponse()
+healthCheck()
+supportsTool()
+supportsCapability()
+
+Capabilities should be discoverable/configurable.
+
+Examples:
+
+REASONING
+FAST_RESPONSE
+CODING
+VISION
+STRUCTURED_OUTPUT
+FUNCTION_CALLING
+WEB_RESEARCH
+X_SEARCH
+LONG_CONTEXT
+TOOL_USE
+
+Do not falsely advertise capabilities.
+
+==================================================
+PHASE 3 — OPENAI PROVIDER
+==================================================
+
+Implement an official OpenAI provider adapter.
+
+Use the current maintained official OpenAI SDK/API architecture.
+
+Prefer the current Responses API architecture when appropriate.
+
+Support where available/configured:
+
+- streaming
+- reasoning
+- structured outputs
+- function/tool calling
+- vision
+- appropriate context handling
+
+DO NOT hard-code secrets.
+
+API credentials must be server-side.
+
+If an OpenAI credential is required:
+
+STOP at the appropriate configuration point and tell the user exactly:
+
+1. what credential is required
+2. the official provider it comes from
+3. the exact Replit Secret name expected
+
+NEVER ask the user to paste API keys into Replit Agent chat.
+
+Do not expose credentials to frontend code.
+
+If the existing Replit AI Integration already provides OpenAI-compatible
+capability, preserve it as a valid provider/fallback rather than breaking it.
+
+==================================================
+PHASE 4 — xAI / GROK PROVIDER
+==================================================
+
+Implement an official xAI Grok provider adapter.
+
+Use ONLY official xAI APIs/SDKs/documented interfaces.
+
+Support only capabilities actually available from the configured API.
+
+Where officially supported this may include:
+
+- reasoning
+- streaming
+- structured responses
+- function calling
+- web search
+- X search
+- code execution
+
+Do NOT:
+
+- scrape Grok
+- automate the Grok website
+- reuse browser sessions
+- reverse engineer private endpoints
+- request xAI usernames/passwords
+- fake an xAI connection
+
+If xAI credentials are required:
+
+STOP at the appropriate configuration point and tell the user:
+
+1. which credential is needed
+2. where it officially comes from
+3. the exact Replit Secret name expected
+
+Never request that the secret be pasted into Agent chat.
+
+==================================================
+PHASE 5 — GROK BOT ARCHITECTURE
+==================================================
+
+Treat GROK BOT as conceptually separate from the normal Grok model API.
+
+Create a disabled/prepared adapter slot such as:
+
+GROK_BOT
+
+BUT:
+
+Do not claim it is integrated unless an official callable API, MCP,
+connector, or supported agent interface exists and is actually configured.
+
+If official callable access is not currently available:
+
+status:
+
+UNAVAILABLE
+
+or:
+
+NOT CONFIGURED
+
+with a truthful reason.
+
+Do NOT use:
+
+browser automation
+scraping
+session hijacking
+private APIs
+reverse-engineered endpoints
+
+to control Grok Bots.
+
+The architecture should allow Grok Bot support to be added later without
+rewriting JARVIS.
+
+==================================================
+PHASE 6 — MULTI-AI ORCHESTRATOR
+==================================================
+
+Create:
+
+MultiAIOrchestrator
+
+Its job is to determine which intelligence resources should be used for a
+request.
+
+Routing factors should include:
+
+- user intent
+- task domain
+- reasoning complexity
+- freshness requirement
+- required tools
+- provider capabilities
+- provider availability
+- latency
+- cost
+- privacy/context requirements
+- specialist requirements
+- user intelligence setting
+
+Do NOT call every provider for every request.
+
+==================================================
+NORMAL ROUTING
+==================================================
+
+Simple request:
+
+JARVIS
+→ best available appropriate provider
+→ JARVIS response
+
+Complex reasoning:
+
+JARVIS
+→ strongest appropriate reasoning provider
+→ JARVIS synthesis
+
+Current/X-heavy research:
+
+JARVIS
+→ Grok/X-search capability where actually available
+→ optionally independent OpenAI analysis
+→ JARVIS synthesis
+
+High-impact decision:
+
+JARVIS
+→ independent multi-provider analysis when useful
+→ disagreement analysis
+→ JARVIS synthesis
+
+Coding:
+
+JARVIS
+→ strongest configured coding/reasoning provider
+
+General personal assistant request:
+
+JARVIS automatically selects the appropriate provider.
+
+==================================================
+PHASE 7 — INTELLIGENCE MODES
+==================================================
+
+Create user-selectable intelligence levels:
+
+NORMAL
+SMART
+MAX
+
+Default:
+
+SMART
+
+Conceptual behavior:
+
+NORMAL
+- prioritize speed
+- normally use one provider
+- avoid unnecessary parallel calls
+
+SMART
+- balanced reasoning/cost/latency
+- use multiple providers when the task warrants it
+
+MAX
+- highest practical reasoning effort
+- allow independent multi-provider analysis
+- adversarial review when useful
+- deeper synthesis
+- higher latency/cost accepted
+
+These settings control computational effort.
+
+They must NOT weaken safety controls.
+
+==================================================
+PHASE 8 — PROVIDER PREFERENCES
+==================================================
+
+Add optional advanced provider settings:
+
+AUTO
+OPENAI ONLY
+GROK ONLY
+MULTI-AI
+
+Default:
+
+AUTO
+
+AUTO should be recommended.
+
+These settings are for advanced users/debugging.
+
+The normal JARVIS experience should require no manual provider selection.
+
+==================================================
+PHASE 9 — JARVIS SYNTHESIS
+==================================================
+
+Create a proper synthesis layer.
+
+When multiple providers are used:
+
+DO NOT simply concatenate responses.
+
+JARVIS should synthesize:
+
+- areas of agreement
+- disagreements
+- supporting evidence
+- uncertainty
+- missing information
+- important assumptions
+- final recommendation/answer where appropriate
+
+The user receives ONE coherent JARVIS response.
+
+==================================================
+PHASE 10 — INDEPENDENT ANALYSIS
+==================================================
+
+For important multi-provider requests, providers should analyze independently
+before seeing each other's conclusions where practical.
+
+This reduces anchoring.
+
+Conceptual flow:
+
+REQUEST
+   |
+   +---- OPENAI independent analysis
+   |
+   +---- GROK independent analysis
+   |
+   v
+JARVIS COMPARISON
+   |
+   v
+JARVIS SYNTHESIS
+
+==================================================
+PHASE 11 — ADVERSARIAL REVIEW
+==================================================
+
+Create optional adversarial analysis for important decisions.
+
+Conceptually:
+
+PROPOSER
+build strongest case FOR
+
+CHALLENGER
+find weaknesses, missing assumptions and case AGAINST
+
+JARVIS
+evaluate both
+
+This can be used across domains.
+
+Examples:
+
+- business decisions
+- financial decisions
+- trading research
+- major purchases
+- project architecture
+- important planning
+
+Do not expose hidden chain-of-thought.
+
+Only expose useful conclusions/evidence.
+
+==================================================
+PHASE 12 — SPECIALIST ROUTING
+==================================================
+
+Preserve and extend specialist domains:
+
+GENERAL
+WORK
+FINANCE
+MARKETS
+PERSONAL
+RESEARCH
+AUTOMATIONS
+SOFTWARE
+
+Specialists are NOT separate personalities.
+
+They are capability/context boundaries underneath JARVIS.
+
+Each specialist may have:
+
+- domain-specific context
+- tools
+- provider preferences
+- structured outputs
+- safety rules
+
+But JARVIS remains the single conversational identity.
+
+==================================================
+PHASE 13 — MARKETS SPECIALIST BOUNDARY
+==================================================
+
+Markets must remain a specialist beneath JARVIS.
+
+AI providers may:
+
+- research
+- analyze
+- compare
+- propose
+- challenge
+- rank opportunities
+- generate structured trade hypotheses
+
+AI providers may NOT directly submit brokerage orders.
+
+Future trading path remains:
+
+JARVIS
+→ Markets Specialist
+→ AI research / analysis
+→ Strategy Engine
+→ validated OrderIntent
+→ deterministic RiskEngine
+→ future CapitalGovernor
+→ server-authoritative execution policy
+→ future brokerage adapter
+
+Neither OpenAI nor Grok may bypass this path.
+
+==================================================
+PHASE 14 — PRESERVE HARD TRADING CONTROLS
+==================================================
+
+DO NOT weaken or bypass:
+
+- Research Only
+- Approval Required
+- Agentic Auto gating
+- server-authoritative execution mode
+- kill switch
+- RiskEngine
+- authenticated state transitions
+- audit logging
+
+LLM text cannot modify these controls.
+
+The current 18/18 safety tests must continue passing.
+
+==================================================
+PHASE 15 — PREPARE FOR CAPITAL SURVIVAL SYSTEM
+==================================================
+
+Do NOT implement the full Capital Survival system in this phase.
+
+However, prepare clean interfaces for the next Markets intelligence phase:
+
+CapitalGovernor
+StrategyEngine
+TradeQualityScore
+CapitalSurvivalScore
+StrategyPerformanceTracker
+MarketRegimeEngine
+
+These may be interface/type placeholders only.
+
+Do not fabricate metrics.
+
+Do not display fake scores.
+
+Do not connect them to live execution yet.
+
+==================================================
+PHASE 16 — CANONICAL JARVIS MEMORY
+==================================================
+
+JARVIS must own canonical memory.
+
+Do NOT allow each AI provider to become an independent memory silo.
+
+Architecture:
+
+USER
+→ JARVIS MEMORY / CONTEXT
+→ relevant subset sent to provider
+→ provider response
+→ JARVIS
+→ appropriate memory update
+
+Only send context relevant to the request.
+
+Design for:
+
+- preferences
+- projects
+- work
+- personal organization
+- financial context
+- conversation context
+- future integrations
+
+Maintain user isolation.
+
+Do not send unrelated sensitive context to providers.
+
+==================================================
+PHASE 17 — CONTEXT MINIMIZATION
+==================================================
+
+Implement a context-selection layer.
+
+Providers should receive only what is reasonably necessary for the task.
+
+Examples:
+
+A coding question should not automatically receive financial context.
+
+A Markets request should not automatically receive unrelated personal
+information.
+
+A general question should not receive the entire database.
+
+This improves:
+
+privacy
+cost
+latency
+relevance
+
+==================================================
+PHASE 18 — TOOL SAFETY
+==================================================
+
+Treat external/provider-returned content as untrusted.
+
+Prepare defenses against:
+
+- prompt injection
+- malicious web content
+- malicious tool output
+- instructions attempting to override JARVIS policy
+- instructions attempting to expose secrets
+- instructions attempting to bypass trading controls
+
+External content is DATA.
+
+It is not authoritative JARVIS instruction.
+
+==================================================
+PHASE 19 — PROVIDER HEALTH
+==================================================
+
+Implement truthful provider health states.
+
+Examples:
+
+OPENAI
+CONNECTED
+DEGRADED
+NOT CONFIGURED
+UNAVAILABLE
+
+GROK
+CONNECTED
+DEGRADED
+NOT CONFIGURED
+UNAVAILABLE
+
+GROK BOT
+CONNECTED
+NOT CONFIGURED
+UNAVAILABLE
+
+Health should reflect actual configuration/runtime checks.
+
+Do not fake provider availability.
+
+==================================================
+PHASE 20 — AUTOMATIC FALLBACK
+==================================================
+
+If the preferred provider fails:
+
+JARVIS should attempt an appropriate configured fallback when safe.
+
+Example:
+
+OpenAI unavailable
+→ Grok if appropriate/configured
+
+Grok unavailable
+→ OpenAI if appropriate/configured
+
+If no provider can perform the task:
+
+JARVIS should say so truthfully.
+
+Do not fabricate a successful AI response.
+
+==================================================
+PHASE 21 — COST CONTROL
+==================================================
+
+Add internal usage awareness.
+
+Track where practical:
+
+provider
+model
+request type
+latency
+token/usage metadata if available
+estimated/provider-reported cost if available
+
+Do not invent costs.
+
+The orchestrator should avoid unnecessary expensive calls.
+
+MAX mode may intentionally spend more computation than NORMAL.
+
+==================================================
+PHASE 22 — AI ACTIVITY UI
+==================================================
+
+Integrate orchestration into the existing cinematic interface.
+
+Do NOT redesign the UI.
+
+Use existing visual primitives.
+
+Allow high-level activity such as:
+
+JARVIS
+ANALYZING
+
+ROUTING → RESEARCH
+
+OPENAI
+ANALYZING
+
+GROK
+SEARCHING CURRENT INFORMATION
+
+JARVIS
+SYNTHESIZING
+
+Do NOT expose hidden chain-of-thought.
+
+Show only safe high-level process status.
+
+==================================================
+PHASE 23 — SYSTEM MAP
+==================================================
+
+Update the existing System Map.
+
+JARVIS remains central.
+
+Show actual configured systems beneath it.
+
+Example:
+
+                    JARVIS
+                       |
+                AI ORCHESTRATOR
+                  /         \
+              OPENAI       GROK
+                       |
+               SPECIALIST LAYER
+        /       /       |       \
+
+     WORK   FINANCE   MARKETS   RESEARCH
+
+Only illuminate connections that actually exist.
+
+Unavailable providers must visibly appear unavailable/not configured.
+
+==================================================
+PHASE 24 — SETTINGS
+==================================================
+
+Add an AI Intelligence section to existing Settings.
+
+Include:
+
+INTELLIGENCE
+NORMAL / SMART / MAX
+
+PROVIDER MODE
+AUTO / OPENAI ONLY / GROK ONLY / MULTI-AI
+
+Provider status:
+
+OpenAI
+Grok
+Grok Bot
+
+Do not expose API keys.
+
+Provide configuration status only.
+
+==================================================
+PHASE 25 — JARVIS PERSONALITY
+==================================================
+
+Preserve JARVIS as a calm, highly capable personal AI.
+
+Characteristics:
+
+- concise when possible
+- thorough when necessary
+- analytical
+- confident without pretending certainty
+- proactive
+- professional
+- slightly formal
+- restrained dry wit where appropriate
+- not overly enthusiastic
+- not robotic
+- not trading-obsessed
+
+Avoid repetitive phrases such as:
+
+"Awesome!"
+"Great question!"
+"Sure thing!"
+"Let's go!"
+
+JARVIS should adapt its communication to the task.
+
+==================================================
+PHASE 26 — GENERAL PERSONAL ASSISTANT FUTURE
+==================================================
+
+Architect for future JARVIS capabilities without implementing all of them now.
+
+Future modules may include:
+
+Calendar
+Email
+Contacts
+Files
+Cloud storage
+Notes
+Reminders
+Home automation
+Business operations
+Real estate research
+Opportunity discovery
+Document creation
+Software development
+Data analysis
+Travel
+Purchasing research
+Personal finance
+Additional income-generating operations
+
+These future capabilities must plug underneath JARVIS.
+
+Do NOT turn this phase into an attempt to implement all future integrations.
+
+==================================================
+PHASE 27 — FUTURE OPPORTUNITY ENGINE
+==================================================
+
+Prepare an architectural extension point for:
+
+OpportunityEngine
+
+Purpose:
+
+Allow JARVIS in the future to identify and compare legitimate ways to
+increase income or deploy capital.
+
+Possible future domains:
+
+MARKETS
+BUSINESS
+REAL ESTATE
+DIGITAL PROJECTS
+COST REDUCTION
+OTHER USER-AUTHORIZED OPPORTUNITIES
+
+Do NOT implement autonomous financial/business actions now.
+
+Do NOT fabricate opportunities.
+
+This is an architectural extension point only.
+
+==================================================
+PHASE 28 — STREAMING
+==================================================
+
+Preserve the current streaming JARVIS experience.
+
+Where possible:
+
+provider stream
+→ orchestrator
+→ JARVIS response stream
+
+For multi-provider requests:
+
+show high-level activity while independent analyses complete,
+then stream the synthesized JARVIS answer.
+
+Do not expose raw internal reasoning.
+
+==================================================
+PHASE 29 — DATABASE / PERSISTENCE
+==================================================
+
+Persist only what is necessary.
+
+Potential persistent settings:
+
+intelligenceMode
+providerMode
+
+Potential operational records:
+
+provider used
+specialist selected
+task classification
+high-level latency/usage
+fallback event
+
+Do not store secrets.
+
+Avoid storing unnecessary raw provider reasoning.
+
+==================================================
+PHASE 30 — TESTING
+==================================================
+
+Keep ALL existing tests.
+
+Existing safety suite must remain:
+
+18/18 PASSING
+
+Add tests covering at minimum:
+
+1. General request routes successfully.
+2. Work request routes to Work context.
+3. Finance request routes to Finance context.
+4. Markets request routes to Markets context.
+5. Research request routes appropriately.
+6. Provider selection respects capability.
+7. AUTO mode selects an available provider.
+8. OPENAI ONLY behaves correctly.
+9. GROK ONLY behaves correctly.
+10. MULTI-AI can invoke independent providers.
+11. Provider failure triggers valid fallback.
+12. Failed providers are not reported as successful.
+13. Multi-provider synthesis returns one JARVIS answer.
+14. Context minimization prevents unrelated context leakage.
+15. User isolation remains intact.
+16. Provider output cannot modify execution mode.
+17. Provider output cannot deactivate kill switch.
+18. Provider output cannot bypass RiskEngine.
+19. Markets AI cannot directly submit brokerage orders.
+20. Intelligence mode persists.
+21. Provider preference persists.
+22. Streaming remains functional.
+23. Conversation history remains persistent.
+24. Authentication still protects APIs.
+25. Existing Work functionality still works.
+26. iPad landscape UI remains functional.
+27. iPad portrait UI remains functional.
+28. Reduced-motion remains functional.
+29. No secrets are returned to frontend.
+30. Existing 18 trading/state safety tests still pass.
+
+==================================================
+PHASE 31 — DO NOT SIMULATE COMPLETION
+==================================================
+
+Do not display:
+
+OPENAI CONNECTED
+
+unless actually connected.
+
+Do not display:
+
+GROK CONNECTED
+
+unless actually connected.
+
+Do not display:
+
+GROK BOT CONNECTED
+
+unless actually connected.
+
+Do not fabricate multi-AI responses for demonstration.
+
+If provider credentials/configuration are missing:
+
+build the architecture,
+report NOT CONFIGURED,
+and clearly state what configuration is required.
+
+==================================================
+PHASE 32 — DO NOT CONNECT ROBINHOOD
+==================================================
+
+Robinhood must remain:
+
+NOT CONNECTED
+
+Live brokerage execution remains unavailable.
+
+Do not modify this merely to demonstrate multi-AI functionality.
+
+==================================================
+ACCEPTANCE CRITERIA
+==================================================
+
+At completion:
+
+JARVIS remains the single personal assistant identity.
+
+OpenAI and Grok exist as modular intelligence providers.
+
+Provider selection can be automatic.
+
+Multi-provider analysis is supported where configured.
+
+JARVIS synthesizes one answer.
+
+Specialists remain underneath JARVIS.
+
+Markets remains safely isolated from direct AI execution.
+
+Current server-authoritative trading controls remain intact.
+
+Current 18/18 safety tests still pass.
+
+No provider is falsely shown as connected.
+
+No secrets are exposed.
+
+No Robinhood connection is made.
+
+No live trading is enabled.
+
+The existing cinematic UI remains intact.
+
+The application remains iPad-first.
+
+Nothing is published.
+
+==================================================
+FINAL REPORT
+==================================================
+
+When finished, provide:
+
+JARVIS CORE INTELLIGENCE
+[status]
+
+AI ORCHESTRATOR
+[status]
+
+OPENAI
+[connected / existing integration / not configured / unavailable]
+[actual mechanism]
+
+GROK
+[connected / not configured / unavailable]
+[actual mechanism]
+
+GROK BOT
+[connected / not configured / unavailable]
+[actual reason]
+
+DEFAULT INTELLIGENCE MODE
+[value]
+
+DEFAULT PROVIDER MODE
+[value]
+
+SPECIALIST ROUTING
+[status]
+
+JARVIS SYNTHESIS
+[status]
+
+CANONICAL MEMORY
+[status]
+
+CONTEXT MINIMIZATION
+[status]
+
+PROVIDER FALLBACK
+[status]
+
+AI ACTIVITY UI
+[status]
+
+SYSTEM MAP
+[status]
+
+MARKETS SAFETY BOUNDARY
+[status]
+
+EXISTING SAFETY TESTS
+[x/18]
+
+NEW ORCHESTRATION TESTS
+[x/x]
+
+TYPESCRIPT VALIDATION
+[status]
+
+ROBINHOOD
+NOT CONNECTED
+
+LIVE TRADING
+DISABLED
+
+SECRETS / CONFIGURATION STILL REQUIRED
+[list exact Replit Secret names only if actually required]
+
+KNOWN LIMITATIONS
+[list]
+
+NEXT RECOMMENDED PHASE
+[recommendation]
+
+DO NOT PUBLISH.
+
+BEGIN IMPLEMENTATION NOW.
