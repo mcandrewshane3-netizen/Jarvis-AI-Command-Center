@@ -20,6 +20,7 @@ describe("economic engine HTTP boundaries", () => {
   const b = `economic-http-b-${randomUUID()}`;
   const c = `economic-http-c-${randomUUID()}`;
   const d = `economic-http-d-${randomUUID()}`;
+  const e = `economic-http-e-${randomUUID()}`;
   let server: Server, base: string;
   let setRuntime: (overrides: Record<string, unknown> | null) => void;
   beforeAll(async () => {
@@ -37,6 +38,7 @@ describe("economic engine HTTP boundaries", () => {
     await db.delete(users).where(eq(users.clerkUserId, b));
     await db.delete(users).where(eq(users.clerkUserId, c));
     await db.delete(users).where(eq(users.clerkUserId, d));
+    await db.delete(users).where(eq(users.clerkUserId, e));
     setRuntime(null);
     vi.unstubAllEnvs();
   });
@@ -255,6 +257,25 @@ describe("economic engine HTTP boundaries", () => {
       execution.orderIntent.paperExecutionCost === "MODELED" &&
       typeof execution.orderIntent.executionSpreadBps === "number",
     )).toBe(true);
+
+    quotePrice = bars.at(-1)!.close;
+    await request("/economic-engine/paper/portfolio", {
+      user: e,
+      method: "POST",
+      body: { startingCapitalCents: 10_000_000 },
+    });
+    const modeledEntry = await request("/economic-engine/paper/autonomous-cycle", { user: e, method: "POST" });
+    expect(modeledEntry.status).toBe(201);
+    expect((modeledEntry.body.result as Record<string, unknown>).tradesTaken).toBe(1);
+    const [modeledEntryUser] = await db.select().from(users).where(eq(users.clerkUserId, e)).limit(1);
+    const modeledEntryExecutions = await db.select().from(paperExecutions)
+      .where(eq(paperExecutions.userId, modeledEntryUser.id));
+    expect(modeledEntryExecutions).toHaveLength(1);
+    expect(modeledEntryExecutions[0].orderIntent).toMatchObject({
+      providerBidAskStatus: "BID_ASK_UNAVAILABLE",
+      paperExecutionCost: "MODELED",
+      executionSpreadBps: 1,
+    });
 
     const bearishProvider = {
       ...aiProvider,

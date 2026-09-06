@@ -1,0 +1,165 @@
+Perform ONE focused pre-test repair for JARVIS crypto PAPER trading.
+
+DO NOT redesign.
+DO NOT publish.
+DO NOT connect Robinhood.
+DO NOT enable live trading.
+DO NOT add a provider.
+DO NOT purchase anything.
+DO NOT change strategy thresholds to create trades.
+DO NOT fabricate provider observations.
+
+Current verified baseline:
+
+183/183 tests PASS
+Twelve Data CONNECTED/HEALTHY
+BTC/USD PASS
+ETH/USD PASS
+CRYPTO classification PASS
+24/7 handling PASS
+Robinhood NOT CONNECTED
+Live trading DISABLED
+Execution PAPER ONLY
+
+Two issues must be addressed before the first crypto paper lab.
+
+==================================================
+1. INTERVAL-AWARE CRYPTO FRESHNESS
+==================================================
+
+Inspect Twelve Data's actual timestamp semantics for OHLCV intervals and
+the existing MarketDataQualityService.
+
+The current implementation can classify a legitimate hourly crypto candle
+as STALE simply because its timestamp represents an hourly interval boundary.
+
+Fix freshness evaluation so it understands the requested interval.
+
+Do NOT simply increase the global stale threshold.
+
+Freshness should distinguish between:
+
+QUOTE freshness
+1-minute bar freshness
+5-minute bar freshness
+15-minute bar freshness
+1-hour bar freshness
+daily historical data
+
+A valid recently completed hourly candle should not be treated as equivalent
+to a quote that is more than an hour old.
+
+However, genuinely delayed/missing crypto data must still become STALE.
+
+Preserve fail-closed behavior.
+
+Add tests around interval boundaries, including:
+
+- fresh hourly crypto candle
+- legitimately stale hourly crypto candle
+- stale quote
+- historical daily data
+- 24/7 weekend crypto behavior
+
+==================================================
+2. PAPER BID/ASK / EXECUTION COST POLICY
+==================================================
+
+The provider currently returns:
+
+BID_ASK_UNAVAILABLE
+
+Do NOT fabricate provider bid/ask.
+
+However, determine whether the existing PaperBroker can legitimately execute
+PAPER entries using its deterministic modeled spread/slippage methodology.
+
+If yes, allow PAPER-ONLY entry simulation with explicit provenance:
+
+providerBidAskStatus = BID_ASK_UNAVAILABLE
+paperExecutionCost = MODELED
+
+The modeled execution cost must be:
+
+- deterministic
+- configurable
+- asset-class aware
+- conservative
+- included in paper P/L
+- clearly identified as simulated
+- never presented as provider-observed bid/ask
+
+This exception applies ONLY to PAPER execution.
+
+Future LIVE execution must require actual executable brokerage information
+according to the future brokerage adapter and execution policy.
+
+Do NOT weaken the RiskEngine, TradeQualityEngine, CapitalGovernor,
+CapitalSurvivalEngine, strategy requirements, or live-trading controls.
+
+==================================================
+3. VERIFY
+==================================================
+
+After the repair, verify with REAL Twelve Data crypto data:
+
+BTC/USD
+ETH/USD
+
+Confirm that:
+
+- real provider data is being used
+- appropriate current crypto data can pass freshness when genuinely current
+- stale data still fails closed
+- PAPER entry simulation is technically possible without provider bid/ask
+- modeled execution costs are clearly separated from provider data
+- no actual trade is forced
+
+Then run:
+
+FULL TEST SUITE
+TYPESCRIPT
+API PRODUCTION BUILD
+JARVIS PRODUCTION BUILD
+
+Previous baseline is 183/183.
+
+RETURN:
+
+INTERVAL-AWARE FRESHNESS: [PASS/FAIL]
+ROOT CAUSE:
+QUOTE FRESHNESS:
+HOURLY CRYPTO FRESHNESS:
+STALE-DATA REJECTION:
+24/7 HANDLING:
+
+PROVIDER BID/ASK:
+PAPER ENTRY WITH MODELED COSTS: [SUPPORTED/BLOCKED]
+MODELED COST PROVENANCE:
+LIVE EXECUTION EFFECT: NONE
+
+BTC/USD:
+ETH/USD:
+
+FABRICATED PROVIDER DATA: NO
+
+ROBINHOOD: NOT CONNECTED
+LIVE TRADING: DISABLED
+EXECUTION: PAPER ONLY
+
+EXISTING TESTS:
+NEW TESTS:
+TOTAL TESTS:
+TYPESCRIPT:
+API PRODUCTION BUILD:
+JARVIS PRODUCTION BUILD:
+
+CODE CHANGES:
+NEW COST:
+ERRORS:
+
+READY FOR CRYPTO PAPER LAB:
+[YES/NO]
+
+Do not run the full crypto paper lab yet.
+Do not force a trade.

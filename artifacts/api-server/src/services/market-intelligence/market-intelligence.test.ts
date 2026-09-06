@@ -45,7 +45,10 @@ describe("normalized market data and Twelve Data adapter", () => {
       return {
         ok: true, status: 200,
         json: async () => input.pathname.endsWith("/quote")
-          ? { close: "501.25", bid: "501.2", ask: "501.3", volume: "1000", timestamp: 1767225600 }
+          ? {
+            close: "501.25", bid: "501.2", ask: "501.3", volume: "1000",
+            timestamp: 1767225600, last_quote_at: 1767312000,
+          }
           : { values: [
             { datetime: "2026-01-02", open: "101", high: "103", low: "100", close: "102", volume: "12" },
             { datetime: "2026-01-01", open: "100", high: "102", low: "99", close: "101", volume: "10" },
@@ -56,7 +59,12 @@ describe("normalized market data and Twelve Data adapter", () => {
       apiKey: "test-key", fetch: fetcher as never, now: () => new Date("2026-01-02T00:01:00Z"),
     });
     expect(await provider.getQuote(asset)).toMatchObject({
-      price: 501.25, bid: 501.2, ask: 501.3, bidAskStatus: "AVAILABLE",
+      price: 501.25,
+      bid: 501.2,
+      ask: 501.3,
+      bidAskStatus: "AVAILABLE",
+      marketTimestamp: "2026-01-02T00:00:00.000Z",
+      freshness: "LIVE_OR_CURRENT",
     });
     const result = await provider.getBars(asset, "1day", 2);
     expect(result.bars.map((bar) => bar.close)).toEqual([101, 102]);
@@ -118,14 +126,33 @@ describe("normalized market data and Twelve Data adapter", () => {
 
 describe("freshness and universe liquidity", () => {
   const quality = new MarketDataQualityService();
-  it("classifies current, delayed, stale, unavailable, and explicit history", () => {
+  it("classifies quote freshness independently from bar intervals", () => {
     const now = new Date("2026-01-01T12:00:00Z");
     expect(quality.classify("2026-01-01T11:59:00Z", "STOCK", now)).toBe("LIVE_OR_CURRENT");
     expect(quality.classify("2026-01-01T11:50:00Z", "STOCK", now)).toBe("DELAYED");
     expect(quality.classify("2025-12-30T00:00:00Z", "STOCK", now)).toBe("STALE");
+    expect(quality.classify("2026-01-01T10:59:00Z", "CRYPTO", now)).toBe("STALE");
     expect(quality.classify(undefined, "CRYPTO", now)).toBe("UNAVAILABLE");
     expect(quality.classify("2020-01-01", "ETF", now, true)).toBe("HISTORICAL");
     expect(quality.isUsableForCurrentStrategy("STALE")).toBe(false);
+  });
+
+  it("measures current crypto bars from their interval close and rejects stale bars", () => {
+    const now = new Date("2026-01-03T12:01:00Z");
+    expect(quality.classify("2026-01-03T11:59:00Z", "CRYPTO", now, false, "1min")).toBe("LIVE_OR_CURRENT");
+    expect(quality.classify("2026-01-03T11:55:00Z", "CRYPTO", now, false, "5min")).toBe("LIVE_OR_CURRENT");
+    expect(quality.classify("2026-01-03T11:45:00Z", "CRYPTO", now, false, "15min")).toBe("LIVE_OR_CURRENT");
+    expect(quality.classify("2026-01-03T11:00:00Z", "CRYPTO", now, false, "1h")).toBe("LIVE_OR_CURRENT");
+    expect(quality.classify("2026-01-03T10:55:00Z", "CRYPTO", now, false, "1h")).toBe("DELAYED");
+    expect(quality.classify("2026-01-03T09:00:00Z", "CRYPTO", now, false, "1h")).toBe("STALE");
+  });
+
+  it("keeps 24/7 weekend crypto bars current without market-session exceptions", () => {
+    const saturday = new Date("2026-01-03T12:01:00Z");
+    expect(quality.classify("2026-01-03T11:00:00Z", "CRYPTO", saturday, false, "1h"))
+      .toBe("LIVE_OR_CURRENT");
+    expect(quality.classify("2026-01-03T00:00:00Z", "CRYPTO", saturday, true, "1day"))
+      .toBe("HISTORICAL");
   });
 
   it("makes each inclusion decision inspectable and excludes unknown liquidity", () => {

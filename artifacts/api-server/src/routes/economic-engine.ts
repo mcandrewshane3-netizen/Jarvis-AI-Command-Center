@@ -543,10 +543,10 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
       return res.status(201).json({ ...run, mode: "PAPER", liveTradingEnabled: false });
     }
     /*
-     * This is deliberately a tiny, inspectable universe.  We request metadata and bars
-     * from the configured provider; no symbols, quotes, liquidity, or research are invented.
-     * Twelve Data does not expose the liquidity facts required by TradingUniverse here, so
-     * that absence correctly produces NO_TRADE rather than a synthetic fill.
+     * This is deliberately a tiny, inspectable universe. We request metadata, bars,
+     * quotes, and volume from the configured provider. When provider bid/ask is absent,
+     * PAPER execution may use the broker's separately labeled deterministic cost model;
+     * those modeled costs are never stored as provider liquidity observations.
      */
     const requested = [
       { symbol: "SPY", assetClass: "ETF" as const }, { symbol: "AAPL", assetClass: "STOCK" as const },
@@ -564,9 +564,10 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
     let candidateExecution: {
       assetClass: "STOCK" | "ETF" | "CRYPTO";
       spreadBps: number;
-      providerBidAskStatus: "AVAILABLE";
-      paperExecutionCost: "PROVIDER_BID_ASK_DERIVED";
+      providerBidAskStatus: "AVAILABLE" | "BID_ASK_UNAVAILABLE";
+      paperExecutionCost: "PROVIDER_BID_ASK_DERIVED" | "MODELED";
     } | null = null;
+    const modeledSpreadBps = { STOCK: 2, ETF: 1, CRYPTO: 10 } as const;
     for (const item of requested) {
       try {
         const rawAsset = await provider.getAssetMetadata(item.symbol, item.assetClass);
@@ -581,20 +582,28 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
             averageDollarVolume <= 0) {
           inspected.push({ symbol: item.symbol, reason: "LIQUIDITY_DATA_REQUIRED" }); continue;
         }
-        if (quote.bidAskStatus === "BID_ASK_UNAVAILABLE") {
-          inspected.push({ symbol: item.symbol, reason: "BID_ASK_UNAVAILABLE" }); continue;
-        }
-        if (quote.bid === null || quote.ask === null || quote.bid <= 0 || quote.ask < quote.bid) {
+        const providerBidAskAvailable = quote.bidAskStatus === "AVAILABLE";
+        if (providerBidAskAvailable &&
+            (quote.bid === null || quote.ask === null || quote.bid <= 0 || quote.ask < quote.bid)) {
           inspected.push({ symbol: item.symbol, reason: "INVALID_PROVIDER_BID_ASK" }); continue;
         }
-        const quotedSpreadBps = (quote.ask - quote.bid) / quote.price * 10_000;
+        const executionSpreadBps = providerBidAskAvailable
+          ? (quote.ask! - quote.bid!) / quote.price * 10_000
+          : modeledSpreadBps[item.assetClass];
         const asset = { ...rawAsset, liquidityData: { averageDailyVolume: averageVolume,
-          averageDailyDollarVolume: averageDollarVolume, spreadBps: quotedSpreadBps,
+          averageDailyDollarVolume: averageDollarVolume,
+          ...(providerBidAskAvailable ? { spreadBps: executionSpreadBps } : {}),
           measuredAt: quote.marketTimestamp } };
         const candidate = new OpportunityScanner().scan(asset, bars.bars);
         const membership = universe.inspect([asset])[0];
-        if (!membership.included) {
-          inspected.push({ symbol: item.symbol, reason: membership.reasons.join(",") }); continue;
+        const membershipBlockers = providerBidAskAvailable
+          ? [...membership.reasons]
+          : membership.reasons.filter((reason) => reason !== "SPREAD_TOO_WIDE");
+        if (!providerBidAskAvailable && executionSpreadBps > universe.config.liquidity.maximumSpreadBps) {
+          membershipBlockers.push("MODELED_SPREAD_TOO_WIDE");
+        }
+        if (membershipBlockers.length) {
+          inspected.push({ symbol: item.symbol, reason: membershipBlockers.join(",") }); continue;
         }
         if (candidate.status !== "CANDIDATE") {
           inspected.push({ symbol: item.symbol, reason: candidate.reason ?? "NO_TRADE" }); continue;
@@ -616,7 +625,7 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
           riskReward: candidate.features.atrPercent > 0 ? Math.min(100, 100 / candidate.features.atrPercent / 10) : 0,
           signalStrength: candidate.score, catalystQuality: 0, portfolioDiversification: 100,
           drawdownSafety: Math.max(0, 100 - portfolio.currentDrawdownBps / 100),
-          executionQuality: 100 - Math.min(100, (asset.liquidityData.spreadBps ?? 100) / 2),
+          executionQuality: 100 - Math.min(100, executionSpreadBps / 2),
         };
         objectiveQuality.set(asset.symbol, objective);
         if (candidate.score < 70 || backtest.outOfSample.sampleStatus !== "SUFFICIENT") {
@@ -629,9 +638,9 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
           targetPrice: quote.price * (1 + Math.max(candidate.features.atrPercent * 3, 0.004)) });
         candidateExecution = {
           assetClass: asset.assetClass,
-          spreadBps: quotedSpreadBps,
-          providerBidAskStatus: "AVAILABLE",
-          paperExecutionCost: "PROVIDER_BID_ASK_DERIVED",
+          spreadBps: executionSpreadBps,
+          providerBidAskStatus: quote.bidAskStatus,
+          paperExecutionCost: providerBidAskAvailable ? "PROVIDER_BID_ASK_DERIVED" : "MODELED",
         };
         candidateFreshness.set(
           asset.symbol,

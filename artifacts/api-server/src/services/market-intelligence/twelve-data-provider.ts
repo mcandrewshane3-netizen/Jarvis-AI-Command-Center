@@ -43,7 +43,7 @@ export class TwelveDataProvider implements MarketDataProvider {
   async getQuote(asset: TradableAsset): Promise<MarketQuote> {
     const raw = await this.request("/quote", { symbol: this.providerSymbol(asset) });
     const price = number(raw.close ?? raw.price, "quote price");
-    const marketTimestamp = timestamp(raw.timestamp ?? raw.datetime);
+    const marketTimestamp = timestamp(raw.last_quote_at ?? raw.timestamp ?? raw.datetime);
     const retrievedAt = this.now().toISOString();
     const rawBid = optionalNumber(raw.bid);
     const rawAsk = optionalNumber(raw.ask);
@@ -114,7 +114,7 @@ export class TwelveDataProvider implements MarketDataProvider {
     const marketTimestamp = bars[bars.length - 1].timestamp;
     return {
       provider: this.name, retrievedAt: this.now().toISOString(), marketTimestamp,
-      freshness: this.quality.classify(marketTimestamp, asset.assetClass, this.now(), historical),
+      freshness: this.quality.classify(marketTimestamp, asset.assetClass, this.now(), historical, interval),
       asset, interval, bars,
     };
   }
