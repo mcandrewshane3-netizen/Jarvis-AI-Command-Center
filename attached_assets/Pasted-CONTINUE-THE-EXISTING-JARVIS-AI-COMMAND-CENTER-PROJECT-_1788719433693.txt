@@ -1,0 +1,437 @@
+CONTINUE THE EXISTING JARVIS AI COMMAND CENTER PROJECT.
+
+DO NOT create a new project.
+DO NOT redesign the UI again.
+DO NOT publish.
+
+The cinematic JARVIS redesign is complete.
+
+Now implement the NEXT SAFETY / STATE-INTEGRATION PHASE:
+
+Expose the REAL server-authoritative trading execution mode and kill-switch
+state inside the existing Markets command center.
+
+Preserve everything already working:
+
+- Clerk authentication
+- PostgreSQL persistence
+- streaming JARVIS chat
+- Work tasks
+- cinematic UI
+- paper orders
+- deterministic RiskEngine
+- trading safety tests
+- Research Only
+- Approval Required
+- Agentic Auto
+- global kill switch
+- audit logging
+- reduced motion
+- PWA behavior
+
+Do not weaken any existing safety boundary.
+
+==================================================
+PRIMARY GOAL
+==================================================
+
+The Markets interface must display and control the ACTUAL authoritative
+server-side trading state.
+
+The frontend must never be the source of truth.
+
+The source of truth must remain server-side / persisted.
+
+Expose:
+
+EXECUTION MODE
+
+RESEARCH ONLY
+APPROVAL REQUIRED
+AGENTIC AUTO
+
+and:
+
+GLOBAL KILL SWITCH
+
+ACTIVE / INACTIVE
+
+==================================================
+STEP 1 — INSPECT EXISTING BACKEND
+==================================================
+
+First locate the current implementation of:
+
+- execution mode state
+- kill-switch state
+- risk settings
+- authenticated user settings
+- audit logging
+- trading-safety tests
+
+Do NOT create duplicate state if the real implementation already exists.
+
+Reuse the existing authoritative storage and logic.
+
+If one or both states are not currently persisted, add them to the existing
+server-side settings/risk-profile architecture.
+
+==================================================
+STEP 2 — SERVER API
+==================================================
+
+Create authenticated server endpoints/actions for reading the current state.
+
+Return structured data such as:
+
+{
+  executionMode: "RESEARCH_ONLY" | "APPROVAL_REQUIRED" | "AGENTIC_AUTO",
+  killSwitchActive: boolean,
+  updatedAt: timestamp
+}
+
+The API must:
+
+- require authentication
+- enforce user isolation
+- validate responses
+- never trust client-supplied user IDs
+
+==================================================
+STEP 3 — EXECUTION MODE CHANGES
+==================================================
+
+Implement a server-authoritative action for changing execution mode.
+
+Allowed transitions:
+
+RESEARCH_ONLY
+APPROVAL_REQUIRED
+AGENTIC_AUTO
+
+Rules:
+
+RESEARCH_ONLY:
+may always be selected.
+
+APPROVAL_REQUIRED:
+may be selected through authenticated settings control.
+
+AGENTIC_AUTO:
+must NOT be enabled casually.
+
+Require explicit authenticated confirmation.
+
+If Robinhood is not connected, Agentic Auto should remain unavailable or
+clearly blocked according to the existing system rules.
+
+Do NOT silently enable Agentic Auto.
+
+Do NOT default to Agentic Auto.
+
+==================================================
+STEP 4 — KILL SWITCH
+==================================================
+
+Implement the real kill-switch control in Markets.
+
+When activated:
+
+- immediately set server-authoritative killSwitchActive = true
+- block all NEW live order submissions
+- block strategy-driven live submissions
+- block Agentic Auto live submissions
+- record an audit event
+- visually display TRADING PAUSED / KILL SWITCH ACTIVE
+
+The kill switch must be checked again immediately before any future live
+broker submission.
+
+The UI control itself must not be the only enforcement point.
+
+==================================================
+IMPORTANT KILL-SWITCH BEHAVIOR
+==================================================
+
+Activating the kill switch means:
+
+STOP NEW LIVE TRADING.
+
+It must NOT automatically:
+
+- liquidate positions
+- cancel all orders
+- close positions
+- sell everything
+
+unless the user separately invokes a clearly labeled action designed for
+that purpose.
+
+Keep these actions separate.
+
+==================================================
+STEP 5 — DEACTIVATING KILL SWITCH
+==================================================
+
+Deactivation must require deliberate authenticated confirmation.
+
+Do not use an accidental one-tap toggle.
+
+Suggested flow:
+
+KILL SWITCH ACTIVE
+
+button:
+REQUEST REACTIVATION
+
+confirmation:
+"Resume permission for new live trading?"
+
+then authenticated server-side update.
+
+Log the event.
+
+==================================================
+STEP 6 — MARKETS UI
+==================================================
+
+Update the existing cinematic Markets interface.
+
+Prominently show:
+
+EXECUTION MODE
+RESEARCH ONLY
+
+or actual state.
+
+Show:
+
+KILL SWITCH
+ACTIVE / INACTIVE
+
+These must come from the real backend.
+
+Do not use mock state.
+
+==================================================
+EXECUTION MODE UI
+==================================================
+
+Provide a protected mode selector.
+
+Visual states:
+
+RESEARCH ONLY
+cyan / neutral
+
+APPROVAL REQUIRED
+amber
+
+AGENTIC AUTO
+persistent amber/orange warning
+
+When Agentic Auto is unavailable:
+
+display the actual reason.
+
+Examples:
+
+ROBINHOOD NOT CONNECTED
+
+LIVE EXECUTION NOT CONFIGURED
+
+AUTHORIZATION REQUIRED
+
+Do not fabricate availability.
+
+==================================================
+STEP 7 — STATUS SYNCHRONIZATION
+==================================================
+
+The Markets page should refresh authoritative state:
+
+- on page load
+- after a mode change
+- after kill-switch changes
+- after authentication/session changes
+- after relevant trading actions
+
+Use optimistic UI only if it cannot misrepresent safety state.
+
+For safety-critical controls, prefer confirmed server response before
+showing success.
+
+==================================================
+STEP 8 — ROUTING ENFORCEMENT
+==================================================
+
+Verify that the current execution controller uses the authoritative state.
+
+Every live execution attempt must effectively follow:
+
+OrderIntent
+→ validation
+→ RiskEngine
+→ read latest server-side executionMode
+→ read latest server-side killSwitchActive
+→ execution controller
+→ brokerage adapter
+
+If:
+
+executionMode == RESEARCH_ONLY
+
+BLOCK live execution.
+
+If:
+
+killSwitchActive == true
+
+BLOCK live execution.
+
+No LLM output can override either result.
+
+==================================================
+STEP 9 — AUDIT EVENTS
+==================================================
+
+Audit:
+
+EXECUTION_MODE_CHANGED
+
+KILL_SWITCH_ACTIVATED
+
+KILL_SWITCH_DEACTIVATED
+
+LIVE_ORDER_BLOCKED_RESEARCH_MODE
+
+LIVE_ORDER_BLOCKED_KILL_SWITCH
+
+Include:
+
+authenticated user
+timestamp
+previous state
+new state
+relevant reason
+
+Never log secrets.
+
+==================================================
+STEP 10 — JARVIS AWARENESS
+==================================================
+
+Expose these states to JARVIS as safe structured context.
+
+JARVIS may say:
+
+"Trading is currently in Research Only mode."
+
+"The kill switch is active. New live orders are blocked."
+
+But JARVIS must not be able to change these states merely through model text.
+
+Changes must use explicit authenticated application actions.
+
+==================================================
+STEP 11 — SYSTEM MAP / HEALTH
+==================================================
+
+Update the existing System Map / Markets telemetry.
+
+Examples:
+
+MARKETS
+EXECUTION: RESEARCH ONLY
+
+RISK ENGINE
+ONLINE
+
+KILL SWITCH
+INACTIVE
+
+ROBINHOOD MCP
+NOT CONNECTED
+
+Use actual state only.
+
+==================================================
+STEP 12 — TESTS
+==================================================
+
+Keep all existing 8 trading-safety tests.
+
+Add tests proving:
+
+1. Research Only blocks every live submission.
+2. Approval Required cannot execute without approval.
+3. Agentic Auto cannot activate without required conditions.
+4. Kill switch blocks live order submission.
+5. Kill switch is checked server-side, not only in UI.
+6. A forged frontend request cannot bypass Research Only.
+7. A forged frontend request cannot bypass kill switch.
+8. LLM-generated instructions cannot alter execution mode.
+9. LLM-generated instructions cannot deactivate kill switch.
+10. State persists through refresh/login session where intended.
+
+Do not remove old tests.
+
+==================================================
+STEP 13 — DO NOT CONNECT ROBINHOOD YET
+==================================================
+
+This phase does NOT connect Robinhood.
+
+Robinhood remains:
+
+NOT CONNECTED
+
+Live trading remains unavailable.
+
+We are only making the existing trading controls truthful and
+server-authoritative before adding external brokerage execution.
+
+==================================================
+FINAL REPORT
+==================================================
+
+When complete report:
+
+TRADING STATE CONTROL
+
+Execution mode source of truth:
+[actual implementation]
+
+Current execution mode:
+[actual value]
+
+Kill-switch source of truth:
+[actual implementation]
+
+Current kill-switch state:
+[actual value]
+
+Markets UI:
+[status]
+
+JARVIS awareness:
+[status]
+
+Audit logging:
+[status]
+
+Existing safety tests:
+[x/x]
+
+New state-control tests:
+[x/x]
+
+Robinhood:
+NOT CONNECTED
+
+Known issues:
+[list]
+
+Do not publish.
+
+BEGIN IMPLEMENTATION NOW.
