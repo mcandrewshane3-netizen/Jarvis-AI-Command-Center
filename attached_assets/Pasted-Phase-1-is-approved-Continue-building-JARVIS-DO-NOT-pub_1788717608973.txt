@@ -1,0 +1,184 @@
+Phase 1 is approved. Continue building JARVIS.
+
+DO NOT publish yet and DO NOT stop after each phase unless you require information or a secret that only I can provide.
+
+Continue implementing the master JARVIS specification I originally gave you.
+
+Work through the remaining phases sequentially, testing and repairing each phase before proceeding.
+
+PRIORITY ORDER:
+
+1. Persistent PostgreSQL database
+2. Authentication and secure sessions
+3. Persistent users, settings, conversations, messages and memories
+4. Real JARVIS AI backend with streaming responses
+5. AI provider abstraction
+6. JARVIS orchestrator and specialist-agent routing
+7. Work module
+8. Finance module
+9. Markets module
+10. Deterministic trading Risk Engine
+11. Paper trading system
+12. Robinhood Agentic Trading MCP integration
+13. TradingView webhook integration
+14. Automation engine
+15. PWA/iPad installation and polishing
+16. Security testing and final deployment testing
+
+IMPORTANT:
+
+The current Demo Mode UI is useful as a fallback, but replace simulated functionality with real backend functionality as each component is completed.
+
+Do not delete or substantially redesign the current interface unless necessary. I approve the existing visual direction.
+
+DATABASE:
+
+Provision and configure a persistent PostgreSQL database using the most appropriate current Replit-supported database option.
+
+Create migrations and persistent models for the entities in the original specification.
+
+Do not keep important application state only in browser localStorage.
+
+AI:
+
+Implement the actual server-side AI provider architecture.
+
+Support OpenAI and xAI/Grok through provider adapters.
+
+Use Replit Secrets for API credentials.
+
+If credentials are missing, keep Demo Mode operational and tell me exactly which Secret is required.
+
+Build real streaming JARVIS chat.
+
+Implement the JARVIS orchestrator so normal-language requests can be routed to Work, Finance, Markets, Personal and Research capabilities.
+
+TRADING:
+
+Implement the deterministic Risk Engine BEFORE implementing live brokerage order execution.
+
+The Risk Engine must be ordinary application code, not an LLM prompt.
+
+Implement and thoroughly test:
+
+- OrderIntent schema validation
+- maximum position size
+- maximum account percentage
+- maximum risk per trade
+- maximum daily loss
+- maximum open positions
+- maximum trades per day
+- maximum total exposure
+- minimum cash reserve
+- allowed/blocked assets
+- trading-hour restrictions
+- kill switch
+
+Then implement paper trading and test the complete trading pipeline without real money.
+
+ROBINHOOD:
+
+After the Risk Engine and paper-trading pipeline pass their tests, implement Robinhood Agentic Trading using Robinhood's OFFICIAL Trading MCP:
+
+https://agent.robinhood.com/mcp/trading
+
+Do not scrape Robinhood.
+Do not use unofficial Robinhood APIs.
+Do not request my Robinhood username or password.
+Do not automate the normal Robinhood website.
+
+Build JARVIS as an MCP client.
+
+Use MCP capability/tool discovery instead of assuming Robinhood tool names.
+
+Implement the official authentication flow required by the Robinhood MCP server.
+
+Start Robinhood integration READ ONLY.
+
+First verify that JARVIS can retrieve the supported account/portfolio/position information.
+
+Do NOT submit a real trade merely to test the integration.
+
+After read-only connectivity works, implement the execution pipeline:
+
+JARVIS
+→ Markets Agent
+→ structured OrderIntent
+→ deterministic Risk Engine
+→ execution-mode controller
+→ Robinhood MCP
+→ Robinhood Agentic Account
+
+Execution modes:
+
+RESEARCH ONLY
+APPROVAL REQUIRED
+AGENTIC AUTO
+
+Default to RESEARCH ONLY.
+
+Agentic Auto must remain OFF until I explicitly enable it.
+
+All live orders, including Agentic Auto orders, MUST pass the deterministic Risk Engine.
+
+The LLM must have no code path capable of bypassing the Risk Engine.
+
+The global kill switch must prevent all new live orders regardless of what the AI, strategy, automation or external webhook requests.
+
+TRADINGVIEW:
+
+Build an authenticated TradingView webhook endpoint.
+
+TradingView alerts may create trading signals/OrderIntents but may NEVER directly submit a brokerage order.
+
+They must pass through the same Risk Engine and execution controller.
+
+IPAD:
+
+Remember that this system is intended for everyday operation entirely from my iPad.
+
+The backend should run in Replit's cloud even when Safari is closed.
+
+Maintain the responsive iPad interface.
+
+Finish PWA configuration so the deployed JARVIS application can be added to my iPad Home Screen and launched in standalone mode.
+
+TESTING:
+
+Write automated tests for security-critical trading behavior.
+
+Explicitly prove with tests that:
+
+1. Research Only cannot submit an order.
+2. Approval Required cannot submit without approval.
+3. Agentic Auto still cannot bypass RiskEngine.
+4. A failed risk rule blocks an order.
+5. Kill switch blocks all new orders.
+6. TradingView cannot directly execute an order.
+7. Malformed AI output cannot become a brokerage order.
+8. External/prompt-injection content cannot alter execution mode or risk settings.
+
+Do not claim an integration works unless you have actually verified it.
+
+Do not represent simulated data as live data.
+
+WHEN YOU NEED SOMETHING FROM ME:
+
+If you reach a point requiring an API key, OAuth authorization, Robinhood authentication, Replit Secret, permission, or other information that only I can provide:
+
+STOP at that specific dependency.
+
+Tell me in plain English:
+
+1. What you need
+2. Why you need it
+3. Exactly where I tap/click on my iPad
+4. Exactly what I enter
+5. Whether the value is sensitive
+6. What you will do after I provide it
+
+Do not ask me to manually write code.
+
+Continue building everything that does NOT require my intervention before stopping.
+
+Begin Phase 2 now.
