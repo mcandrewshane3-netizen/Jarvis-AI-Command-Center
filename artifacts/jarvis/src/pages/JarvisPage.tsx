@@ -16,7 +16,7 @@ export function JarvisPage() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [activities, setActivities] = useState<AIActivity[]>([]);
-  const [lastRun, setLastRun] = useState<{ domain: string; providers: string[]; fallbackUsed: boolean } | null>(null);
+  const [lastRun, setLastRun] = useState<{ domain: string; specialists?: string[]; providers: string[]; fallbackUsed: boolean } | null>(null);
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const { reducedMotion } = useSettings();
@@ -83,7 +83,7 @@ export function JarvisPage() {
           error?: string;
           activity?: AIActivity;
           done?: boolean;
-          run?: { domain: string; providers: string[]; fallbackUsed: boolean };
+          run?: { domain: string; specialists?: string[]; providers: string[]; fallbackUsed: boolean };
         };
         if (data.error) throw new Error(data.error);
         if (data.activity) {
@@ -195,7 +195,9 @@ export function JarvisPage() {
             {activities.length === 0 ? (
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
                 <BrainCircuit size={15} className="text-primary/60" />
-                {lastRun ? `${lastRun.domain} // ${lastRun.providers.map((provider) => provider.toUpperCase()).join(' + ')}` : 'Awaiting orchestration activity'}
+                {lastRun
+                  ? `${lastRun.specialists?.join(' + ') || lastRun.domain} // ${lastRun.providers.map((provider) => provider.toUpperCase()).join(' + ')}`
+                  : 'Awaiting orchestration activity'}
               </div>
             ) : activities.map((activity, index) => (
               <div className="flex items-start gap-3 border-l border-primary/20 pl-3" key={`${activity.stage}-${activity.provider ?? 'system'}-${index}`}>

@@ -5,6 +5,7 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  index,
   text,
   timestamp,
   uuid,
@@ -19,6 +20,11 @@ export const memoryCategory = pgEnum("memory_category", [
   "FINANCE",
   "MARKETS",
   "PERSONAL",
+  "RESEARCH",
+  "CAREER",
+  "BUSINESS",
+  "SOFTWARE",
+  "AUTOMATIONS",
   "TEMPORARY",
 ]);
 
@@ -90,6 +96,26 @@ export const tasks = pgTable("tasks", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+export const specialistRecords = pgTable(
+  "specialist_records",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    specialist: text("specialist").notNull(),
+    recordType: text("record_type").notNull(),
+    title: text("title").notNull(),
+    status: text("status").notNull().default("ACTIVE"),
+    source: text("source").notNull().default("MANUAL"),
+    data: jsonb("data").$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("specialist_records_user_specialist_idx").on(table.userId, table.specialist),
+    index("specialist_records_user_type_idx").on(table.userId, table.recordType),
+  ],
+);
 
 export const riskProfiles = pgTable(
   "risk_profiles",

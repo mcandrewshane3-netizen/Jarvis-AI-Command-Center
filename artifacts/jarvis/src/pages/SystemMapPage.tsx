@@ -59,7 +59,7 @@ export function SystemMapPage() {
         <div className="map-link map-link-c" />
         <HolographicPanel title="SPECIALISTS" className="map-node specialist-node">
           <div className="grid grid-cols-2 gap-2">
-            {['GENERAL', 'WORK', 'RESEARCH', 'FINANCE', 'MARKETS', 'PERSONAL', 'AUTOMATIONS', 'SOFTWARE'].map((item) => <div className="specialist-cell" key={item}><Network size={13} /><span>{item}</span></div>)}
+            {['GENERAL', 'FINANCE', 'RESEARCH', 'CAREER', 'WORK', 'BUSINESS', 'SOFTWARE', 'MARKETS', 'PERSONAL', 'AUTOMATIONS'].map((item) => <div className="specialist-cell" key={item}><Network size={13} /><span>{item}</span></div>)}
           </div>
           <p className="mt-4 font-mono text-[9px] tracking-widest text-muted-foreground uppercase">Specialist surfaces receive orchestrated context. Availability follows the provider layer.</p>
         </HolographicPanel>

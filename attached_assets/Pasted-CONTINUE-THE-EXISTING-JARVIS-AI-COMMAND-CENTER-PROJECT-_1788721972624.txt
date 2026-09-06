@@ -1,0 +1,1261 @@
+CONTINUE THE EXISTING JARVIS AI COMMAND CENTER PROJECT.
+
+DO NOT create a new project.
+DO NOT rebuild the application.
+DO NOT redesign the cinematic UI.
+DO NOT publish.
+DO NOT connect Robinhood yet.
+DO NOT enable live trading.
+
+This is the next sequential development phase:
+
+JARVIS SPECIALIST OPERATING LAYER
+
+The goal is to make JARVIS genuinely useful TODAY across:
+
+- Finance
+- Research
+- Career / Work
+- Business Builder / Operator
+- Software / App Builder
+- Markets / Trading Intelligence
+
+JARVIS must remain the ONE top-level assistant.
+
+OpenAI and Grok are intelligence providers beneath JARVIS.
+Specialists are capability domains beneath JARVIS.
+The user should not need to manually switch bots.
+
+==================================================
+CURRENT VERIFIED BASELINE
+==================================================
+
+Preserve the current working system:
+
+- Cinematic iPad-first JARVIS UI
+- Clerk authentication
+- PostgreSQL persistence
+- user isolation
+- persistent conversations
+- streaming chat
+- Work task persistence
+- specialist routing
+- AI orchestration
+- OpenAI provider
+- xAI/Grok provider
+- AUTO / OPENAI ONLY / GROK ONLY / MULTI-AI
+- NORMAL / SMART / MAX intelligence modes
+- canonical JARVIS memory
+- context minimization
+- provider fallback
+- provider health checks
+- server-authoritative execution mode
+- server-authoritative kill switch
+- deterministic RiskEngine
+- paper orders
+- audit logging
+- Robinhood NOT CONNECTED
+- live trading DISABLED
+- 45/45 current tests passing
+- TypeScript validation passing
+
+Do not regress any of these.
+
+==================================================
+FOUNDATIONAL RULE
+==================================================
+
+JARVIS is not a collection of disconnected bots.
+
+JARVIS is one personal AI operator.
+
+Architecture:
+
+USER
+→ JARVIS
+→ intent classification
+→ specialist selection
+→ appropriate AI/provider/tools
+→ JARVIS synthesis
+→ one response
+
+Specialists may have distinct tools, context, data structures and safety rules,
+but should not present themselves as separate assistants unless needed for debugging.
+
+==================================================
+PHASE 1 — SPECIALIST REGISTRY
+==================================================
+
+Create or extend a clean specialist registry.
+
+Required specialist domains:
+
+GENERAL
+FINANCE
+RESEARCH
+CAREER
+WORK
+BUSINESS
+SOFTWARE
+MARKETS
+PERSONAL
+AUTOMATIONS
+
+Each specialist should declare:
+
+- id
+- name
+- supported intents
+- relevant tools
+- relevant data/context
+- preferred provider capabilities
+- structured output schemas
+- safety constraints
+- whether autonomous actions are allowed
+- whether user confirmation is required
+
+Keep routing deterministic where possible.
+
+Use LLM classification only where deterministic routing is insufficient.
+
+==================================================
+PHASE 2 — FINANCE SPECIALIST
+==================================================
+
+Make Finance useful for real personal financial management.
+
+JARVIS should be able to handle:
+
+- income
+- paychecks
+- bills
+- bill due dates
+- loans
+- credit cards
+- recurring expenses
+- groceries
+- fuel
+- miscellaneous spending
+- savings
+- savings goals
+- emergency fund
+- debt payoff planning
+- monthly budget
+- weekly budget
+- cash flow
+- affordability questions
+- scenario comparisons
+
+Create persistent financial data models only where needed.
+
+Examples:
+
+FinancialAccount
+IncomeSource
+RecurringBill
+Debt
+SavingsGoal
+ExpenseEntry
+BudgetCategory
+CashFlowProjection
+
+Do NOT fabricate bank balances.
+
+If no connected financial account exists:
+
+allow the user to manually provide data.
+
+Mark manual data clearly.
+
+Design this specialist so future bank/financial integrations can replace or augment manual data without rewriting the architecture.
+
+==================================================
+FINANCE INTELLIGENCE
+==================================================
+
+JARVIS should answer questions like:
+
+"What bills do I have this week?"
+
+"How much can I spend after my bills?"
+
+"How quickly can I save $20,000?"
+
+"What happens if my paycheck is $300 lower this week?"
+
+"Can I afford this?"
+
+"Build me a budget through November."
+
+Use deterministic calculations for numbers.
+
+Use AI for explanation/planning, not arithmetic that can be calculated directly.
+
+==================================================
+PHASE 3 — RESEARCH SPECIALIST
+==================================================
+
+Build a serious general-purpose research workflow.
+
+JARVIS should determine when research requires:
+
+- OpenAI
+- Grok
+- both providers
+- current web information
+- X/current sentiment where supported
+- independent second opinion
+- adversarial review
+
+Research workflow:
+
+QUESTION
+→ classify freshness/complexity
+→ gather evidence
+→ independent analyses if useful
+→ compare findings
+→ synthesize
+→ cite/identify sources in user-facing output where available
+
+Do not present unsupported speculation as fact.
+
+Create structured internal research output:
+
+ResearchResult
+
+with fields such as:
+
+topic
+summary
+keyFindings
+evidence
+conflictingEvidence
+uncertainties
+sources
+dateChecked
+confidenceBand
+
+Do not use fake confidence percentages.
+
+==================================================
+PHASE 4 — CAREER SPECIALIST
+==================================================
+
+Create a dedicated Career specialist.
+
+Capabilities:
+
+- resume creation
+- resume tailoring
+- cover letters
+- job description analysis
+- skills-gap analysis
+- interview preparation
+- mock interview
+- likely interview questions
+- STAR response development
+- employer research
+- salary research architecture
+- job search assistance
+- application tracking architecture
+- work history organization
+- certification / qualification mapping
+
+JARVIS should preserve a structured CareerProfile for the user where authorized.
+
+Possible fields:
+
+workHistory
+roles
+skills
+certifications
+industries
+equipment
+software
+achievements
+preferredJobs
+locations
+salaryTargets
+
+Do not overwrite user-provided work history with inferred information.
+
+==================================================
+CAREER / WORK SEPARATION
+==================================================
+
+CAREER = getting/improving employment.
+
+WORK = helping with the user's current professional work.
+
+WORK should support:
+
+- project planning
+- documentation
+- procedures
+- reports
+- technical explanations
+- checklists
+- spreadsheets/documents
+- calculations
+- inspection documentation
+- work task tracking
+- professional writing
+
+==================================================
+PHASE 5 — BUSINESS BUILDER SPECIALIST
+==================================================
+
+Create:
+
+BUSINESS
+
+This specialist should turn business requests into executable plans.
+
+Example request:
+
+"JARVIS, build me a pressure washing business."
+
+Expected workflow:
+
+1. clarify assumptions only if truly required
+2. market research
+3. customer definition
+4. offer design
+5. pricing
+6. startup costs
+7. competitive positioning
+8. branding direction
+9. sales process
+10. marketing plan
+11. customer acquisition
+12. operations
+13. SOPs
+14. financial model
+15. KPI dashboard
+16. automation opportunities
+17. launch checklist
+18. risk analysis
+19. next actions
+
+Create reusable business data structures:
+
+BusinessProject
+BusinessModel
+Offer
+CustomerSegment
+PricingPlan
+StartupBudget
+RevenueModel
+MarketingChannel
+SOP
+KPI
+BusinessTask
+BusinessRisk
+
+==================================================
+BUSINESS OPERATOR
+==================================================
+
+Prepare JARVIS to OPERATE businesses through tools and integrations later.
+
+Important distinction:
+
+JARVIS may currently:
+
+- research
+- plan
+- write
+- design
+- calculate
+- generate documents
+- create workflows
+- generate SOPs
+- create marketing copy
+- create customer scripts
+- create dashboards
+- plan campaigns
+- track business tasks
+
+JARVIS must NOT pretend it has:
+
+- opened bank accounts
+- formed legal entities
+- signed contracts
+- collected payments
+- placed ads
+- contacted customers
+- filed taxes
+- obtained licenses
+- performed physical work
+
+unless an actual authorized integration/tool exists and confirms the action.
+
+Create a generic action status model:
+
+PLANNED
+READY
+REQUIRES_USER
+AUTHORIZED
+RUNNING
+COMPLETED
+FAILED
+
+Only mark COMPLETED after actual confirmation.
+
+==================================================
+PHASE 6 — SOFTWARE / APP BUILDER
+==================================================
+
+Create a strong SOFTWARE specialist.
+
+The user should eventually be able to say:
+
+"JARVIS, build me an app that does X."
+
+The specialist should support:
+
+- idea clarification
+- requirements
+- product spec
+- user stories
+- architecture
+- data model
+- API design
+- UI/UX planning
+- implementation planning
+- code generation
+- testing strategy
+- bug analysis
+- deployment planning
+- iteration
+- technical documentation
+
+Create reusable project structures:
+
+SoftwareProject
+Requirement
+Feature
+UserStory
+ArchitectureDecision
+DataModel
+APIContract
+Task
+TestCase
+Bug
+Release
+
+==================================================
+SOFTWARE EXECUTION
+==================================================
+
+When running inside Replit:
+
+JARVIS should be able to prepare work for the existing coding environment.
+
+Do NOT create a second JARVIS app inside itself.
+
+The Software specialist should distinguish:
+
+- advising about software
+- designing software
+- modifying the current JARVIS project
+- creating a new unrelated app/project
+
+For unrelated app builds:
+
+create a project plan/spec first.
+
+Do not silently modify JARVIS itself.
+
+Future tooling may allow JARVIS to create/delegate projects automatically.
+
+Prepare interfaces for that without pretending the capability exists today.
+
+==================================================
+PHASE 7 — MARKETS INTELLIGENCE FOUNDATION
+==================================================
+
+Now deepen MARKETS significantly.
+
+This phase remains PAPER / RESEARCH ONLY for brokerage activity.
+
+Implement the first serious trading intelligence foundation.
+
+Create:
+
+StrategyEngine
+MarketRegimeEngine
+TradeQualityEngine
+StrategyPerformanceTracker
+CapitalGovernor
+CapitalSurvivalEngine
+
+These are real modules, not UI-only concepts.
+
+==================================================
+PHASE 8 — STRATEGY ENGINE
+==================================================
+
+Create a strategy framework capable of supporting multiple strategy families.
+
+Initial framework should allow:
+
+- momentum
+- breakout
+- trend following
+- mean reversion
+- catalyst/news
+- swing
+- relative strength
+- volatility-based approaches
+
+Do not claim any strategy is profitable without evidence.
+
+Each strategy should have:
+
+id
+name
+version
+status
+assetUniverse
+timeframe
+entryRules
+exitRules
+riskRules
+requiredData
+allowedRegimes
+performanceMetrics
+validationStage
+
+Validation stages:
+
+IDEA
+BACKTEST
+OUT_OF_SAMPLE
+PAPER
+LIMITED_LIVE
+SCALED
+PAUSED
+RETIRED
+
+Do not allow an AI model to skip validation stages.
+
+==================================================
+PHASE 9 — MARKET REGIME ENGINE
+==================================================
+
+Create:
+
+MarketRegimeEngine
+
+Purpose:
+
+classify the current environment using objective market data when available.
+
+Possible dimensions:
+
+trend
+volatility
+breadth
+liquidity
+risk-on/risk-off
+sector leadership
+correlation
+event risk
+
+Do not fabricate regime values if live data is unavailable.
+
+If data is missing:
+
+REGIME = UNKNOWN
+
+and explain missing inputs.
+
+==================================================
+PHASE 10 — TRADE QUALITY ENGINE
+==================================================
+
+Create:
+
+TradeQualityScore
+
+Range:
+
+0–100
+
+BUT:
+
+score must be deterministic or rules-based from actual inputs.
+
+The LLM must not invent the score.
+
+Potential factors:
+
+- strategy expectancy
+- regime fit
+- risk/reward
+- liquidity
+- volatility
+- technical confirmation
+- catalyst quality
+- model agreement/disagreement
+- portfolio correlation
+- current drawdown
+- execution quality
+
+Make weights configurable.
+
+Do not present a score if required inputs are missing.
+
+==================================================
+PHASE 11 — CAPITAL SURVIVAL ENGINE
+==================================================
+
+Implement the Capital Survival philosophy.
+
+Core objective:
+
+MAXIMIZE SUSTAINABLE LONG-TERM RISK-ADJUSTED CAPITAL GROWTH
+WHILE MINIMIZING PROBABILITY OF RUIN.
+
+Capital is conceptually JARVIS's trading life.
+
+This must make JARVIS MORE conservative during losses, never desperate.
+
+Create:
+
+CapitalSurvivalScore
+
+0–100
+
+using objective inputs such as:
+
+- current drawdown
+- max drawdown
+- realized P/L
+- unrealized P/L
+- total exposure
+- concentration
+- volatility
+- recent expectancy
+- profit factor
+- losing streak
+- regime fit
+- available risk budget
+
+Possible states:
+
+STRONG
+HEALTHY
+CAUTION
+DEFENSIVE
+CAPITAL_PRESERVATION
+SURVIVAL
+
+Do not fabricate metrics.
+
+==================================================
+ABSOLUTE SURVIVAL RULE
+==================================================
+
+Never implement logic equivalent to:
+
+"We are losing, increase risk to make it back."
+
+Instead:
+
+LOSSES
+→ REDUCE RISK
+→ REDUCE SIZE
+→ REASSESS
+→ PAUSE WEAK STRATEGIES
+→ POSSIBLY STOP NEW RISK
+
+Detect and reject revenge-trading behavior.
+
+==================================================
+PHASE 12 — CAPITAL GOVERNOR
+==================================================
+
+Implement:
+
+CapitalGovernor
+
+This sits ABOVE individual trade execution.
+
+Architecture:
+
+AI RESEARCH
+→ StrategyEngine
+→ OrderIntent
+→ RiskEngine
+→ CapitalGovernor
+→ execution policy
+→ future brokerage adapter
+
+CapitalGovernor governs:
+
+- total trading capital allocation
+- strategy allocations
+- portfolio exposure
+- concentration
+- correlated exposure
+- drawdown-based risk reduction
+- protected profit
+- available risk budget
+
+OpenAI, Grok, or any other LLM may not bypass it.
+
+==================================================
+PHASE 13 — STRATEGY PERFORMANCE TRACKING
+==================================================
+
+Track real/paper strategy performance.
+
+Metrics where data exists:
+
+- number of trades
+- win rate
+- average winner
+- average loser
+- expectancy
+- profit factor
+- max drawdown
+- return
+- volatility
+- Sharpe-style metric
+- Sortino-style metric
+- slippage
+- fees
+- regime performance
+- sample size
+
+Do not overstate statistical significance.
+
+Create strategy status:
+
+ACTIVE
+WATCH
+REDUCE
+PAUSE
+RETEST
+RETIRE
+
+==================================================
+PHASE 14 — ADVERSARIAL TRADE ANALYSIS
+==================================================
+
+For meaningful trade candidates:
+
+BULL CASE
+strongest argument for trade
+
+BEAR CASE
+strongest argument against trade
+
+GROK
+current/news/X perspective where available
+
+OPENAI
+independent reasoning
+
+MARKET ENGINE
+objective data
+
+PORTFOLIO ENGINE
+account impact
+
+JARVIS
+synthesis
+
+Providers should analyze independently when practical.
+
+If disagreement remains unresolved:
+
+reduce trade quality
+reduce allowed size
+or reject trade
+
+NO TRADE must be treated as a valid successful outcome.
+
+==================================================
+PHASE 15 — TRADING JOURNAL
+==================================================
+
+Create a structured TradingJournal.
+
+Track:
+
+trade thesis
+strategy
+entry
+exit
+risk
+target
+result
+market regime
+AI analyses
+reason for entry
+reason for exit
+mistakes
+rule violations
+slippage
+fees
+lesson
+
+Do not store hidden model chain-of-thought.
+
+Store only safe summaries and structured rationale.
+
+==================================================
+PHASE 16 — PAPER TRADING LAB
+==================================================
+
+Expand paper trading into a Strategy Lab.
+
+Capabilities:
+
+- create strategy hypothesis
+- simulate/backtest when data exists
+- forward paper trade
+- compare strategies
+- track leaderboard
+- identify degradation
+- promote/demote validation stages
+
+Do not simulate fake historical performance.
+
+If market data/history is unavailable:
+
+show DATA REQUIRED.
+
+==================================================
+PHASE 17 — BUSINESS + MARKETS BOUNDARY
+==================================================
+
+Keep BUSINESS and MARKETS distinct.
+
+Examples:
+
+"Research buying a laundromat"
+→ BUSINESS
+
+"Analyze SPY momentum"
+→ MARKETS
+
+"Compare investing $50k in a rental vs portfolio"
+→ may invoke FINANCE + BUSINESS + MARKETS + RESEARCH
+→ JARVIS synthesis
+
+==================================================
+PHASE 18 — CROSS-SPECIALIST COLLABORATION
+==================================================
+
+Enable controlled collaboration.
+
+Examples:
+
+FINANCE + BUSINESS:
+"Can I afford to start this business?"
+
+CAREER + FINANCE:
+"What salary do I need to reach this savings goal?"
+
+RESEARCH + BUSINESS:
+"Is this business viable in my area?"
+
+SOFTWARE + BUSINESS:
+"Build the app needed for this business."
+
+RESEARCH + MARKETS:
+"Research this company and assess trade thesis."
+
+JARVIS coordinates collaboration.
+
+Do not merge entire context domains unnecessarily.
+
+==================================================
+PHASE 19 — ACTION PLAN ENGINE
+==================================================
+
+Create a generic structured ActionPlan model.
+
+Fields:
+
+goal
+specialists
+steps
+dependencies
+status
+requiresUser
+requiresTool
+risk
+nextAction
+
+JARVIS should use this for larger requests.
+
+Example:
+
+"Build me a business."
+
+JARVIS can create a multi-step project rather than dumping one giant answer.
+
+==================================================
+PHASE 20 — LONG-RUNNING WORK PREPARATION
+==================================================
+
+Prepare architecture for future delegated work.
+
+Do not claim background autonomy unless the platform actually supports it.
+
+Support states:
+
+QUEUED
+IN_PROGRESS
+WAITING_FOR_USER
+WAITING_FOR_TOOL
+BLOCKED
+COMPLETED
+FAILED
+
+This will later support external agent systems / Grok Bot / automated workflows.
+
+==================================================
+PHASE 21 — UI INTEGRATION
+==================================================
+
+Do NOT redesign the app.
+
+Use the existing cinematic design system.
+
+Improve existing sections:
+
+FINANCE
+RESEARCH
+WORK
+MARKETS
+
+Add coherent routes/pages for:
+
+CAREER
+BUSINESS
+SOFTWARE
+
+if missing.
+
+Keep JARVIS central.
+
+Specialists should feel like JARVIS workspaces, not separate products.
+
+==================================================
+PHASE 22 — HOME DASHBOARD
+==================================================
+
+Allow Home to show truthful high-level status such as:
+
+ACTIVE TASKS
+FINANCE DATA STATUS
+RESEARCH ACTIVITY
+BUSINESS PROJECTS
+SOFTWARE PROJECTS
+MARKETS MODE
+CAPITAL SURVIVAL STATUS if calculable
+PROVIDER HEALTH
+
+Do not fabricate values.
+
+==================================================
+PHASE 23 — JARVIS NATURAL REQUESTS
+==================================================
+
+Test natural language routing such as:
+
+"Help me save $20,000."
+
+"Research this company."
+
+"Tailor my resume for this job."
+
+"Interview me for this position."
+
+"Build me a pressure washing business."
+
+"Design an app for contractors."
+
+"Find the best trading setup today."
+
+"Compare starting a business with investing the money."
+
+JARVIS should route without requiring commands like:
+
+/finance
+/business
+/software
+
+==================================================
+PHASE 24 — SAFETY / HIGH IMPACT ACTIONS
+==================================================
+
+AI may advise and prepare actions.
+
+High-impact real-world actions must remain behind appropriate authorization.
+
+Examples:
+
+- financial transfers
+- brokerage execution
+- contracts
+- purchases
+- payments
+- account creation
+- legal filing
+- external customer communication
+
+Do not pretend these occurred without actual tool confirmation.
+
+==================================================
+PHASE 25 — PRESERVE TRADING CONTROLS
+==================================================
+
+Absolutely preserve:
+
+Research Only
+Approval Required
+Agentic Auto gating
+kill switch
+RiskEngine
+audit logging
+server-authoritative state
+
+Robinhood remains NOT CONNECTED.
+
+Live trading remains DISABLED.
+
+Do not allow new Markets intelligence to bypass the existing 45-test safety baseline.
+
+==================================================
+PHASE 26 — TESTING
+==================================================
+
+Keep all existing tests.
+
+Current baseline:
+
+45/45 PASSING
+
+Add new tests covering at minimum:
+
+FINANCE
+1. deterministic budget math
+2. bill due-date retrieval
+3. manual finance data persistence
+4. no fabricated balances
+
+RESEARCH
+5. research route works
+6. multi-AI research synthesis
+7. missing evidence produces uncertainty
+
+CAREER
+8. resume workflow routing
+9. interview-prep workflow
+10. structured CareerProfile persistence
+
+BUSINESS
+11. business project creation
+12. business action statuses
+13. business tasks persist
+14. no false external-action completion
+
+SOFTWARE
+15. software project creation
+16. requirement persistence
+17. current JARVIS project is not modified for unrelated app requests
+
+MARKETS
+18. StrategyEngine validation stages
+19. MarketRegime UNKNOWN when data absent
+20. TradeQualityScore cannot be invented by LLM
+21. CapitalSurvivalScore requires real inputs
+22. losses reduce risk rather than increase it
+23. revenge-trading attempt rejected
+24. CapitalGovernor enforces portfolio rules
+25. strategy cannot jump from IDEA to live
+26. no Markets AI directly executes brokerage trades
+27. existing RiskEngine remains authoritative
+
+CROSS-SPECIALIST
+28. Finance + Business collaboration
+29. Research + Markets collaboration
+30. Software + Business collaboration
+31. context isolation preserved
+
+GENERAL
+32. streaming still works
+33. conversation persistence works
+34. auth still works
+35. iPad landscape works
+36. iPad portrait works
+37. reduced-motion works
+38. no secrets exposed
+39. OpenAI health still works
+40. Grok health still works
+
+AND:
+
+ALL EXISTING 45 TESTS MUST STILL PASS.
+
+==================================================
+PHASE 27 — DO NOT OVERBUILD
+==================================================
+
+Do not attempt to connect every external service.
+
+Do not implement:
+
+Robinhood
+bank connections
+email
+calendar
+Apple Home
+payment processors
+ad platforms
+legal filing systems
+
+in this phase.
+
+Architect clean extension points only where useful.
+
+==================================================
+FINAL ACCEPTANCE CRITERIA
+==================================================
+
+At completion:
+
+JARVIS is useful as a practical personal operator across:
+
+FINANCE
+RESEARCH
+CAREER
+WORK
+BUSINESS
+SOFTWARE
+MARKETS
+
+JARVIS remains the single identity.
+
+OpenAI + Grok remain available through the orchestrator.
+
+Markets gains real strategy/risk intelligence architecture.
+
+Capital Survival logic is implemented safely.
+
+No live brokerage is connected.
+
+No fake financial or market data is shown.
+
+No high-impact action is falsely reported as completed.
+
+All existing 45 tests pass.
+
+New specialist tests pass.
+
+TypeScript validation passes.
+
+Nothing is published.
+
+==================================================
+FINAL REPORT
+==================================================
+
+Report:
+
+JARVIS SPECIALIST OPERATING LAYER
+[status]
+
+FINANCE
+[status]
+[data models]
+[capabilities]
+
+RESEARCH
+[status]
+
+CAREER
+[status]
+
+WORK
+[status]
+
+BUSINESS
+[status]
+
+SOFTWARE
+[status]
+
+MARKETS
+[status]
+
+STRATEGY ENGINE
+[status]
+
+MARKET REGIME ENGINE
+[status]
+
+TRADE QUALITY ENGINE
+[status]
+
+CAPITAL SURVIVAL ENGINE
+[status]
+
+CAPITAL GOVERNOR
+[status]
+
+STRATEGY PERFORMANCE TRACKER
+[status]
+
+TRADING JOURNAL
+[status]
+
+PAPER STRATEGY LAB
+[status]
+
+CROSS-SPECIALIST COLLABORATION
+[status]
+
+ACTION PLAN ENGINE
+[status]
+
+OPENAI
+[status]
+
+GROK
+[status]
+
+EXISTING TESTS
+[x/45]
+
+NEW SPECIALIST TESTS
+[x/x]
+
+TOTAL TESTS
+[x/x]
+
+TYPESCRIPT
+[status]
+
+ROBINHOOD
+NOT CONNECTED
+
+LIVE TRADING
+DISABLED
+
+KNOWN LIMITATIONS
+[list]
+
+NEXT RECOMMENDED PHASE
+[recommendation]
+
+DO NOT PUBLISH.
+
+BEGIN IMPLEMENTATION NOW.

@@ -5,32 +5,15 @@ import type {
   ProviderMessage,
   ProviderUsage,
 } from "./ai/provider";
+import { routeSpecialists, type SpecialistDomain } from "./specialists/registry";
 
-export type JarvisDomain =
-  | "GENERAL"
-  | "WORK"
-  | "FINANCE"
-  | "MARKETS"
-  | "PERSONAL"
-  | "RESEARCH"
-  | "AUTOMATION"
-  | "SOFTWARE";
+export type JarvisDomain = SpecialistDomain;
 export type IntelligenceMode = "NORMAL" | "SMART" | "MAX";
 export type ProviderMode = "AUTO" | "OPENAI_ONLY" | "GROK_ONLY" | "MULTI_AI";
 export type ReasoningComplexity = "SIMPLE" | "COMPLEX" | "HIGH_IMPACT";
 
-const rules: Array<[JarvisDomain, RegExp]> = [
-  ["MARKETS", /\b(stock|market|portfolio|trade|watchlist|crypto|option|robinhood)\b/i],
-  ["FINANCE", /\b(budget|bill|paycheck|saving|cash|expense|finance|mortgage|loan)\b/i],
-  ["SOFTWARE", /\b(code|coding|software|program|typescript|javascript|python|api|database|debug)\b/i],
-  ["WORK", /\b(project|task|deadline|client|work|meeting)\b/i],
-  ["PERSONAL", /\b(routine|reminder|personal|habit|family)\b/i],
-  ["RESEARCH", /\b(research|compare|investigate|property|company|evidence|source)\b/i],
-  ["AUTOMATION", /\b(automation|schedule|trigger|workflow)\b/i],
-];
-
 export function routeIntent(content: string): JarvisDomain {
-  return rules.find(([, pattern]) => pattern.test(content))?.[0] ?? "GENERAL";
+  return routeSpecialists(content).primary;
 }
 
 export function domainInstruction(domain: JarvisDomain): string {
@@ -41,7 +24,9 @@ export function domainInstruction(domain: JarvisDomain): string {
     MARKETS: "Research and analyze only. Treat live market data as unavailable unless supplied by an authorized tool. Never submit or imply a trade.",
     PERSONAL: "Focus on private organization, routines, reminders, and practical next actions.",
     RESEARCH: "Separate verified facts, assumptions, risks, evidence, and missing sources.",
-    AUTOMATION: "Describe bounded, auditable rules. Never create an infinite loop or unsafe autonomous action.",
+    CAREER: "Support employment improvement using only user-provided or verified career facts. Never submit an application or invent work history.",
+    BUSINESS: "Turn business goals into executable plans with explicit assumptions, status, risks, and next actions. Never claim an external action occurred without tool confirmation.",
+    AUTOMATIONS: "Describe bounded, auditable rules. Never create an infinite loop or claim background execution.",
     SOFTWARE: "Provide technically precise engineering help while preserving security and data boundaries.",
   };
   return boundaries[domain];

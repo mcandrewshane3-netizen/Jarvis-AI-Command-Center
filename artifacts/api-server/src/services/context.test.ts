@@ -37,6 +37,23 @@ describe("canonical JARVIS context minimization", () => {
     expect(selected.memories.map((item) => item.content)).toEqual(["Prefers conservative research"]);
   });
 
+  it("uses the bounded category union for routed collaborators", () => {
+    const selected = selectRelevantContext({
+      domain: "MARKETS",
+      domains: ["MARKETS", "RESEARCH"],
+      query: "Review stock evidence and market risk",
+      memories: [
+        memory("MARKETS", "Market risk limits"),
+        memory("RESEARCH", "Stock evidence source"),
+        memory("FINANCE", "Private stock account balance"),
+      ],
+    });
+    expect(selected.memories.map((item) => item.content)).toEqual([
+      "Market risk limits",
+      "Stock evidence source",
+    ]);
+  });
+
   it("honors disabled memory categories", () => {
     const selected = selectRelevantContext({
       domain: "WORK",

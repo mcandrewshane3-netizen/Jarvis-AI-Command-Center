@@ -15,9 +15,11 @@ const DOMAIN_CATEGORIES: Record<JarvisDomain, string[]> = {
   FINANCE: ["PREFERENCE", "FINANCE"],
   MARKETS: ["PREFERENCE", "MARKETS"],
   PERSONAL: ["PROFILE", "PREFERENCE", "PERSONAL"],
-  RESEARCH: ["PREFERENCE", "PROJECT"],
-  AUTOMATION: ["PREFERENCE", "PROJECT"],
-  SOFTWARE: ["PREFERENCE", "PROJECT", "WORK"],
+  RESEARCH: ["PREFERENCE", "PROJECT", "RESEARCH"],
+  CAREER: ["PROFILE", "PREFERENCE", "CAREER"],
+  BUSINESS: ["PREFERENCE", "PROJECT", "BUSINESS"],
+  AUTOMATIONS: ["PREFERENCE", "PROJECT", "AUTOMATIONS"],
+  SOFTWARE: ["PREFERENCE", "PROJECT", "WORK", "SOFTWARE"],
 };
 
 export type SelectedContext = {
@@ -37,12 +39,16 @@ function queryTerms(value: string) {
 
 export function selectRelevantContext(input: {
   domain: JarvisDomain;
+  domains?: JarvisDomain[];
   query: string;
   memories: ContextMemory[];
   disabledCategories?: string[];
   limit?: number;
 }): SelectedContext {
-  const allowed = new Set(DOMAIN_CATEGORIES[input.domain]);
+  const allowed = new Set(
+    (input.domains?.length ? input.domains : [input.domain])
+      .flatMap((domain) => DOMAIN_CATEGORIES[domain]),
+  );
   const disabled = new Set(input.disabledCategories ?? []);
   const terms = queryTerms(input.query);
   const memories = input.memories

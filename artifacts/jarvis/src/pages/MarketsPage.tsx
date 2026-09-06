@@ -8,6 +8,7 @@ import {
   TechLabel,
 } from '@/components/primitives';
 import { AlertTriangle, Power, ShieldCheck, ShieldX } from 'lucide-react';
+import { useMarketsIntelligenceStatus } from '@/hooks/use-jarvis-api';
 
 type ExecutionModeValue = 'RESEARCH_ONLY' | 'APPROVAL_REQUIRED' | 'AGENTIC_AUTO';
 
@@ -77,6 +78,7 @@ export function MarketsPage() {
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showReactivation, setShowReactivation] = useState(false);
+  const { data: intelligence, isLoading: loadingIntelligence } = useMarketsIntelligenceStatus();
 
   const loadTradingState = useCallback(async () => {
     setLoadingState(true);
@@ -197,6 +199,42 @@ export function MarketsPage() {
           <AlertTriangle size={15} /> {error}
         </div>
       ) : null}
+
+      <HolographicPanel title="MARKETS INTELLIGENCE // RESEARCH ONLY" className="mb-8">
+        {loadingIntelligence ? (
+          <div className="py-8 text-center font-mono text-[10px] text-primary tracking-widest animate-pulse">
+            LOADING DETERMINISTIC ENGINES...
+          </div>
+        ) : !intelligence ? (
+          <div className="py-8 text-center font-mono text-[10px] text-muted-foreground tracking-widest">
+            INTELLIGENCE STATUS UNAVAILABLE
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {[
+                ['Strategy validation', intelligence.strategyEngine?.status, `${intelligence.strategyEngine?.strategies ?? 0} SAVED`],
+                ['Market regime', intelligence.marketRegimeEngine?.regime, intelligence.marketRegimeEngine?.status],
+                ['Trade quality', intelligence.tradeQualityEngine?.status, 'NO LIVE DATA'],
+                ['Capital survival', intelligence.capitalSurvivalEngine?.status, 'NO LIVE DATA'],
+                ['Capital governor', intelligence.capitalGovernor?.status, intelligence.capitalGovernor?.decision],
+                ['Performance tracker', intelligence.strategyPerformanceTracker?.status, `${intelligence.strategyPerformanceTracker?.paperOutcomes ?? 0} PAPER OUTCOMES`],
+                ['Trading journal', intelligence.tradingJournal?.status, `${intelligence.tradingJournal?.entries ?? 0} ENTRIES`],
+                ['Paper strategy lab', intelligence.paperStrategyLab?.status, intelligence.paperStrategyLab?.evaluation],
+              ].map(([label, value, detail]) => (
+                <div key={label} className="p-3 border border-primary/10 bg-black/20 min-h-24">
+                  <TechLabel className="mb-3">{label}</TechLabel>
+                  <div className="font-mono text-xs text-foreground tracking-wider">{value || 'UNAVAILABLE'}</div>
+                  <div className="font-mono text-[9px] text-muted-foreground tracking-widest mt-2">{detail || 'NO DATA'}</div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 font-mono text-[9px] tracking-widest text-amber-500 uppercase">
+              Market data {intelligence.marketData} // Brokerage {intelligence.brokerage} // No execution authority
+            </div>
+          </>
+        )}
+      </HolographicPanel>
 
       <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_.9fr] gap-6 mb-8">
         <HolographicPanel title="EXECUTION MODE // SERVER AUTHORITY">

@@ -20,7 +20,12 @@ import { WorkPage } from '@/pages/WorkPage';
 import { FinancePage } from '@/pages/FinancePage';
 import { MarketsPage } from '@/pages/MarketsPage';
 import { SettingsPage } from '@/pages/SettingsPage';
-import { ResearchPage, EmptyModulePage } from '@/pages/EmptyPages';
+import { ResearchPage } from '@/pages/ResearchPage';
+import { CareerPage } from '@/pages/CareerPage';
+import { BusinessPage } from '@/pages/BusinessPage';
+import { SoftwarePage } from '@/pages/SoftwarePage';
+import { ActionPlansPage } from '@/pages/ActionPlansPage';
+import { EmptyModulePage } from '@/pages/EmptyPages';
 import { SystemMapPage } from '@/pages/SystemMapPage';
 
 // Primitives
@@ -38,6 +43,7 @@ const navGroups = [
     items: [
       { href: '/', label: 'Overview', icon: HomeIcon },
       { href: '/jarvis', label: 'JARVIS Core', icon: Bot, highlight: true },
+      { href: '/plans', label: 'Plans', icon: Network },
     ],
   },
   {
@@ -46,8 +52,11 @@ const navGroups = [
       { href: '/work', label: 'Work', icon: BriefcaseBusiness },
       { href: '/finance', label: 'Finance', icon: CircleDollarSign },
       { href: '/markets', label: 'Markets', icon: TrendingUp },
-      { href: '/personal', label: 'Personal', icon: CalendarClock },
       { href: '/research', label: 'Research', icon: Microscope },
+      { href: '/career', label: 'Career', icon: BriefcaseBusiness },
+      { href: '/business', label: 'Business', icon: Bot },
+      { href: '/software', label: 'Software', icon: Command },
+      { href: '/personal', label: 'Personal', icon: CalendarClock },
     ],
   },
   {
@@ -241,10 +250,14 @@ function AuthenticatedApp() {
       <Switch>
         <Route path="/" component={OverviewPage} />
         <Route path="/jarvis" component={JarvisPage} />
+        <Route path="/plans" component={ActionPlansPage} />
         <Route path="/work" component={WorkPage} />
         <Route path="/finance" component={FinancePage} />
         <Route path="/markets" component={MarketsPage} />
         <Route path="/research" component={ResearchPage} />
+        <Route path="/career" component={CareerPage} />
+        <Route path="/business" component={BusinessPage} />
+        <Route path="/software" component={SoftwarePage} />
         <Route path="/settings" component={SettingsPage} />
         <Route path="/system-map" component={SystemMapPage} />
         <Route path="/personal">
