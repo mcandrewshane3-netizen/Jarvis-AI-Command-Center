@@ -7,6 +7,11 @@ export function OverviewPage() {
   const [, setLocation] = useLocation();
   const [tasks, setTasks] = useState<Array<{ id: string; title: string; project: string; done: boolean }>>([]);
   const [loadingTasks, setLoadingTasks] = useState(true);
+  const [tradingState, setTradingState] = useState<{
+    executionMode: 'RESEARCH_ONLY' | 'APPROVAL_REQUIRED' | 'AGENTIC_AUTO';
+    killSwitchActive: boolean;
+    capabilities: { robinhoodConnected: boolean };
+  } | null>(null);
   
   useEffect(() => {
     void fetch('/api/tasks')
@@ -21,6 +26,13 @@ export function OverviewPage() {
         setLoadingTasks(false);
       })
       .catch(() => setLoadingTasks(false));
+  }, []);
+
+  useEffect(() => {
+    void fetch('/api/trading/state', { cache: 'no-store' })
+      .then((response) => response.ok ? response.json() : null)
+      .then(setTradingState)
+      .catch(() => setTradingState(null));
   }, []);
 
   const now = new Date();
@@ -135,8 +147,19 @@ export function OverviewPage() {
           </HolographicPanel>
 
           <HolographicPanel title="MARKET FEED">
-            <div className="flex items-center justify-center py-8 border border-primary/5 bg-primary/5">
-              <span className="font-mono text-[10px] text-muted-foreground tracking-widest uppercase">NOT CONFIGURED</span>
+            <div className="space-y-2">
+              <div className="mode-row">
+                <span>Execution</span>
+                <strong>{tradingState?.executionMode?.replaceAll('_', ' ') || 'UNAVAILABLE'}</strong>
+              </div>
+              <div className={`mode-row ${tradingState?.killSwitchActive ? 'disabled' : ''}`}>
+                <span>Kill switch</span>
+                <strong>{tradingState ? (tradingState.killSwitchActive ? 'ACTIVE' : 'INACTIVE') : 'UNAVAILABLE'}</strong>
+              </div>
+              <div className="mode-row disabled">
+                <span>Robinhood</span>
+                <strong>{tradingState ? (tradingState.capabilities.robinhoodConnected ? 'CONNECTED' : 'NOT CONNECTED') : 'UNAVAILABLE'}</strong>
+              </div>
             </div>
             <Link href="/markets" className="mt-4 block font-mono text-[10px] text-primary hover:text-primary/70 tracking-widest uppercase transition-colors text-right">
               ACCESS MODULE <ChevronRight size={10} className="inline mb-0.5" />

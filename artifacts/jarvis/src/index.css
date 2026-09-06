@@ -621,6 +621,81 @@ button { cursor: pointer; }
 .mode-row.active { border-color: hsl(var(--primary) / .4); color: hsl(var(--primary)); background: hsl(var(--primary) / .06); }
 .mode-row.disabled { border-color: hsl(var(--destructive) / .25); }
 .mode-row.disabled strong { color: hsl(var(--destructive)); }
+.state-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid hsl(var(--primary) / .3);
+  background: hsl(var(--primary) / .05);
+  color: hsl(var(--primary));
+  font: 9px var(--app-font-mono);
+  letter-spacing: .12em;
+}
+.state-badge.danger {
+  border-color: hsl(var(--destructive) / .55);
+  background: hsl(var(--destructive) / .08);
+  color: hsl(var(--destructive));
+}
+.mode-select {
+  width: 100%;
+  min-height: 62px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  border: 1px solid hsl(var(--primary) / .14);
+  background: hsl(var(--primary) / .025);
+  color: hsl(var(--muted-foreground));
+  text-align: left;
+  transition: border-color .18s ease, background .18s ease, color .18s ease;
+}
+.mode-select:not(:disabled):hover {
+  border-color: hsl(var(--primary) / .45);
+  background: hsl(var(--primary) / .07);
+  color: hsl(var(--foreground));
+}
+.mode-select.selected {
+  border-color: hsl(var(--primary) / .55);
+  background: hsl(var(--primary) / .09);
+  color: hsl(var(--primary));
+}
+.mode-select.unavailable {
+  border-color: hsl(var(--destructive) / .18);
+  background: hsl(var(--destructive) / .025);
+  opacity: .65;
+}
+.mode-select > span { display: grid; gap: 6px; }
+.mode-select strong {
+  font: 10px var(--app-font-mono);
+  letter-spacing: .14em;
+}
+.mode-select small {
+  font: 8px var(--app-font-mono);
+  letter-spacing: .1em;
+  color: hsl(var(--muted-foreground));
+}
+.kill-core {
+  min-height: 116px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 12px;
+  border: 1px solid hsl(var(--primary) / .32);
+  background: radial-gradient(circle, hsl(var(--primary) / .1), transparent 68%);
+  color: hsl(var(--primary));
+}
+.kill-core span {
+  font: 11px var(--app-font-mono);
+  letter-spacing: .2em;
+}
+.kill-core.active {
+  border-color: hsl(var(--destructive) / .55);
+  background: radial-gradient(circle, hsl(var(--destructive) / .12), transparent 68%);
+  color: hsl(var(--destructive));
+}
 
 @media (max-width: 900px) {
   .auth-welcome-grid { grid-template-columns: 1fr; padding-block: 40px; }

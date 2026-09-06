@@ -107,6 +107,7 @@ export const riskProfiles = pgTable(
     allowedSymbols: text("allowed_symbols").array().notNull().default([]),
     blockedSymbols: text("blocked_symbols").array().notNull().default([]),
     requireStopLoss: boolean("require_stop_loss").notNull().default(true),
+    executionMode: text("execution_mode").notNull().default("RESEARCH_ONLY"),
     killSwitch: boolean("kill_switch").notNull().default(false),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },

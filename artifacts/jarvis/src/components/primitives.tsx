@@ -86,7 +86,7 @@ export function JARVISCore({ isThinking = false, onClick, processText }: { isThi
   );
 }
 
-export function ExecutionMode({ mode }: { mode: 'OBSERVE' | 'EXECUTE' | 'DEGRADED' | 'RESEARCH' }) {
+export function ExecutionMode({ mode }: { mode: 'OBSERVE' | 'EXECUTE' | 'DEGRADED' | 'RESEARCH' | 'APPROVAL' | 'AGENTIC' }) {
   const color = (mode === 'OBSERVE' || mode === 'RESEARCH') ? 'text-cyan' : mode === 'EXECUTE' ? 'text-red' : 'text-amber';
   const border = (mode === 'OBSERVE' || mode === 'RESEARCH') ? 'border-primary/30' : mode === 'EXECUTE' ? 'border-red-500/30' : 'border-amber-500/30';
   
