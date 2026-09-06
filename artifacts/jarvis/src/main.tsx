@@ -15,3 +15,11 @@ createRoot(document.getElementById('root')!, {
     <App />
   </ErrorBoundary>,
 );
+
+if ('serviceWorker' in navigator && window.isSecureContext) {
+  window.addEventListener('load', () => {
+    const serviceWorkerUrl = new URL('sw.js', document.baseURI);
+    navigator.serviceWorker.register(serviceWorkerUrl, { scope: new URL('.', document.baseURI).pathname })
+      .catch((error) => console.warn('JARVIS service worker unavailable', error));
+  });
+}

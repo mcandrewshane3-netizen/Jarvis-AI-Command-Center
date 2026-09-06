@@ -164,9 +164,71 @@ export const autonomousPaperRuns = pgTable(
     candidatesRejected: integer("candidates_rejected").notNull().default(0),
     tradesTaken: integer("trades_taken").notNull().default(0),
     noTradeDecisions: integer("no_trade_decisions").notNull().default(0),
+    idempotencyKey: text("idempotency_key"),
     summary: jsonb("summary").$type<Record<string, unknown>>().notNull().default({}),
   },
-  (table) => [index("autonomous_paper_runs_user_started_idx").on(table.userId, table.startedAt)],
+  (table) => [
+    index("autonomous_paper_runs_user_started_idx").on(table.userId, table.startedAt),
+    uniqueIndex("autonomous_paper_runs_user_idempotency_idx").on(table.userId, table.idempotencyKey),
+  ],
+);
+
+export const paperOperationsSessions = pgTable(
+  "paper_operations_sessions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    status: text("status").notNull().default("STOPPED"),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    stoppedAt: timestamp("stopped_at", { withTimezone: true }),
+    startingPaperEquityCents: integer("starting_paper_equity_cents").notNull().default(0),
+    currentPaperEquityCents: integer("current_paper_equity_cents").notNull().default(0),
+    highWaterMarkCents: integer("high_water_mark_cents").notNull().default(0),
+    drawdownBps: integer("drawdown_bps").notNull().default(0),
+    realizedPaperPnlCents: integer("realized_paper_pnl_cents").notNull().default(0),
+    unrealizedPaperPnlCents: integer("unrealized_paper_pnl_cents").notNull().default(0),
+    paperTradeCount: integer("paper_trade_count").notNull().default(0),
+    noTradeCount: integer("no_trade_count").notNull().default(0),
+    candidateCount: integer("candidate_count").notNull().default(0),
+    aiResearchCount: integer("ai_research_count").notNull().default(0),
+    marketDataRequests: integer("market_data_requests").notNull().default(0),
+    rateLimitEvents: integer("rate_limit_events").notNull().default(0),
+    failedCycles: integer("failed_cycles").notNull().default(0),
+    successfulCycles: integer("successful_cycles").notNull().default(0),
+    dailyAiResearchCallBudget: integer("daily_ai_research_call_budget").notNull().default(4),
+    maxAiReviewedCandidatesPerCycle: integer("max_ai_reviewed_candidates_per_cycle").notNull().default(1),
+    aiResearchCallsToday: integer("ai_research_calls_today").notNull().default(0),
+    aiBudgetDate: text("ai_budget_date"),
+    lastCycleAt: timestamp("last_cycle_at", { withTimezone: true }),
+    lastSuccessfulCycleAt: timestamp("last_successful_cycle_at", { withTimezone: true }),
+    nextExpectedCycleAt: timestamp("next_expected_cycle_at", { withTimezone: true }),
+    cycleLeaseUntil: timestamp("cycle_lease_until", { withTimezone: true }),
+    lastOutcome: text("last_outcome"),
+    lastErrorCode: text("last_error_code"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("paper_operations_sessions_user_idx").on(table.userId),
+    index("paper_operations_sessions_due_idx").on(table.status, table.nextExpectedCycleAt),
+  ],
+);
+
+export const operationsNotificationEvents = pgTable(
+  "operations_notification_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    eventType: text("event_type").notNull(),
+    severity: text("severity").notNull().default("INFO"),
+    status: text("status").notNull().default("PENDING"),
+    payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("operations_notifications_user_occurred_idx").on(table.userId, table.occurredAt),
+    index("operations_notifications_status_idx").on(table.status, table.occurredAt),
+  ],
 );
 
 export const strategyRegistryEntries = pgTable(
@@ -339,6 +401,8 @@ export type PaperPortfolio = typeof paperPortfolios.$inferSelect;
 export type PaperPosition = typeof paperPositions.$inferSelect;
 export type PaperExecution = typeof paperExecutions.$inferSelect;
 export type AutonomousPaperRun = typeof autonomousPaperRuns.$inferSelect;
+export type PaperOperationsSession = typeof paperOperationsSessions.$inferSelect;
+export type OperationsNotificationEvent = typeof operationsNotificationEvents.$inferSelect;
 export type EconomicResearchRecord = typeof economicResearchRecords.$inferSelect;
 export type MarketBar = typeof marketBars.$inferSelect;
 export type StrategyRegistryEntry = typeof strategyRegistryEntries.$inferSelect;

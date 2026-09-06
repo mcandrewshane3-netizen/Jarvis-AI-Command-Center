@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Button,
   ExecutionMode,
@@ -7,7 +7,7 @@ import {
   TechLabel,
   TechValue,
 } from '@/components/primitives';
-import { Power, ShieldCheck, RotateCw } from 'lucide-react';
+import { Pause, Play, Power, ShieldAlert, ShieldCheck, RotateCw, Square } from 'lucide-react';
 import {
   useMarketsLabStatus,
   usePaperPortfolio,
@@ -20,7 +20,11 @@ import {
   usePaperStrategiesRegistry,
   usePaperStrategiesHealth,
   usePaperDecisions,
-  usePaperLearning
+  usePaperLearning,
+  usePaperOperations,
+  usePaperOperationsHealth,
+  usePaperOperationsControl,
+  useUpdatePaperAiBudget
 } from '@/hooks/use-jarvis-api';
 
 function formatCents(cents: number) {
@@ -39,12 +43,18 @@ export function MarketsPage() {
   const { data: health } = usePaperStrategiesHealth();
   const { data: decisions, isLoading: loadingDecisions } = usePaperDecisions();
   const { data: learning, isLoading: loadingLearning } = usePaperLearning();
+  const { data: operations } = usePaperOperations();
+  const { data: operationsHealth } = usePaperOperationsHealth();
+  const operationsControl = usePaperOperationsControl();
+  const updateAiBudget = useUpdatePaperAiBudget();
   const runCycle = useRunAutonomousCycle();
 
   const [startingCapitalStr, setStartingCapitalStr] = useState('');
   const [maxRiskBpsStr, setMaxRiskBpsStr] = useState('100');
   const [dailyLossLimitStr, setDailyLossLimitStr] = useState('');
   const [showPortfolioSetup, setShowPortfolioSetup] = useState(false);
+  const [dailyAiBudget, setDailyAiBudget] = useState('4');
+  const [cycleAiBudget, setCycleAiBudget] = useState('1');
 
   const handleSetupPortfolio = (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,7 +80,13 @@ export function MarketsPage() {
     });
   };
 
-  const isBusy = runCycle.isPending || updatePortfolio.isPending;
+  const isBusy = runCycle.isPending || updatePortfolio.isPending || operationsControl.isPending;
+  const session = operations?.session;
+  useEffect(() => {
+    if (!session) return;
+    setDailyAiBudget(String(session.dailyAiResearchCallBudget));
+    setCycleAiBudget(String(session.maxAiReviewedCandidatesPerCycle));
+  }, [session?.dailyAiResearchCallBudget, session?.maxAiReviewedCandidatesPerCycle]);
 
   return (
     <div className="page-enter stagger-1 pb-12">
@@ -97,6 +113,85 @@ export function MarketsPage() {
           </p>
         </div>
       </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-6 mb-8">
+        <HolographicPanel title="24/7 PAPER OPERATIONS">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+            <div className="p-3 border border-primary/10 bg-black/20">
+              <TechLabel>Status</TechLabel>
+              <div className="font-mono text-sm mt-2 text-primary">{session?.status || 'NOT CONFIGURED'}</div>
+            </div>
+            <div className="p-3 border border-primary/10 bg-black/20">
+              <TechLabel>Last Cycle</TechLabel>
+              <div className="font-mono text-[10px] mt-2">{session?.lastCycleAt ? new Date(session.lastCycleAt).toLocaleString() : 'NEVER'}</div>
+            </div>
+            <div className="p-3 border border-primary/10 bg-black/20">
+              <TechLabel>Next Cycle</TechLabel>
+              <div className="font-mono text-[10px] mt-2">{session?.nextExpectedCycleAt ? new Date(session.nextExpectedCycleAt).toLocaleString() : 'PAUSED'}</div>
+            </div>
+            <div className="p-3 border border-primary/10 bg-black/20">
+              <TechLabel>Cycles</TechLabel>
+              <div className="font-mono text-sm mt-2">{session?.successfulCycles || 0} OK / {session?.failedCycles || 0} FAILED</div>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Button testId="btn-paper-operations-start" onClick={() => operationsControl.mutate('start')} disabled={isBusy || !portfolio}><Play size={13} className="mr-2" />START</Button>
+            <Button testId="btn-paper-operations-pause" onClick={() => operationsControl.mutate('pause')} disabled={isBusy || session?.status !== 'RUNNING'}><Pause size={13} className="mr-2" />PAUSE</Button>
+            <Button testId="btn-paper-operations-resume" onClick={() => operationsControl.mutate('resume')} disabled={isBusy || session?.status !== 'PAUSED'}><Play size={13} className="mr-2" />RESUME</Button>
+            <Button testId="btn-paper-operations-stop" onClick={() => operationsControl.mutate('stop')} disabled={isBusy || !session}><Square size={13} className="mr-2" />STOP</Button>
+            <Button testId="btn-paper-operations-kill" onClick={() => operationsControl.mutate('kill')} disabled={isBusy || !session} className="border-red-500/60 text-red-400"><ShieldAlert size={13} className="mr-2" />KILL SWITCH</Button>
+          </div>
+          <p className="font-mono text-[9px] text-muted-foreground mt-4">
+            PAPER ONLY · hourly request-budget-aware cycles · open positions receive priority · controls persist across restarts
+          </p>
+        </HolographicPanel>
+
+        <HolographicPanel title="OPERATIONS HEALTH">
+          <div className="space-y-2 font-mono text-[10px]">
+            {[
+              ['RUNTIME', operationsHealth?.runtime],
+              ['SCHEDULER', operationsHealth?.scheduler],
+              ['TWELVE DATA', operationsHealth?.marketData?.status],
+              ['OPENAI', operationsHealth?.openAI],
+              ['GROK', operationsHealth?.grok],
+              ['DATABASE', operationsHealth?.database],
+              ['LEARNING', operationsHealth?.learningEngine],
+              ['MEASURED OPS COST', operationsHealth ? formatCents(operationsHealth.measuredOperatingCostCents || 0) : null],
+              ['LIVE TRADING', operationsHealth?.liveTradingEnabled ? 'ACTIVE' : 'DISABLED'],
+            ].map(([label, value]) => (
+              <div key={label} className="flex justify-between gap-3 border-b border-primary/10 pb-2">
+                <span className="text-muted-foreground">{label}</span><span className="text-primary text-right">{value || 'UNAVAILABLE'}</span>
+              </div>
+            ))}
+          </div>
+        </HolographicPanel>
+      </div>
+
+      <HolographicPanel title="AI OPERATING BUDGET" className="mb-8">
+        <form
+          className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3 items-end"
+          onSubmit={(event) => {
+            event.preventDefault();
+            updateAiBudget.mutate({
+              dailyAiResearchCallBudget: Number(dailyAiBudget),
+              maxAiReviewedCandidatesPerCycle: Number(cycleAiBudget),
+            });
+          }}
+        >
+          <label className="font-mono text-[9px] tracking-widest text-muted-foreground">
+            DAILY AI RESEARCH CALLS
+            <input className="tech-input mt-2" type="number" min="0" max="100" value={dailyAiBudget} onChange={(event) => setDailyAiBudget(event.target.value)} />
+          </label>
+          <label className="font-mono text-[9px] tracking-widest text-muted-foreground">
+            MAX AI CANDIDATES / CYCLE
+            <input className="tech-input mt-2" type="number" min="0" max="5" value={cycleAiBudget} onChange={(event) => setCycleAiBudget(event.target.value)} />
+          </label>
+          <Button testId="btn-save-paper-ai-budget" type="submit" disabled={!session || updateAiBudget.isPending}>SAVE BUDGET</Button>
+        </form>
+        <div className="font-mono text-[9px] text-muted-foreground mt-3">
+          USED TODAY: {session?.aiResearchCallsToday || 0} / {session?.dailyAiResearchCallBudget ?? 4}. Exhaustion never bypasses a required AI gate.
+        </div>
+      </HolographicPanel>
 
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_2fr] gap-6 mb-8">
         <div className="space-y-6">

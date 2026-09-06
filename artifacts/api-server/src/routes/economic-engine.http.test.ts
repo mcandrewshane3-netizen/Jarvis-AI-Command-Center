@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { and, eq } from "drizzle-orm";
 import {
-  db, learningReviews, paperExecutions, paperPortfolios, paperPositions,
+  autonomousPaperRuns, db, learningReviews, paperExecutions, paperOperationsSessions, paperPortfolios, paperPositions,
   strategyDecisionOutcomes, strategyPerformances, users,
 } from "@workspace/db";
 
@@ -24,11 +24,14 @@ describe("economic engine HTTP boundaries", () => {
   const c = `economic-http-c-${randomUUID()}`;
   const d = `economic-http-d-${randomUUID()}`;
   const e = `economic-http-e-${randomUUID()}`;
+  const f = `economic-http-f-${randomUUID()}`;
+  const g = `economic-http-g-${randomUUID()}`;
   let server: Server, base: string;
   let setRuntime: (overrides: Record<string, unknown> | null) => void;
   beforeAll(async () => {
     vi.stubEnv("NODE_ENV", "development");
     vi.stubEnv("TWELVE_DATA_API_KEY", "");
+    vi.stubEnv("PAPER_SCHEDULER_SECRET", "test-paper-scheduler-secret");
     ({ setEconomicEngineRuntimeForTests: setRuntime } = await import("./economic-engine"));
     const { default: app } = await import("../app");
     server = app.listen(0, "127.0.0.1");
@@ -42,12 +45,20 @@ describe("economic engine HTTP boundaries", () => {
     await db.delete(users).where(eq(users.clerkUserId, c));
     await db.delete(users).where(eq(users.clerkUserId, d));
     await db.delete(users).where(eq(users.clerkUserId, e));
+    await db.delete(users).where(eq(users.clerkUserId, f));
+    await db.delete(users).where(eq(users.clerkUserId, g));
     setRuntime(null);
     vi.unstubAllEnvs();
   });
-  async function request(path: string, options: { user?: string; method?: string; body?: Record<string, unknown> } = {}) {
+  async function request(path: string, options: {
+    user?: string;
+    method?: string;
+    body?: Record<string, unknown>;
+    headers?: Record<string, string>;
+  } = {}) {
     const response = await fetch(`${base}${path}`, { method: options.method ?? "GET", headers: {
       ...(options.user ? { "x-test-user": options.user } : {}), ...(options.body ? { "content-type": "application/json" } : {}),
+      ...options.headers,
     }, body: options.body ? JSON.stringify(options.body) : undefined });
     return { status: response.status, body: response.status === 204 ? {} : await response.json() as Record<string, unknown> };
   }
@@ -81,6 +92,42 @@ describe("economic engine HTTP boundaries", () => {
     expect((await request("/economic-engine/paper/autonomous-cycle", { user: b, method: "POST" })).status).toBe(409);
     const readiness = await request("/economic-engine/paper/strategies/live-readiness", { user: b });
     expect(readiness.body.liveTradingEnabled).toBe(false);
+  });
+  it("persists server-authoritative PAPER operations controls and AI budgets", async () => {
+    expect((await request("/economic-engine/paper/operations/start", { method: "POST" })).status).toBe(401);
+    const started = await request("/economic-engine/paper/operations/start", { user: b, method: "POST" });
+    expect(started.status).toBe(200);
+    expect((started.body.session as Record<string, unknown>).status).toBe("RUNNING");
+    const budget = await request("/economic-engine/paper/operations/budget", {
+      user: b,
+      method: "PATCH",
+      body: { dailyAiResearchCallBudget: 0, maxAiReviewedCandidatesPerCycle: 0 },
+    });
+    expect(budget.status).toBe(200);
+    expect(budget.body).toMatchObject({
+      dailyAiResearchCallBudget: 0,
+      maxAiReviewedCandidatesPerCycle: 0,
+    });
+    expect((await request("/economic-engine/paper/operations/pause", { user: b, method: "POST" })).body)
+      .toMatchObject({ paperOnly: true, liveTradingEnabled: false });
+    expect((await request("/economic-engine/paper/operations/resume", { user: b, method: "POST" })).status).toBe(200);
+    expect((await request("/economic-engine/paper/operations/stop", { user: b, method: "POST" })).status).toBe(200);
+    expect((await request("/economic-engine/paper/operations/kill", { user: b, method: "POST" })).status).toBe(200);
+    expect((await request("/economic-engine/paper/operations/start", { user: b, method: "POST" })).body)
+      .toMatchObject({ error: "KILL_SWITCH_ACTIVE" });
+    const [local] = await db.select().from(users).where(eq(users.clerkUserId, b)).limit(1);
+    const [session] = await db.select().from(paperOperationsSessions)
+      .where(eq(paperOperationsSessions.userId, local.id)).limit(1);
+    expect(session.status).toBe("KILLED");
+    const health = await request("/economic-engine/paper/operations/health", { user: b });
+    expect(health.body).toMatchObject({
+      runtime: "ONLINE",
+      scheduler: "KILLED",
+      paperBroker: "PAPER_ONLY",
+      liveTradingEnabled: false,
+      database: "AVAILABLE",
+      killSwitch: true,
+    });
   });
   it("persists a configured-data PAPER fill, mark, exit, and serialized re-entry", async () => {
     const now = Date.now();
@@ -174,6 +221,36 @@ describe("economic engine HTTP boundaries", () => {
     expect((entered.body.result as Record<string, unknown>).tradesTaken).toBe(1);
     const afterEntry = await request("/economic-engine/paper/portfolio", { user: c });
     expect((afterEntry.body.positions as unknown[])).toHaveLength(1);
+    await request("/economic-engine/paper/operations/start", { user: c, method: "POST" });
+    const schedulerHeaders = {
+      "x-jarvis-scheduler-secret": "test-paper-scheduler-secret",
+      "x-jarvis-scheduler-user": c,
+      "x-idempotency-key": `test-cycle-${randomUUID()}`,
+    };
+    const scheduled = await request("/economic-engine/paper/autonomous-cycle", {
+      method: "POST",
+      headers: schedulerHeaders,
+    });
+    expect(scheduled.status).toBe(201);
+    await db.update(autonomousPaperRuns).set({
+      status: "FAILED",
+      outcome: "SYSTEM_ERROR",
+      summary: { retryable: true },
+    }).where(eq(autonomousPaperRuns.id, String(scheduled.body.id)));
+    const recoveryRace = await Promise.all([
+      request("/economic-engine/paper/autonomous-cycle", { method: "POST", headers: schedulerHeaders }),
+      request("/economic-engine/paper/autonomous-cycle", { method: "POST", headers: schedulerHeaders }),
+    ]);
+    const recovered = recoveryRace.find((result) => result.status === 201);
+    expect(recovered?.body.id).toBe(scheduled.body.id);
+    expect(recoveryRace.filter((result) => result.status === 201)).toHaveLength(1);
+    expect(recoveryRace.every((result) => [200, 201, 409].includes(result.status))).toBe(true);
+    const replayed = await request("/economic-engine/paper/autonomous-cycle", {
+      method: "POST",
+      headers: schedulerHeaders,
+    });
+    expect(replayed.status).toBe(200);
+    expect(replayed.body).toMatchObject({ id: scheduled.body.id, replayed: true, liveTradingEnabled: false });
     const [localUser] = await db.select().from(users).where(eq(users.clerkUserId, c)).limit(1);
     const [portfolioRow] = await db.select().from(paperPortfolios)
       .where(eq(paperPortfolios.userId, localUser.id)).limit(1);
@@ -342,6 +419,66 @@ describe("economic engine HTTP boundaries", () => {
     expect((mixed.body.result as Record<string, unknown>).tradesTaken).toBe(0);
     const afterMixed = await request("/economic-engine/paper/portfolio", { user: d });
     expect((afterMixed.body.positions as unknown[])).toHaveLength(0);
+
+    let budgetedAiCalls = 0;
+    const countedAiProvider = {
+      status: () => ({ configured: true }),
+      completeStructured: async () => {
+        budgetedAiCalls += 1;
+        return { value: { direction: "BULLISH", confidence: 0.95, evidence: ["should not run"] } };
+      },
+    };
+    setRuntime({
+      marketDataProvider: () => marketDataProvider,
+      openAIProvider: () => countedAiProvider,
+      grokProvider: () => countedAiProvider,
+    });
+    await request("/economic-engine/paper/portfolio", {
+      user: f,
+      method: "POST",
+      body: { startingCapitalCents: 10_000_000 },
+    });
+    await request("/economic-engine/paper/operations/start", { user: f, method: "POST" });
+    await request("/economic-engine/paper/operations/budget", {
+      user: f,
+      method: "PATCH",
+      body: { dailyAiResearchCallBudget: 100, maxAiReviewedCandidatesPerCycle: 0 },
+    });
+    const budgetExhausted = await request("/economic-engine/paper/autonomous-cycle", { user: f, method: "POST" });
+    expect(budgetExhausted.status).toBe(201);
+    expect((budgetExhausted.body.result as Record<string, unknown>).tradesTaken).toBe(0);
+    expect(budgetedAiCalls).toBe(0);
+
+    let releaseBlockedScan = () => {};
+    let signalBlockedScan = () => {};
+    const blockedScan = new Promise<void>((resolve) => { signalBlockedScan = resolve; });
+    const releaseScan = new Promise<void>((resolve) => { releaseBlockedScan = resolve; });
+    const blockingProvider = {
+      ...marketDataProvider,
+      getAssetMetadata: async () => {
+        signalBlockedScan();
+        await releaseScan;
+        return asset;
+      },
+    };
+    setRuntime({
+      marketDataProvider: () => blockingProvider,
+      openAIProvider: () => aiProvider,
+      grokProvider: () => aiProvider,
+    });
+    await request("/economic-engine/paper/portfolio", {
+      user: g,
+      method: "POST",
+      body: { startingCapitalCents: 10_000_000 },
+    });
+    const inFlightCycle = request("/economic-engine/paper/autonomous-cycle", { user: g, method: "POST" });
+    await blockedScan;
+    expect((await request("/economic-engine/paper/operations/kill", { user: g, method: "POST" })).status)
+      .toBe(200);
+    releaseBlockedScan();
+    expect((await inFlightCycle).body).toMatchObject({ error: "KILL_SWITCH_ACTIVE" });
+    expect(((await request("/economic-engine/paper/portfolio", { user: g })).body.positions as unknown[]))
+      .toHaveLength(0);
     setRuntime(null);
   });
 });

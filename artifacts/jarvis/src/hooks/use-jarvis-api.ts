@@ -319,6 +319,68 @@ export function usePaperLearning() {
   });
 }
 
+export function usePaperOperations() {
+  return useQuery({
+    queryKey: ['markets-paper-operations'],
+    queryFn: async () => {
+      const res = await fetch('/api/economic-engine/paper/operations', { cache: 'no-store' });
+      if (!res.ok) throw new Error('Failed to fetch PAPER operations');
+      return res.json() as Promise<any>;
+    },
+    refetchInterval: 30_000,
+  });
+}
+
+export function usePaperOperationsHealth() {
+  return useQuery({
+    queryKey: ['markets-paper-operations-health'],
+    queryFn: async () => {
+      const res = await fetch('/api/economic-engine/paper/operations/health', { cache: 'no-store' });
+      if (!res.ok) throw new Error('Failed to fetch operations health');
+      return res.json() as Promise<any>;
+    },
+    refetchInterval: 30_000,
+  });
+}
+
+export function usePaperOperationsControl() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (action: 'start' | 'pause' | 'resume' | 'stop' | 'kill') => {
+      const res = await fetch(`/api/economic-engine/paper/operations/${action}`, { method: 'POST' });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Failed to update PAPER operations');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['markets-paper-operations'] });
+      queryClient.invalidateQueries({ queryKey: ['markets-paper-operations-health'] });
+      queryClient.invalidateQueries({ queryKey: ['markets-paper-portfolio'] });
+    },
+  });
+}
+
+export function useUpdatePaperAiBudget() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      dailyAiResearchCallBudget: number;
+      maxAiReviewedCandidatesPerCycle: number;
+    }) => {
+      const res = await fetch('/api/economic-engine/paper/operations/budget', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error('Failed to update AI operating budget');
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['markets-paper-operations'] }),
+  });
+}
+
 export function useTradingReview() {
   return useQuery({
     queryKey: ['markets-trading-review'],
@@ -362,6 +424,8 @@ export function useRunAutonomousCycle() {
       queryClient.invalidateQueries({ queryKey: ['markets-paper-portfolio'] });
       queryClient.invalidateQueries({ queryKey: ['markets-paper-decisions'] });
       queryClient.invalidateQueries({ queryKey: ['markets-paper-learning'] });
+      queryClient.invalidateQueries({ queryKey: ['markets-paper-operations'] });
+      queryClient.invalidateQueries({ queryKey: ['markets-paper-operations-health'] });
     },
   });
 }

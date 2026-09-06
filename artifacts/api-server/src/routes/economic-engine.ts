@@ -1,9 +1,10 @@
 import { Router, type IRouter } from "express";
-import { and, desc, eq, gt, gte, isNotNull, isNull, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, isNotNull, isNull, lt, lte, or, sql } from "drizzle-orm";
 import {
   autonomousPaperRuns, db, economicResearchRecords, learningArtifacts, learningReviews, marketBars, paperExecutions,
-  marketBarRetentionCutoff, paperPortfolios, paperPositions, projectEconomicEntries, researchValueEvents, strategyDecisionOutcomes,
-  strategyPerformances, strategyRegistryEntries, users,
+  marketBarRetentionCutoff, operationsNotificationEvents, paperOperationsSessions, paperPortfolios, paperPositions,
+  projectEconomicEntries, researchValueEvents, riskProfiles, strategyDecisionOutcomes, strategyPerformances,
+  strategyRegistryEntries, users,
 } from "@workspace/db";
 import { requireAuth, type AuthenticatedRequest } from "../middlewares/requireAuth";
 import {
@@ -63,9 +64,103 @@ async function getLocalUser(clerkUserId: string) {
   if (!concurrent) throw new Error("LOCAL_USER_PROVISIONING_FAILED");
   return concurrent;
 }
+async function ensureOperationsSession(localUserId: string) {
+  const [portfolio] = await db.select().from(paperPortfolios)
+    .where(eq(paperPortfolios.userId, localUserId)).limit(1);
+  if (!portfolio) return null;
+  const [session] = await db.insert(paperOperationsSessions).values({
+    userId: localUserId,
+    startingPaperEquityCents: portfolio.equityCents,
+    currentPaperEquityCents: portfolio.equityCents,
+    highWaterMarkCents: portfolio.highWaterMarkCents,
+    drawdownBps: portfolio.currentDrawdownBps,
+    realizedPaperPnlCents: portfolio.realizedPnlCents,
+    unrealizedPaperPnlCents: portfolio.unrealizedPnlCents,
+  }).onConflictDoUpdate({
+    target: paperOperationsSessions.userId,
+    set: { updatedAt: new Date() },
+  }).returning();
+  return session;
+}
+async function recordOperationsEvent(
+  localUserId: string,
+  eventType: string,
+  payload: Record<string, unknown> = {},
+  severity = "INFO",
+) {
+  await db.insert(operationsNotificationEvents).values({
+    userId: localUserId, eventType, severity, payload,
+  });
+}
+async function reserveAiResearchBudget(localUserId: string) {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`ai-budget:${localUserId}`}))`);
+    const [session] = await tx.select().from(paperOperationsSessions)
+      .where(eq(paperOperationsSessions.userId, localUserId)).limit(1);
+    if (!session) return false;
+    const today = new Date().toISOString().slice(0, 10);
+    const used = session.aiBudgetDate === today ? session.aiResearchCallsToday : 0;
+    if (used >= session.dailyAiResearchCallBudget || session.maxAiReviewedCandidatesPerCycle < 1) return false;
+    await tx.update(paperOperationsSessions).set({
+      aiBudgetDate: today,
+      aiResearchCallsToday: used + 1,
+      aiResearchCount: sql`${paperOperationsSessions.aiResearchCount} + 1`,
+      updatedAt: new Date(),
+    }).where(eq(paperOperationsSessions.id, session.id));
+    return true;
+  });
+}
+async function updateOperationsAfterRun(
+  localUserId: string,
+  run: typeof autonomousPaperRuns.$inferSelect,
+  metrics: { marketDataRequests: number; rateLimitEvents: number },
+) {
+  const [portfolio] = await db.select().from(paperPortfolios)
+    .where(eq(paperPortfolios.userId, localUserId)).limit(1);
+  if (!portfolio) return;
+  await ensureOperationsSession(localUserId);
+  await db.update(paperOperationsSessions).set({
+    currentPaperEquityCents: portfolio.equityCents,
+    highWaterMarkCents: portfolio.highWaterMarkCents,
+    drawdownBps: portfolio.currentDrawdownBps,
+    realizedPaperPnlCents: portfolio.realizedPnlCents,
+    unrealizedPaperPnlCents: portfolio.unrealizedPnlCents,
+    paperTradeCount: sql`${paperOperationsSessions.paperTradeCount} + ${run.tradesTaken}`,
+    noTradeCount: sql`${paperOperationsSessions.noTradeCount} + ${run.noTradeDecisions}`,
+    candidateCount: sql`${paperOperationsSessions.candidateCount} + ${run.candidatesEvaluated}`,
+    marketDataRequests: sql`${paperOperationsSessions.marketDataRequests} + ${metrics.marketDataRequests}`,
+    rateLimitEvents: sql`${paperOperationsSessions.rateLimitEvents} + ${metrics.rateLimitEvents}`,
+    successfulCycles: sql`${paperOperationsSessions.successfulCycles} + 1`,
+    lastCycleAt: run.completedAt ?? new Date(),
+    lastSuccessfulCycleAt: run.completedAt ?? new Date(),
+    nextExpectedCycleAt: new Date(Date.now() + 60 * 60_000),
+    cycleLeaseUntil: null,
+    lastOutcome: run.outcome,
+    lastErrorCode: null,
+    updatedAt: new Date(),
+  }).where(eq(paperOperationsSessions.userId, localUserId));
+}
+async function persistAutonomousRun(
+  claimId: string | null,
+  values: typeof autonomousPaperRuns.$inferInsert,
+) {
+  if (claimId) {
+    const [updated] = await db.update(autonomousPaperRuns).set(values)
+      .where(eq(autonomousPaperRuns.id, claimId)).returning();
+    return updated;
+  }
+  const [created] = await db.insert(autonomousPaperRuns).values(values).returning();
+  return created;
+}
 function userId(req: unknown) { return (req as AuthenticatedRequest).clerkUserId; }
 function bad(res: Parameters<Parameters<IRouter["post"]>[1]>[1], error: string, status = 400) {
   res.status(status).json({ error });
+}
+function isRateLimitFailure(error: unknown) {
+  if (typeof error !== "object" || error === null) return false;
+  const value = error as { status?: unknown; message?: unknown };
+  return value.status === 429 ||
+    (typeof value.message === "string" && /rate.?limit|quota|429/i.test(value.message));
 }
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -374,13 +469,194 @@ router.get("/economic-engine/paper/strategies/live-readiness", async (req, res, 
     }));
   } catch (error) { next(error); }
 });
-router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) => {
+router.get("/economic-engine/paper/operations", async (req, res, next) => {
   try {
-    const user = await getLocalUser(userId(req)); const provider = configuredProvider(); const health = await provider.getProviderHealth();
+    const user = await getLocalUser(userId(req));
+    const session = await ensureOperationsSession(user.id);
+    const notifications = await db.select().from(operationsNotificationEvents)
+      .where(eq(operationsNotificationEvents.userId, user.id))
+      .orderBy(desc(operationsNotificationEvents.occurredAt)).limit(20);
+    res.json({ session, notifications, paperOnly: true, liveTradingEnabled: false });
+  } catch (error) { next(error); }
+});
+router.patch("/economic-engine/paper/operations/budget", async (req, res, next) => {
+  try {
+    const user = await getLocalUser(userId(req));
+    const session = await ensureOperationsSession(user.id);
+    if (!session) return bad(res, "PAPER_PORTFOLIO_NOT_CONFIGURED", 409);
+    const dailyBudget = Math.trunc(Number(req.body?.dailyAiResearchCallBudget));
+    const perCycle = Math.trunc(Number(req.body?.maxAiReviewedCandidatesPerCycle));
+    if (!Number.isFinite(dailyBudget) || dailyBudget < 0 || dailyBudget > 100 ||
+        !Number.isFinite(perCycle) || perCycle < 0 || perCycle > 5) {
+      return bad(res, "INVALID_AI_BUDGET");
+    }
+    const [updated] = await db.update(paperOperationsSessions).set({
+      dailyAiResearchCallBudget: dailyBudget,
+      maxAiReviewedCandidatesPerCycle: perCycle,
+      updatedAt: new Date(),
+    }).where(eq(paperOperationsSessions.id, session.id)).returning();
+    res.json(updated);
+  } catch (error) { next(error); }
+});
+router.post("/economic-engine/paper/operations/:action", async (req, res, next) => {
+  try {
+    const user = await getLocalUser(userId(req));
+    const session = await ensureOperationsSession(user.id);
+    if (!session) return bad(res, "PAPER_PORTFOLIO_NOT_CONFIGURED", 409);
+    const action = String(req.params.action).toUpperCase();
+    if (!["START", "PAUSE", "RESUME", "STOP", "KILL"].includes(action)) {
+      return bad(res, "INVALID_OPERATIONS_ACTION");
+    }
+    const status = action === "START" || action === "RESUME"
+      ? "RUNNING"
+      : action === "PAUSE" ? "PAUSED" : action === "KILL" ? "KILLED" : "STOPPED";
+    const now = new Date();
+    const updated = await db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`paper-control:${user.id}`}))`);
+      const [risk] = await tx.select().from(riskProfiles).where(eq(riskProfiles.userId, user.id)).limit(1);
+      if ((action === "START" || action === "RESUME") && risk?.killSwitch) {
+        throw new Error("KILL_SWITCH_ACTIVE");
+      }
+      if (action === "KILL") {
+        await tx.insert(riskProfiles).values({
+          userId: user.id, executionMode: "RESEARCH_ONLY", killSwitch: true,
+        }).onConflictDoUpdate({
+          target: riskProfiles.userId,
+          set: { killSwitch: true, executionMode: "RESEARCH_ONLY", updatedAt: now },
+        });
+      }
+      const [row] = await tx.update(paperOperationsSessions).set({
+        status,
+        ...(action === "START" ? { startedAt: now, stoppedAt: null } : {}),
+        ...(action === "STOP" || action === "KILL" ? { stoppedAt: now } : {}),
+        nextExpectedCycleAt: status === "RUNNING" ? now : null,
+        cycleLeaseUntil: null,
+        updatedAt: now,
+      }).where(eq(paperOperationsSessions.id, session.id)).returning();
+      await tx.insert(operationsNotificationEvents).values({
+        userId: user.id,
+        eventType: `PAPER_OPERATIONS_${action}`,
+        severity: action === "KILL" ? "CRITICAL" : "INFO",
+        payload: { status, mode: "PAPER" },
+      });
+      return row;
+    });
+    res.json({ session: updated, paperOnly: true, liveTradingEnabled: false });
+  } catch (error) {
+    if (error instanceof Error && error.message === "KILL_SWITCH_ACTIVE") {
+      return bad(res, "KILL_SWITCH_ACTIVE", 409);
+    }
+    next(error);
+  }
+});
+router.get("/economic-engine/paper/operations/health", async (req, res, next) => {
+  try {
+    const user = await getLocalUser(userId(req));
+    const session = await ensureOperationsSession(user.id);
+    const [risk, portfolio] = await Promise.all([
+      db.select().from(riskProfiles).where(eq(riskProfiles.userId, user.id)).limit(1).then((rows) => rows[0]),
+      db.select().from(paperPortfolios).where(eq(paperPortfolios.userId, user.id)).limit(1).then((rows) => rows[0]),
+    ]);
+    const providerHealth = await configuredProvider().getProviderHealth();
+    const openAI = runtime.openAIProvider().status();
+    const grok = runtime.grokProvider().status();
+    const costs = await db.select().from(projectEconomicEntries)
+      .where(eq(projectEconomicEntries.userId, user.id));
+    res.json({
+      runtime: "ONLINE",
+      scheduler: session?.status ?? "NOT_CONFIGURED",
+      lastSuccessfulCycle: session?.lastSuccessfulCycleAt ?? null,
+      nextExpectedCycle: session?.nextExpectedCycleAt ?? null,
+      marketData: providerHealth,
+      openAI: openAI.configured ? "AVAILABLE" : "UNAVAILABLE",
+      grok: grok.configured ? "AVAILABLE" : "UNAVAILABLE",
+      paperBroker: "PAPER_ONLY",
+      learningEngine: "CONTROLLED_EVIDENCE_ONLY",
+      database: "AVAILABLE",
+      killSwitch: risk?.killSwitch ?? false,
+      executionMode: risk?.executionMode ?? "RESEARCH_ONLY",
+      liveTradingEnabled: false,
+      portfolioConfigured: Boolean(portfolio),
+      measuredDevelopmentCostCents: costs.filter((entry) =>
+        entry.verified && entry.category === "REPLIT_DEVELOPMENT_COST")
+        .reduce((sum, entry) => sum + entry.amountCents, 0),
+      measuredOperatingCostCents: costs.filter((entry) =>
+        entry.verified && entry.category !== "REPLIT_DEVELOPMENT_COST" &&
+        (entry.category.endsWith("_COST") || entry.category === "OTHER_OPERATING_EXPENSE"))
+        .reduce((sum, entry) => sum + entry.amountCents, 0),
+      estimatedMonthlyRunRateCents: null,
+    });
+  } catch (error) { next(error); }
+});
+router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) => {
+  let activeClaimId: string | null = null;
+  let marketDataRequestsThisCycle = 0;
+  let rateLimitEventsThisCycle = 0;
+  try {
+    const user = await getLocalUser(userId(req));
+    const schedulerInvocation = Boolean(req.header("x-jarvis-scheduler-secret"));
+    const session = await ensureOperationsSession(user.id);
+    if (schedulerInvocation && session?.status !== "RUNNING") return bad(res, "PAPER_OPERATIONS_NOT_RUNNING", 409);
+    const [riskProfile] = await db.select().from(riskProfiles).where(eq(riskProfiles.userId, user.id)).limit(1);
+    if (riskProfile?.killSwitch) return bad(res, "KILL_SWITCH_ACTIVE", 409);
+    const idempotencyKey = req.header("x-idempotency-key")?.trim().slice(0, 160) || null;
+    let recoverableClaimId: string | null = null;
+    if (idempotencyKey) {
+      const [existingRun] = await db.select().from(autonomousPaperRuns).where(and(
+        eq(autonomousPaperRuns.userId, user.id),
+        eq(autonomousPaperRuns.idempotencyKey, idempotencyKey),
+      )).limit(1);
+      if (existingRun) {
+        if (existingRun.status === "COMPLETED") {
+          return res.status(200).json({
+            ...existingRun, replayed: true, mode: "PAPER", liveTradingEnabled: false,
+          });
+        }
+        const stale = existingRun.startedAt.getTime() <= Date.now() - 20 * 60_000;
+        if (existingRun.status === "RUNNING" && !stale) {
+          return bad(res, "PAPER_CYCLE_ALREADY_RUNNING", 409);
+        }
+        recoverableClaimId = existingRun.id;
+      }
+    }
+    const provider = configuredProvider(); const health = await provider.getProviderHealth();
     if (!health.configured) return bad(res, "MARKET_DATA_PROVIDER_NOT_CONFIGURED", 409);
     const [portfolio] = await db.select().from(paperPortfolios)
       .where(eq(paperPortfolios.userId, user.id)).limit(1);
     if (!portfolio) return bad(res, "PAPER_PORTFOLIO_NOT_CONFIGURED", 409);
+    if (idempotencyKey) {
+      if (recoverableClaimId) {
+        const staleBefore = new Date(Date.now() - 20 * 60_000);
+        const [recovered] = await db.update(autonomousPaperRuns).set({
+          status: "RUNNING",
+          outcome: "IN_PROGRESS",
+          startedAt: new Date(),
+          completedAt: null,
+          summary: { mode: "PAPER", source: "SCHEDULER", recovered: true },
+        }).where(and(
+          eq(autonomousPaperRuns.id, recoverableClaimId),
+          or(
+            eq(autonomousPaperRuns.status, "FAILED"),
+            and(
+              eq(autonomousPaperRuns.status, "RUNNING"),
+              lte(autonomousPaperRuns.startedAt, staleBefore),
+            ),
+          ),
+        )).returning();
+        if (!recovered) return bad(res, "PAPER_CYCLE_ALREADY_RUNNING", 409);
+        activeClaimId = recovered.id;
+      } else {
+        const [claim] = await db.insert(autonomousPaperRuns).values({
+          userId: user.id,
+          status: "RUNNING",
+          outcome: "IN_PROGRESS",
+          idempotencyKey,
+          summary: { mode: "PAPER", source: "SCHEDULER" },
+        }).onConflictDoNothing().returning();
+        if (!claim) return bad(res, "PAPER_CYCLE_ALREADY_RUNNING", 409);
+        activeClaimId = claim.id;
+      }
+    }
     const todayStart = new Date();
     todayStart.setUTCHours(0, 0, 0, 0);
     const closedToday = await db.select().from(paperExecutions).where(and(
@@ -415,6 +691,7 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
             tradingHoursType: position.assetClass === "CRYPTO" ? "TWENTY_FOUR_SEVEN" as const : "EXCHANGE_SESSION" as const,
             fractionalSupport: "UNKNOWN" as const, liquidityData: null, providerMetadata: {},
           };
+          marketDataRequestsThisCycle += 1;
           const quote = await provider.getQuote(asset, { openPosition: true, priority: "HIGH" });
           if (!["LIVE_OR_CURRENT", "DELAYED"].includes(quote.freshness)) throw new Error(`DATA_${quote.freshness}`);
           if (!Number.isFinite(quote.price) || quote.price <= 0) throw new Error("EXECUTABLE_QUOTE_REQUIRED");
@@ -487,21 +764,32 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
             filled,
           });
         } catch (error) {
+          if (isRateLimitFailure(error)) rateLimitEventsThisCycle += 1;
           markErrors.push({
             symbol: position.symbol,
-            reason: error instanceof Error ? error.message.slice(0, 120) : "POSITION_MARK_FAILED",
+            reason: isRateLimitFailure(error)
+              ? "PROVIDER_LIMIT"
+              : error instanceof Error ? error.message.slice(0, 120) : "POSITION_MARK_FAILED",
           });
         }
       }
       if (markErrors.length || !evaluated.length) {
-        const [run] = await db.insert(autonomousPaperRuns).values({
+        const run = await persistAutonomousRun(activeClaimId, {
           userId: user.id, status: "COMPLETED", outcome: "NO_TRADE", provider: "TWELVE_DATA",
-          completedAt: new Date(), noTradeDecisions: 1,
+          completedAt: new Date(), noTradeDecisions: 1, idempotencyKey,
           summary: { mode: "PAPER", reason: "COMPLETE_POSITION_MARKS_REQUIRED", markErrors },
-        }).returning();
+        });
+        await updateOperationsAfterRun(user.id, run, {
+          marketDataRequests: marketDataRequestsThisCycle,
+          rateLimitEvents: rateLimitEventsThisCycle,
+        });
         return res.status(201).json({ ...run, mode: "PAPER", liveTradingEnabled: false });
       }
       const accounting = await db.transaction(async (tx) => {
+        await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`paper-control:${user.id}`}))`);
+        const [control] = await tx.select().from(riskProfiles)
+          .where(eq(riskProfiles.userId, user.id)).limit(1);
+        if (control?.killSwitch) throw new Error("KILL_SWITCH_ACTIVE");
         let cashCents = portfolio.cashCents;
         let realizedPnlCents = portfolio.realizedPnlCents;
         let unrealizedPnlCents = 0;
@@ -647,20 +935,25 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
         if (!updatedPortfolio) throw new Error("PAPER_CYCLE_CONFLICT_RETRY");
         return { exited, held, equityCents, unrealizedPnlCents };
       });
-      const [run] = await db.insert(autonomousPaperRuns).values({
+      const run = await persistAutonomousRun(activeClaimId, {
         userId: user.id,
         status: "COMPLETED",
         outcome: "NO_TRADE",
         provider: "TWELVE_DATA",
         completedAt: new Date(),
         noTradeDecisions: 1,
+        idempotencyKey,
         summary: {
           mode: "PAPER",
           reason: accounting.exited.length ? "POSITIONS_EXITED" : "OPEN_POSITIONS_HELD",
           ...accounting,
           markErrors,
         },
-      }).returning();
+      });
+      await updateOperationsAfterRun(user.id, run, {
+        marketDataRequests: marketDataRequestsThisCycle,
+        rateLimitEvents: rateLimitEventsThisCycle,
+      });
       return res.status(201).json({ ...run, mode: "PAPER", liveTradingEnabled: false });
     }
     /*
@@ -718,8 +1011,11 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
     const modeledSpreadBps = { STOCK: 2, ETF: 1, CRYPTO: 10 } as const;
     for (const item of scheduled) {
       try {
+        marketDataRequestsThisCycle += 1;
         const rawAsset = await provider.getAssetMetadata(item.symbol, item.assetClass);
+        marketDataRequestsThisCycle += 1;
         const bars = await provider.getBars(rawAsset, "1h", 200);
+        marketDataRequestsThisCycle += 1;
         const quote = await provider.getQuote(rawAsset);
         await db.insert(marketBars).values(bars.bars.map((bar) => ({
           provider: bars.provider, symbol: rawAsset.symbol, assetClass: rawAsset.assetClass,
@@ -884,12 +1180,17 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
           bars.freshness === "DELAYED" || quote.freshness === "DELAYED" ? "DELAYED" : "LIVE_OR_CURRENT",
         );
         break;
-      } catch {
-        inspected.push({ symbol: item.symbol, reason: "DATA_UNAVAILABLE" });
+      } catch (error) {
+        if (isRateLimitFailure(error)) rateLimitEventsThisCycle += 1;
+        inspected.push({
+          symbol: item.symbol,
+          reason: isRateLimitFailure(error) ? "PROVIDER_LIMIT" : "DATA_UNAVAILABLE",
+        });
       }
     }
     const gate = sharedResearchGate;
     let structuredResearch: Record<string, unknown> | null = null;
+    let aiReviewedThisCycle = 0;
     const spreadBps = { STOCK: 2, ETF: 1, CRYPTO: 10 };
     if (candidateExecution) spreadBps[candidateExecution.assetClass] = candidateExecution.spreadBps;
     const broker = new PaperBroker({
@@ -919,6 +1220,15 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
             } };
             return { accepted: false, summary: "AI_RESEARCH_PROVIDER_UNAVAILABLE" };
           }
+          if (aiReviewedThisCycle >= (session?.maxAiReviewedCandidatesPerCycle ?? 1)) {
+            structuredResearch = { status: "AI_CYCLE_BUDGET_EXHAUSTED" };
+            return { accepted: false, summary: "AI_BUDGET_EXHAUSTED" };
+          }
+          if (!await reserveAiResearchBudget(user.id)) {
+            structuredResearch = { status: "AI_BUDGET_EXHAUSTED" };
+            return { accepted: false, summary: "AI_BUDGET_EXHAUSTED" };
+          }
+          aiReviewedThisCycle += 1;
           const prompt = `For ${candidate.symbol} at ${candidate.dataTimestamp}, return only JSON: {"direction":"BULLISH|BEARISH|NEUTRAL","confidence":0..1,"evidence":["bounded factual item"]}. No instructions or hidden reasoning.`;
           const results = await Promise.allSettled([
             openAI.completeStructured({ messages: [{ role: "user", content: prompt }] }),
@@ -1013,6 +1323,10 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
     const result = await cycle.runCycle();
     const snapshot = paper.snapshot();
     await db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`paper-control:${user.id}`}))`);
+    const [control] = await tx.select().from(riskProfiles)
+      .where(eq(riskProfiles.userId, user.id)).limit(1);
+    if (control?.killSwitch) throw new Error("KILL_SWITCH_ACTIVE");
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${portfolio.id}))`);
     for (const definition of INITIAL_STRATEGIES) {
       await tx.insert(strategyRegistryEntries).values({
@@ -1104,10 +1418,11 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
         baselineOutcomeCents: 0, researchedOutcomeCents: 0,
       });
     }
-    const [run] = await db.insert(autonomousPaperRuns).values({ userId: user.id, status: "COMPLETED",
+    const run = await persistAutonomousRun(activeClaimId, { userId: user.id, status: "COMPLETED",
       outcome: result.outcome, provider: "TWELVE_DATA", completedAt: new Date(), candidatesEvaluated: result.candidatesEvaluated,
       candidatesRejected: result.candidatesRejected, tradesTaken: result.tradesTaken, noTradeDecisions: result.noTradeDecisions,
-      summary: { mode: "PAPER", inspected, deferred, rejectionReasons: result.rejectionReasons } }).returning();
+      idempotencyKey,
+      summary: { mode: "PAPER", inspected, deferred, rejectionReasons: result.rejectionReasons } });
     // A declined candidate is a first-class durable outcome.  The rationale is a
     // concise, inspectable reason code only; it never stores model reasoning.
     if (result.noTradeDecisions > 0) {
@@ -1292,8 +1607,27 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
       target: [learningReviews.userId, learningReviews.cadence, learningReviews.period],
       set: { review: weeklyReview, createdAt: new Date() },
     });
+    await updateOperationsAfterRun(user.id, run, {
+      marketDataRequests: marketDataRequestsThisCycle,
+      rateLimitEvents: rateLimitEventsThisCycle,
+    });
     res.status(201).json({ ...run, mode: "PAPER", result, liveTradingEnabled: false });
   } catch (error) {
+    if (activeClaimId) {
+      await db.update(autonomousPaperRuns).set({
+        status: "FAILED",
+        outcome: "SYSTEM_ERROR",
+        completedAt: new Date(),
+        summary: {
+          mode: "PAPER",
+          retryable: true,
+          errorCode: error instanceof Error ? error.message.slice(0, 120) : "SYSTEM_ERROR",
+        },
+      }).where(eq(autonomousPaperRuns.id, activeClaimId)).catch(() => undefined);
+    }
+    if (error instanceof Error && error.message === "KILL_SWITCH_ACTIVE") {
+      return bad(res, "KILL_SWITCH_ACTIVE", 409);
+    }
     if (error instanceof Error && error.message === "PAPER_CYCLE_CONFLICT_RETRY") {
       return bad(res, "PAPER_CYCLE_CONFLICT_RETRY", 409);
     }

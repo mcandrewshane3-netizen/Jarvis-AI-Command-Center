@@ -1,0 +1,1024 @@
+CONTINUE THE EXISTISTING JARVIS AI COMMAND CENTER PROJECT.
+
+THIS IS NOT A NEW PROJECT.
+
+============================================================
+JARVIS PHASE III
+24/7 PAPER OPERATIONS + COST-OPTIMIZED DEPLOYMENT + IPAD PWA
+============================================================
+
+PRIMARY OBJECTIVE:
+
+Take the now-completed Economic Engine II system and prepare JARVIS for
+continuous long-run PAPER operation with the LOWEST PRACTICAL OPERATING COST.
+
+JARVIS must be usable primarily from my iPad.
+
+This phase is about OPERATING the existing system.
+
+DO NOT add unnecessary new trading features.
+DO NOT redesign the architecture.
+DO NOT connect Robinhood.
+DO NOT enable live trading.
+DO NOT use real money.
+DO NOT purchase additional services automatically.
+DO NOT upgrade Replit plans automatically.
+DO NOT publish until all pre-deployment validation passes.
+DO NOT weaken any safety/risk controls.
+
+============================================================
+VERIFIED BASELINE
+============================================================
+
+Latest known baseline:
+
+Economic Engine II: COMPLETE
+
+201/201 tests passing across 19 test files.
+
+TypeScript: PASS
+API production build: PASS
+JARVIS production build: PASS
+
+Persistent authenticated PAPER portfolio: implemented
+
+Persistent trading memory: implemented
+
+Decision → outcome records: implemented
+
+NO_TRADE outcome evaluation: implemented
+
+JarvisLearningEngine: implemented
+
+Strategy health: implemented
+
+Champion / Challenger: implemented
+
+Strategy versioning: implemented
+
+Deterministic promotion rules: implemented
+
+Crypto strategies include:
+
+MOMENTUM
+BREAKOUT
+TREND_FOLLOWING
+MEAN_REVERSION
+SWING
+RELATIVE_STRENGTH
+
+Relative Strength participates in autonomous strategy competition.
+
+Performance history preserves:
+
+strategy
+version
+asset
+timeframe
+regime
+out-of-sample dimensions
+
+Closed PAPER outcomes feed back into their originating decisions.
+
+Daily/weekly learning reviews use persisted evidence.
+
+Twelve Data: connected
+
+OpenAI: connected
+
+Grok/xAI: connected
+
+Robinhood: NOT CONNECTED
+
+LIVE TRADING: DISABLED
+
+EXECUTION: PAPER ONLY
+
+The primary remaining limitation is that the development environment is not
+guaranteed to execute continuously.
+
+FIRST:
+
+Inspect the ACTUAL repository and database/schema state.
+
+Do not blindly trust this prompt if the repository differs.
+
+Report discrepancies before changing architecture.
+
+============================================================
+PART 1 — DETERMINE THE CHEAPEST SAFE RUNTIME
+============================================================
+
+Inspect the existing JARVIS architecture and determine the minimum production
+runtime requirements for:
+
+authenticated web/API requests
+PostgreSQL persistence
+scheduled paper-market cycles
+open-position monitoring
+market scans
+daily learning review
+weekly strategy review
+OpenAI calls
+xAI/Grok calls
+Twelve Data calls
+voice requests
+iPad PWA access
+
+Determine whether these workloads require:
+
+always-on compute
+
+OR
+
+request-driven compute + scheduled jobs
+
+OR
+
+a hybrid architecture.
+
+Prefer the LOWEST-COST architecture that preserves reliability.
+
+Do not provision unnecessary CPU/RAM/storage.
+
+Do not automatically purchase anything.
+
+============================================================
+PART 2 — COST-FIRST DEPLOYMENT ANALYSIS
+============================================================
+
+Before publishing, produce an internal deployment recommendation comparing
+available practical Replit deployment options for THIS repository.
+
+Consider:
+
+expected idle time
+background job requirements
+scheduled execution
+cold starts
+persistent processes
+database connectivity
+voice/API requests
+market scanning frequency
+
+Select the cheapest option that can legitimately support the requirements.
+
+If an inexpensive scheduled/request-driven architecture can replace an
+always-running server, prefer it.
+
+Do not pretend development mode is 24/7 production.
+
+============================================================
+PART 3 — SEPARATE INTERACTIVE AND BACKGROUND WORK
+============================================================
+
+Where appropriate, separate:
+
+INTERACTIVE JARVIS
+
+from
+
+BACKGROUND ECONOMIC WORKERS.
+
+Interactive workload:
+
+chat
+voice
+dashboard
+portfolio inspection
+learning review
+manual commands
+
+Background workload:
+
+market-data refresh
+open-position evaluation
+candidate scanning
+paper trading
+outcome evaluation
+daily learning review
+weekly strategy review
+
+Do not duplicate the entire application merely to accomplish this.
+
+Reuse existing services.
+
+============================================================
+PART 4 — PERSISTENT PAPER SCHEDULER
+============================================================
+
+Create the production-safe scheduling mechanism required for long-run PAPER
+operations.
+
+The scheduler should invoke the existing server-authoritative autonomous paper
+cycle.
+
+Conceptual cycle:
+
+CHECK SYSTEM HEALTH
+
+→ CHECK KILL SWITCH
+
+→ CHECK PAPER-ONLY EXECUTION STATE
+
+→ PRIORITIZE OPEN POSITIONS
+
+→ REFRESH REQUIRED MARKET DATA
+
+→ EVALUATE EXITS
+
+→ UPDATE PORTFOLIO
+
+→ SCAN BOUNDED UNIVERSE IF REQUEST BUDGET ALLOWS
+
+→ RUN STRATEGY COMPETITION
+
+→ APPLY AI RESEARCH GATE
+
+→ TRADE QUALITY
+
+→ RISK ENGINE
+
+→ CAPITAL SURVIVAL
+
+→ CAPITAL GOVERNOR
+
+→ PAPER EXECUTION OR NO_TRADE
+
+→ JOURNAL
+
+→ UPDATE PERFORMANCE
+
+→ UPDATE LEARNING RECORDS
+
+The scheduler MUST NOT contain an alternate trading implementation.
+
+It must call the existing authoritative services.
+
+============================================================
+PART 5 — SCHEDULING FREQUENCY
+============================================================
+
+Do NOT blindly scan every asset every minute.
+
+Choose cost/rate-limit-aware scheduling.
+
+Open PAPER positions have highest priority.
+
+Candidate discovery has lower priority.
+
+Historical-data maintenance has still lower priority.
+
+Daily learning review runs once per day.
+
+Weekly strategy review runs once per week.
+
+Use Twelve Data request-budget awareness.
+
+If provider budget is constrained:
+
+manage open positions first.
+
+New opportunity discovery can wait.
+
+============================================================
+PART 6 — SCHEDULER CONCURRENCY SAFETY
+============================================================
+
+Prevent:
+
+duplicate cycles
+overlapping cycles
+duplicate orders
+duplicate exits
+duplicate learning records
+race conditions
+
+Use existing transactional/optimistic-concurrency mechanisms where possible.
+
+If one cycle is still running when another starts:
+
+do not launch a competing execution cycle.
+
+============================================================
+PART 7 — FAILURE RECOVERY
+============================================================
+
+A failed market-data call must NOT crash JARVIS.
+
+A failed OpenAI call must NOT crash JARVIS.
+
+A failed Grok call must NOT crash JARVIS.
+
+A rate-limit response must NOT trigger a request storm.
+
+A failed cycle must NOT create a duplicate PAPER trade when retried.
+
+Persist useful operational status.
+
+Support:
+
+SUCCESS
+NO_TRADE
+PARTIAL_DATA
+RATE_LIMITED
+AI_UNAVAILABLE
+DATA_UNAVAILABLE
+RISK_REJECTED
+SYSTEM_ERROR
+
+============================================================
+PART 8 — COST-AWARE AI ROUTING
+============================================================
+
+Preserve the existing AIResearchGate.
+
+Do not send every scanned asset to OpenAI and Grok.
+
+Required flow:
+
+CHEAP DETERMINISTIC FILTERING FIRST
+
+→ STRATEGY EVIDENCE
+
+→ TRADE QUALITY PRE-SCREEN
+
+→ ONLY QUALIFIED CANDIDATES MAY RECEIVE EXPENSIVE AI RESEARCH
+
+Use cached/reusable research when it remains sufficiently fresh.
+
+Do not duplicate identical AI requests.
+
+Do not sacrifice decision integrity merely to reduce cost.
+
+============================================================
+PART 9 — AI COST BUDGET
+============================================================
+
+Add configurable server-side operating limits for AI research.
+
+Examples:
+
+daily AI research call budget
+daily AI token/cost budget where reliable billing metadata exists
+maximum AI-reviewed candidates per cycle
+
+When a budget is exhausted:
+
+JARVIS should continue deterministic PAPER operation where safe
+
+OR return NO_TRADE / AI_BUDGET_EXHAUSTED if AI research is required by policy.
+
+Never bypass a required AI gate because the budget ran out.
+
+Do not invent dollar costs when provider billing metadata is unavailable.
+
+============================================================
+PART 10 — MARKET DATA COST/RATE CONTROL
+============================================================
+
+Preserve the MarketDataCacheService and MarketDataRequestBudgetService.
+
+Verify production scheduler uses them.
+
+Reuse:
+
+quotes
+bars
+historical data
+
+when still valid.
+
+Never fabricate market data.
+
+Never label modeled data as provider-observed data.
+
+============================================================
+PART 11 — LONG-RUN PAPER SESSION
+============================================================
+
+Create a persistent:
+
+PaperOperationsSession
+
+Track:
+
+sessionId
+userId
+startedAt
+status
+startingPaperEquity
+currentPaperEquity
+highWaterMark
+drawdown
+realizedPaperPnL
+unrealizedPaperPnL
+paperTradeCount
+noTradeCount
+candidateCount
+AIResearchCount
+marketDataRequests where measurable
+rateLimitEvents
+failedCycles
+successfulCycles
+lastCycleAt
+nextExpectedCycleAt
+
+This is PAPER accounting.
+
+Never classify paper gains as real income.
+
+============================================================
+PART 12 — OPERATIONS HEALTH
+============================================================
+
+Create a concise OperationsHealth service/view.
+
+Show:
+
+JARVIS runtime
+scheduler status
+last successful cycle
+next expected cycle
+market data provider
+market data request budget
+OpenAI availability
+Grok availability
+paper broker status
+learning engine status
+database status
+kill switch
+live-trading status
+
+Health must be based on actual server state.
+
+============================================================
+PART 13 — IPAD-FIRST PWA
+============================================================
+
+Prepare the existing JARVIS frontend as an installable Progressive Web App.
+
+DO NOT redesign the existing cinematic JARVIS interface.
+
+Add/verify:
+
+web app manifest
+app name
+short name
+icons using existing original JARVIS branding
+standalone display
+responsive iPad layout
+safe-area support
+landscape support
+portrait fallback
+Home Screen installation compatibility
+HTTPS production compatibility
+
+The iPad should be able to:
+
+open Safari
+visit the secure JARVIS URL
+sign in
+Share
+Add to Home Screen
+
+and then operate JARVIS like an app.
+
+============================================================
+PART 14 — IPAD VOICE
+============================================================
+
+Verify the existing tap-to-talk voice system works under the intended deployed
+HTTPS/PWA environment.
+
+Do not make the microphone permanently active.
+
+Preserve:
+
+tap-to-talk
+interruption
+text fallback
+voice failure fallback
+authenticated voice endpoints
+rate limits
+
+============================================================
+PART 15 — IPAD OPERATIONS DASHBOARD
+============================================================
+
+DO NOT REDESIGN.
+
+Make sure the existing dashboard clearly exposes:
+
+PAPER equity
+cash
+positions
+realized PAPER P/L
+unrealized PAPER P/L
+Capital Survival state
+Capital Governor state
+strategy health
+last autonomous cycle
+next cycle
+latest decision
+latest NO_TRADE
+learning observations
+provider health
+scheduler health
+
+Keep PAPER labels extremely clear.
+
+============================================================
+PART 16 — JARVIS OPERATIONS CONTROL
+============================================================
+
+Provide authenticated controls for:
+
+START PAPER OPERATIONS
+
+PAUSE PAPER OPERATIONS
+
+RESUME PAPER OPERATIONS
+
+STOP PAPER OPERATIONS
+
+EMERGENCY KILL SWITCH
+
+These controls must be server-authoritative.
+
+STOP/PAUSE must not delete historical records.
+
+The kill switch must dominate all other execution states.
+
+============================================================
+PART 17 — RESTART RECOVERY
+============================================================
+
+If the production service restarts:
+
+paper portfolio persists
+paper positions persist
+paper orders persist
+strategy history persists
+decision/outcome history persists
+learning history persists
+
+The scheduler must safely determine whether operations should resume.
+
+It must NOT accidentally create duplicate trades after restart.
+
+============================================================
+PART 18 — LEARNING CONTINUES AUTOMATICALLY
+============================================================
+
+Wire the existing JarvisLearningEngine into long-run operations.
+
+JARVIS should accumulate evidence over time.
+
+It should remember:
+
+what it evaluated
+what it rejected
+what it traded
+why
+strategy/version
+market regime
+AI agreement/disagreement
+expected outcome
+actual outcome
+P/L
+drawdown
+strategy performance
+
+Daily and weekly learning reviews should run automatically when production
+scheduling supports them.
+
+Do NOT allow learning to modify safety systems.
+
+============================================================
+PART 19 — NO PREMATURE SELF-OPTIMIZATION
+============================================================
+
+Do not change strategy rules because of:
+
+one loss
+one win
+one NO_TRADE
+one missed move
+one unusual market session
+
+Require the existing controlled evidence lifecycle.
+
+Observation
+→ Hypothesis
+→ Challenger
+→ Backtest
+→ Out-of-sample
+→ Paper challenger
+→ Deterministic review
+→ Promotion or rejection
+
+============================================================
+PART 20 — NOTIFICATIONS FOUNDATION
+============================================================
+
+Do NOT add Slack in this phase.
+
+Do NOT add another paid service.
+
+Create an internal notification/event abstraction that can later support:
+
+iPad push notifications
+email
+Slack
+other channels
+
+Important future events include:
+
+paper trade opened
+paper trade closed
+Capital Survival warning
+kill switch
+strategy degradation
+challenger promoted/rejected
+provider outage
+scheduler failure
+daily review ready
+
+For now, preserve events internally if no free/appropriate delivery mechanism
+already exists.
+
+============================================================
+PART 21 — SECURITY
+============================================================
+
+Production deployment must preserve:
+
+authentication
+user isolation
+server-authoritative controls
+secret isolation
+rate limiting
+secure cookies/tokens as appropriate
+HTTPS
+no API keys in browser bundles
+no secrets in logs
+
+Never print:
+
+OPENAI API key
+XAI API key
+TWELVE_DATA_API_KEY
+authentication secrets
+database credentials
+
+============================================================
+PART 22 — LIVE TRADING FIREWALL
+============================================================
+
+Explicitly verify:
+
+Robinhood NOT CONNECTED
+
+Live trading DISABLED
+
+Execution PAPER ONLY
+
+Production deployment must NOT change those facts.
+
+There must be no route whereby deployment or scheduler activation implicitly
+enables live trading.
+
+============================================================
+PART 23 — PROJECT ECONOMICS
+============================================================
+
+Extend existing Project Economics with OPERATING COST visibility.
+
+Track when reliably measurable:
+
+hosting cost
+database cost
+market-data cost
+OpenAI usage/cost
+Grok usage/cost
+voice usage/cost
+
+Separate:
+
+DEVELOPMENT COST
+OPERATING COST
+PAPER PERFORMANCE
+REAL REVENUE
+
+Paper P/L is NEVER real revenue.
+
+Add:
+
+estimated monthly run rate
+
+ONLY if based on actual pricing/configuration or clearly labeled estimates.
+
+============================================================
+PART 24 — PRE-DEPLOYMENT TESTS
+============================================================
+
+Add/verify tests for:
+
+scheduler authentication/authorization
+scheduler concurrency
+duplicate-cycle prevention
+duplicate-order prevention
+restart recovery
+paper persistence
+rate-limit behavior
+AI budget enforcement
+AI failure
+market-data failure
+OpenAI unavailable
+Grok unavailable
+daily learning scheduling
+weekly learning scheduling
+pause
+resume
+stop
+kill switch
+user isolation
+PWA manifest
+live trading remains disabled
+
+============================================================
+PART 25 — FULL VALIDATION
+============================================================
+
+Run:
+
+FULL TEST SUITE
+
+FULL WORKSPACE TYPESCRIPT VALIDATION
+
+API PRODUCTION BUILD
+
+JARVIS PRODUCTION BUILD
+
+SCHEMA VALIDATION
+
+PRODUCTION STARTUP VALIDATION
+
+Do not call this phase complete if critical validation fails.
+
+============================================================
+PART 26 — DO NOT PUBLISH AUTOMATICALLY
+============================================================
+
+IMPORTANT:
+
+Prepare everything required for deployment.
+
+Determine the recommended Replit production deployment configuration.
+
+BUT DO NOT ACTUALLY PUBLISH/DEPLOY IF DOING SO CREATES OR CHANGES BILLABLE
+RESOURCES WITHOUT MY EXPLICIT APPROVAL.
+
+If deployment is already covered by existing resources/credits and can be
+performed without additional cost, state that clearly but STILL ask for
+authorization before publishing.
+
+I want to review the final deployment recommendation and expected cost first.
+
+============================================================
+ACCEPTANCE CRITERIA
+============================================================
+
+Complete only when:
+
+1. Existing Economic Engine II remains intact.
+
+2. Persistent PAPER operations architecture exists.
+
+3. Scheduler uses existing authoritative trading services.
+
+4. Open positions receive priority.
+
+5. Duplicate cycles/orders are prevented.
+
+6. Restart recovery is safe.
+
+7. Twelve Data request budgeting is enforced.
+
+8. Expensive AI calls remain selectively gated.
+
+9. AI operating budget controls exist.
+
+10. Long-run PaperOperationsSession persists.
+
+11. Operations Health exists.
+
+12. JARVIS is PWA-ready for iPad.
+
+13. Voice remains functional.
+
+14. Learning automatically consumes long-run outcomes.
+
+15. Learning cannot weaken safety systems.
+
+16. Notification abstraction exists without unnecessary new service.
+
+17. Project operating costs can be observed where measurable.
+
+18. Robinhood remains NOT CONNECTED.
+
+19. Live trading remains DISABLED.
+
+20. Execution remains PAPER ONLY.
+
+21. Tests pass.
+
+22. TypeScript passes.
+
+23. API production build passes.
+
+24. JARVIS production build passes.
+
+25. Production deployment recommendation is provided.
+
+26. Expected monthly hosting configuration/cost is provided or explicitly
+marked UNKNOWN if Replit does not expose enough information.
+
+27. Nothing billable is provisioned without my approval.
+
+============================================================
+FINAL REPORT — RETURN EXACTLY THIS STRUCTURE
+============================================================
+
+JARVIS PHASE III
+[COMPLETE / PARTIAL / BLOCKED]
+
+BASELINE VERIFIED:
+[status]
+
+TOTAL TESTS:
+[x/x]
+
+TYPESCRIPT:
+[PASS/FAIL]
+
+API PRODUCTION BUILD:
+[PASS/FAIL]
+
+JARVIS PRODUCTION BUILD:
+[PASS/FAIL]
+
+SCHEMA VALIDATION:
+[PASS/FAIL]
+
+PERSISTENT PAPER OPERATIONS:
+[status]
+
+SCHEDULER:
+[status]
+
+SCHEDULER MECHANISM:
+[explain]
+
+REQUIRES ALWAYS-ON COMPUTE:
+[YES/NO/HYBRID]
+
+OPEN POSITION PRIORITY:
+[status]
+
+DUPLICATE CYCLE PROTECTION:
+[status]
+
+DUPLICATE ORDER PROTECTION:
+[status]
+
+RESTART RECOVERY:
+[status]
+
+TWELVE DATA REQUEST BUDGET:
+[status]
+
+AI RESEARCH GATE:
+[status]
+
+AI DAILY BUDGET:
+[status]
+
+OPENAI:
+[status]
+
+GROK:
+[status]
+
+PAPER OPERATIONS SESSION:
+[status]
+
+LEARNING ENGINE:
+[status]
+
+AUTOMATIC DAILY REVIEW:
+[status]
+
+AUTOMATIC WEEKLY REVIEW:
+[status]
+
+STRATEGY SELF-IMPROVEMENT:
+[controlled lifecycle status]
+
+CAN LEARNING CHANGE RISK CONTROLS:
+NO
+
+OPERATIONS HEALTH:
+[status]
+
+IPAD PWA:
+[status]
+
+IPAD LANDSCAPE:
+[status]
+
+IPAD PORTRAIT:
+[status]
+
+IPAD VOICE:
+[status]
+
+HOME SCREEN INSTALLATION:
+[status]
+
+NOTIFICATION FOUNDATION:
+[status]
+
+PROJECT ECONOMICS:
+[status]
+
+DEVELOPMENT COST TRACKING:
+[status]
+
+OPERATING COST TRACKING:
+[status]
+
+PAPER P/L CLASSIFIED AS REAL REVENUE:
+NO
+
+ROBINHOOD:
+NOT CONNECTED
+
+LIVE TRADING:
+DISABLED
+
+EXECUTION:
+PAPER ONLY
+
+RECOMMENDED REPLIT DEPLOYMENT TYPE:
+[type]
+
+WHY:
+[explanation]
+
+ESTIMATED MONTHLY HOSTING COST:
+[$ amount/range OR UNKNOWN]
+
+ADDITIONAL DATABASE COST:
+[$ amount/range OR UNKNOWN]
+
+EXPECTED OPENAI COST:
+[explain based on architecture; do not invent usage]
+
+EXPECTED GROK COST:
+[explain based on architecture; do not invent usage]
+
+EXPECTED MARKET DATA COST:
+[existing plan / additional requirement]
+
+NEW REQUIRED COST:
+[list or NONE]
+
+NEW SECRETS REQUIRED:
+[secret names only or NONE]
+
+BILLABLE RESOURCES CREATED:
+NONE
+
+PUBLISHED:
+NO
+
+READY TO DEPLOY:
+[YES/NO]
+
+READY FOR LONG-RUN PAPER OPERATIONS:
+[YES/NO]
+
+KNOWN LIMITATIONS:
+[list]
+
+NEXT HIGHEST-ROI ACTION:
+[one recommendation]
+
+STOP AFTER THIS REPORT.
+
+DO NOT PUBLISH.
+DO NOT CONNECT ROBINHOOD.
+DO NOT ENABLE LIVE TRADING.
+DO NOT START A NEW DEVELOPMENT PHASE.
