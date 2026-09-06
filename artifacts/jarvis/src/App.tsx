@@ -1,92 +1,52 @@
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ClerkProvider, Show, SignIn, SignUp } from '@clerk/react';
+import { ClerkProvider, SignIn, SignUp, useUser, useAuth } from '@clerk/react';
 import { publishableKeyFromHost } from '@clerk/react/internal';
 import { shadcn } from '@clerk/themes';
-import {
-  ArrowUpRight,
-  Bell,
-  Bot,
-  BriefcaseBusiness,
-  CalendarClock,
-  Check,
-  ChevronRight,
-  CircleDollarSign,
-  Clock3,
-  Command,
-  CreditCard,
-  Database,
-  Download,
-  FileText,
-  GitBranch,
-  Globe2,
-  Home as HomeIcon,
-  KeyRound,
-  Link2,
-  LockKeyhole,
-  Menu,
-  MessageSquare,
-  Moon,
-  MoreHorizontal,
-  Pause,
-  Play,
-  Plus,
-  RefreshCw,
-  Send,
-  Settings,
-  ShieldCheck,
-  SlidersHorizontal,
-  Sparkles,
-  TrendingDown,
-  TrendingUp,
-  Unplug,
-  UserRound,
-  WalletCards,
-  Zap,
-} from 'lucide-react';
-import { Link, Redirect, Route, Router as WouterRouter, Switch, useLocation } from 'wouter';
+import { Link, Route, Router as WouterRouter, Switch, useLocation } from 'wouter';
 import { ErrorBoundary } from '@/components/error-boundary';
-import { Toaster } from '@/components/ui/toaster';
-import { TooltipProvider } from '@/components/ui/tooltip';
-import NotFound from '@/pages/not-found';
+
+// Icons
+import { 
+  Menu, X, Command, Home as HomeIcon, Bot, BriefcaseBusiness, 
+  CircleDollarSign, TrendingUp, CalendarClock, Microscope, 
+  Zap, Link2, Settings as SettingsIcon, Bell, RefreshCw
+} from 'lucide-react';
+
+// Pages
+import { OverviewPage } from '@/pages/OverviewPage';
+import { JarvisPage } from '@/pages/JarvisPage';
+import { WorkPage } from '@/pages/WorkPage';
+import { FinancePage } from '@/pages/FinancePage';
+import { MarketsPage } from '@/pages/MarketsPage';
+import { SettingsPage } from '@/pages/SettingsPage';
+import { ResearchPage, EmptyModulePage } from '@/pages/EmptyPages';
+
+// Primitives
+import { StatusDot, TechValue, Button, JARVISCore } from '@/components/primitives';
+import { useSettings } from '@/hooks/use-settings';
 
 const queryClient = new QueryClient();
-const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
-const clerkPubKey = publishableKeyFromHost(
-  window.location.hostname,
-  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
-);
+
+const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || publishableKeyFromHost(window.location.hostname);
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
-const now = new Date();
-const fullDate = new Intl.DateTimeFormat('en-US', {
-  weekday: 'long',
-  month: 'long',
-  day: 'numeric',
-  year: 'numeric',
-}).format(now);
-const dayAndTime = new Intl.DateTimeFormat('en-US', {
-  weekday: 'long',
-  month: 'long',
-  day: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-}).format(now);
 
 const navGroups = [
   {
     label: 'Command',
     items: [
       { href: '/', label: 'Overview', icon: HomeIcon },
-      { href: '/jarvis', label: 'JARVIS', icon: Bot },
+      { href: '/jarvis', label: 'JARVIS Core', icon: Bot, highlight: true },
     ],
   },
   {
-    label: 'Life systems',
+    label: 'Subsystems',
     items: [
       { href: '/work', label: 'Work', icon: BriefcaseBusiness },
       { href: '/finance', label: 'Finance', icon: CircleDollarSign },
       { href: '/markets', label: 'Markets', icon: TrendingUp },
       { href: '/personal', label: 'Personal', icon: CalendarClock },
+      { href: '/research', label: 'Research', icon: Microscope },
     ],
   },
   {
@@ -94,471 +54,296 @@ const navGroups = [
     items: [
       { href: '/automations', label: 'Automations', icon: Zap },
       { href: '/integrations', label: 'Integrations', icon: Link2 },
-      { href: '/settings', label: 'Settings', icon: Settings },
+      { href: '/settings', label: 'Settings', icon: SettingsIcon },
     ],
   },
 ];
 
-function Button({
-  children,
-  variant = 'primary',
-  onClick,
-  testId,
-  type = 'button',
-  style,
-  disabled = false,
-}: {
-  children: ReactNode;
-  variant?: 'primary' | 'secondary' | 'quiet';
-  onClick?: () => void;
-  testId: string;
-  type?: 'button' | 'submit';
-  style?: CSSProperties;
-  disabled?: boolean;
-}) {
+function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <button className={`button-${variant}`} data-testid={testId} onClick={onClick} type={type} style={style} disabled={disabled}>
-      {children}
-    </button>
-  );
-}
-
-function Panel({ children, className = '', testId }: { children: ReactNode; className?: string; testId?: string }) {
-  return <section className={`panel ${className}`} data-testid={testId}>{children}</section>;
-}
-
-function StatusPill({ children, tone = 'good' }: { children: ReactNode; tone?: 'good' | 'amber' | 'neutral' }) {
-  return (
-    <span className={`status-pill ${tone === 'amber' ? 'demo-pill' : ''}`} data-testid="status-pill">
-      <span className={tone === 'good' ? 'live-dot' : 'demo-dot'} /> {children}
-    </span>
-  );
-}
-
-function Toggle({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
-  return (
-    <button className={`toggle ${on ? 'on' : ''}`} onClick={onClick} aria-label={label} data-testid={`toggle-${label.toLowerCase().replaceAll(' ', '-')}`}>
-      <span />
-    </button>
-  );
-}
-
-function Shell({ children }: { children: ReactNode }) {
-  const [location] = useLocation();
-  const [refreshed, setRefreshed] = useState(false);
-  const pageTitle = navGroups.flatMap((group) => group.items).find((item) => item.href === location)?.label ?? 'Overview';
-  return (
-    <div className="app-shell">
-      <aside className="side-rail" data-testid="navigation-rail">
-        <div className="side-head">
-          <Link href="/" className="brand" data-testid="link-brand">
-            <span className="brand-mark"><Command size={18} /></span>
-            <span><span className="brand-word">JARVIS</span><span className="brand-sub">personal command center</span></span>
-          </Link>
-          <button className="icon-button mobile-menu" aria-label="Open navigation" data-testid="button-open-navigation"><Menu /></button>
-        </div>
-        <nav className="nav-list" aria-label="Primary navigation">
-          {navGroups.map((group) => (
-            <div className="nav-block" key={group.label}>
-              <div className="nav-group-label">{group.label}</div>
-              {group.items.map((item) => {
-                const Icon = item.icon;
-                const active = location === item.href;
-                return (
-                  <Link className={`nav-link ${active ? 'active' : ''}`} href={item.href} key={item.href} data-testid={`link-nav-${item.label.toLowerCase()}`}>
-                    <Icon /><span>{item.label}</span>{item.href === '/jarvis' && <span className="nav-live-dot" />}
-                  </Link>
-                );
-              })}
-            </div>
-          ))}
-        </nav>
-        <div className="rail-foot">
-          <Link className="user-chip" href="/settings" data-testid="link-user-settings">
-            <span className="avatar">SH</span>
-            <span><span className="user-name">Shane</span><span className="user-role">Owner · Demo workspace</span></span>
-            <ChevronRight size={15} style={{ marginLeft: 'auto', opacity: .5 }} />
-          </Link>
-        </div>
-      </aside>
-      <main className="main-stage">
-        <header className="topbar">
-          <div>
-            <div className="topbar-kicker">{fullDate}</div>
-            <div className="topbar-title">{pageTitle}</div>
-          </div>
-          <div className="topbar-actions">
-            <span className="demo-pill"><span className="demo-dot" /> Demo mode</span>
-            <button className="icon-button" aria-label="Refresh demo data" onClick={() => setRefreshed(true)} data-testid="button-refresh-data">
-              <RefreshCw className={refreshed ? 'spin-slow' : ''} />
-            </button>
-            <button className="icon-button" aria-label="Notifications" data-testid="button-notifications"><Bell /></button>
-          </div>
-        </header>
-        <div className="content page-enter" key={location}>
-          {children}
-        </div>
-      </main>
-    </div>
-  );
-}
-
-function SectionHeading({ title, detail, action }: { title: string; detail?: string; action?: ReactNode }) {
-  return <div className="section-heading"><div><h2>{title}</h2>{detail && <p>{detail}</p>}</div>{action}</div>;
-}
-
-const priorities = [
-  { id: 'p1', title: 'Review the Q4 product brief', meta: 'Work · due today', tag: '09:30' },
-  { id: 'p2', title: 'Send revised launch timeline', meta: 'Work · waiting on you', tag: '11:00' },
-  { id: 'p3', title: 'Move $1,200 to high-yield savings', meta: 'Finance · suggested', tag: 'Today' },
-];
-
-function Home() {
-  const [done, setDone] = useState<string[]>(['p1']);
-  const completed = (id: string) => done.includes(id);
-  return (
-    <>
-      <div className="home-hero">
-        <div className="hero-copy">
-          <div className="eyebrow">{dayAndTime}</div>
-          <h1 className="display-title" style={{ margin: '13px 0 13px' }}>Good morning, <em>Shane.</em></h1>
-          <p className="lede">Your day is clear enough to make a dent. JARVIS has condensed the moving parts into one quiet place.</p>
-          <div className="hero-actions">
-            <Link className="button-primary" href="/jarvis" data-testid="link-open-jarvis"><Sparkles /> Ask JARVIS</Link>
-            <Button variant="secondary" testId="button-open-briefing"><FileText /> Open briefing</Button>
+    <div className="auth-layout">
+      <div className="w-full max-w-md bg-black/60 border border-primary/20 backdrop-blur-xl p-8 relative overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.8)]">
+        <div className="absolute top-0 left-0 w-full h-1 bg-primary/50 shadow-[0_0_15px_hsl(var(--primary))]" />
+        <div className="flex justify-center mb-8">
+          <div className="w-16 h-16 border border-primary/40 bg-primary/10 rounded-full flex items-center justify-center relative">
+            <Command className="text-primary w-8 h-8" />
+            <div className="absolute inset-0 border-t border-primary/80 rounded-full animate-[spin-slow_3s_linear_infinite]" />
           </div>
         </div>
-        <div className="signal-card" data-testid="card-system-pulse">
-          <div className="mini-label">System pulse</div>
-          <div className="signal-value">4 / 4</div>
-          <div className="signal-caption">core systems accounted for</div>
-          <div style={{ marginTop: 23 }}><StatusPill tone="good">Local workspace ready</StatusPill></div>
+        <div className="text-center font-mono text-sm tracking-widest text-primary uppercase mb-8">
+          Secure Authentication Required
         </div>
-      </div>
-
-      <div className="briefing-strip" data-testid="card-daily-briefing">
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <div className="briefing-icon"><Bot /></div>
-          <div><div className="briefing-title">Your 90-second briefing is ready</div><div className="briefing-copy">One focus block, two financial moves, and a calmer market open than yesterday.</div></div>
-        </div>
-        <Button variant="secondary" testId="button-play-briefing"><Play /> Play</Button>
-      </div>
-
-      <div className="dashboard-grid">
-        <div className="dashboard-stack">
-          <Panel className="panel-pad" testId="panel-todays-priorities">
-            <SectionHeading title="Today's priorities" detail={`${priorities.filter((item) => !completed(item.id)).length} remaining`} action={<Button variant="quiet" testId="button-priorities-more"><MoreHorizontal /></Button>} />
-            {priorities.map((item) => (
-              <div className="priority-row" key={item.id}>
-                <button className={`check-button ${completed(item.id) ? 'checked' : ''}`} onClick={() => setDone((current) => completed(item.id) ? current.filter((id) => id !== item.id) : [...current, item.id])} aria-label={`Mark ${item.title}`} data-testid={`button-priority-${item.id}`}><Check /></button>
-                <div><div className={`row-title ${completed(item.id) ? 'muted' : ''}`} style={completed(item.id) ? { textDecoration: 'line-through' } : undefined}>{item.title}</div><div className="row-meta">{item.meta}</div></div>
-                <div className="row-end mono muted" style={{ fontSize: 10 }}>{item.tag}</div>
-              </div>
-            ))}
-          </Panel>
-          <Panel className="panel-pad" testId="panel-work-preview">
-            <SectionHeading title="Work" detail="Tuesday · 3 active threads" action={<Link className="button-quiet" href="/work" data-testid="link-view-work">View work <ArrowUpRight /></Link>} />
-            <div className="list-row"><span className="status-dot" /><div><div className="row-title">Northstar launch</div><div className="row-meta">Product brief · 72% on track</div></div><div className="row-end"><span className="metric-change green"><TrendingUp /> 72%</span></div></div>
-            <div className="list-row"><span className="status-dot amber" /><div><div className="row-title">Weekly writing cadence</div><div className="row-meta">2 of 4 sessions complete</div></div><div className="row-end mono muted" style={{ fontSize: 10 }}>Thu</div></div>
-            <div className="list-row"><span className="status-dot red" /><div><div className="row-title">Vendor security review</div><div className="row-meta">Blocked · needs a reply</div></div><div className="row-end"><span className="metric-change red"><Clock3 /> 2d</span></div></div>
-          </Panel>
-        </div>
-        <div className="dashboard-stack">
-          <Panel className="panel-pad" testId="panel-finance-preview">
-            <SectionHeading title="Finance" detail="Demo data" action={<Link className="button-quiet" href="/finance" data-testid="link-view-finance">Details <ArrowUpRight /></Link>} />
-            <div className="value-xl">$84,260</div>
-            <div className="row-meta" style={{ marginTop: 5 }}>estimated net worth</div>
-            <div className="metric-change green" style={{ marginTop: 17 }}><TrendingUp /> +$1,842 this month</div>
-            <div className="micro-grid" style={{ marginTop: 20 }}>
-              <div className="micro-metric" style={{ padding: '12px 0 0' }}><div className="mini-label">Cash</div><div className="value-lg">$12,480</div></div>
-              <div className="micro-metric" style={{ padding: '12px 0 0' }}><div className="mini-label">Runway</div><div className="value-lg">7.4 mo</div></div>
-            </div>
-          </Panel>
-          <Panel className="panel-pad" testId="panel-markets-preview">
-            <SectionHeading title="Markets" detail="Paper trading" action={<Link className="button-quiet" href="/markets" data-testid="link-view-markets">Watchlist <ArrowUpRight /></Link>} />
-            <div className="list-row"><div><div className="row-title">SPY</div><div className="row-meta">S&P 500 ETF</div></div><div className="row-end"><div className="row-title">$582.11</div><div className="metric-change green">+0.41%</div></div></div>
-            <div className="list-row"><div><div className="row-title">NVDA</div><div className="row-meta">NVIDIA Corporation</div></div><div className="row-end"><div className="row-title">$138.07</div><div className="metric-change red">−0.82%</div></div></div>
-          </Panel>
-        </div>
-      </div>
-      <div className="three-col" style={{ marginTop: 22 }}>
-        <Panel className="micro-metric" testId="card-calendar"><div className="mini-label">Next up</div><div className="value-lg">10:30</div><div className="row-meta">Design review · 45 min</div></Panel>
-        <Panel className="micro-metric" testId="card-connections"><div className="mini-label">Connections</div><div className="value-lg">6 / 7</div><div className="row-meta"><span className="green">Healthy</span> · one setup required</div></Panel>
-        <Panel className="micro-metric" testId="card-focus"><div className="mini-label">Focus time</div><div className="value-lg">2h 10m</div><div className="row-meta">planned today · +25m vs avg</div></Panel>
-      </div>
-    </>
-  );
-}
-
-function JarvisPage() {
-  const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState<Array<{ author: string; text: string }>>([]);
-  const [conversationId, setConversationId] = useState<string | null>(null);
-  const [isStreaming, setIsStreaming] = useState(false);
-
-  useEffect(() => {
-    void (async () => {
-      const conversations = await fetch('/api/conversations').then((response) => response.ok ? response.json() : []);
-      const active = conversations[0];
-      if (!active) return;
-      setConversationId(active.id);
-      const history = await fetch(`/api/conversations/${active.id}/messages`).then((response) => response.ok ? response.json() : []);
-      setMessages(history.map((item: { role: string; content: string }) => ({
-        author: item.role === 'assistant' ? 'JARVIS' : 'SHANE',
-        text: item.content,
-      })));
-    })();
-  }, []);
-
-  const send = async (value = message) => {
-    const content = value.trim();
-    if (!content || isStreaming) return;
-    setMessage('');
-    setMessages((current) => [...current, { author: 'SHANE', text: content }, { author: 'JARVIS', text: '' }]);
-    setIsStreaming(true);
-    try {
-      let id = conversationId;
-      if (!id) {
-        const created = await fetch('/api/conversations', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: content.slice(0, 60), domain: 'GENERAL' }),
-        }).then((response) => {
-          if (!response.ok) throw new Error('Could not create conversation');
-          return response.json();
-        });
-        id = created.id;
-        setConversationId(id);
-      }
-      const response = await fetch(`/api/conversations/${id}/messages/stream`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content }),
-      });
-      if (!response.ok || !response.body) throw new Error('JARVIS is unavailable');
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let pending = '';
-      while (true) {
-        const { value: chunk, done } = await reader.read();
-        if (done) break;
-        pending += decoder.decode(chunk, { stream: true });
-        const events = pending.split('\n\n');
-        pending = events.pop() ?? '';
-        for (const event of events) {
-          const line = event.split('\n').find((part) => part.startsWith('data: '));
-          if (!line) continue;
-          const data = JSON.parse(line.slice(6)) as { content?: string; error?: string };
-          if (data.error) throw new Error(data.error);
-          if (data.content) {
-            setMessages((current) => current.map((item, index) =>
-              index === current.length - 1 ? { ...item, text: item.text + data.content } : item,
-            ));
-          }
-        }
-      }
-    } catch {
-      setMessages((current) => current.map((item, index) =>
-        index === current.length - 1 ? { ...item, text: 'I could not complete that response. Please try again.' } : item,
-      ));
-    } finally {
-      setIsStreaming(false);
-    }
-  };
-  return (
-    <div className="two-col">
-      <div>
-        <div className="page-header"><div><div className="eyebrow">Private assistant · persistent history</div><h1 className="display-title" style={{ margin: '11px 0 10px' }}>Talk it through.</h1><p className="lede">A focused surface for decisions, not a noisy chat feed.</p></div><StatusPill>{isStreaming ? 'Thinking' : 'AI ready'}</StatusPill></div>
-        <Panel className="panel-pad" testId="panel-conversation">
-          <div className="chat-thread">
-            {messages.length === 0 && <div className="chat-bubble jarvis"><div className="chat-author">JARVIS</div>Your private conversation history is ready. What should we work through?</div>}
-            {messages.map((item, index) => <div className={`chat-bubble ${item.author === 'SHANE' ? 'shane' : 'jarvis'}`} key={`${item.author}-${index}`} data-testid={`message-${index}`}><div className="chat-author">{item.author}</div>{item.text || 'Thinking…'}</div>)}
-          </div>
-          <div className="divider" style={{ margin: '22px 0 15px' }} />
-          <div className="chips" style={{ marginBottom: 13 }}>
-            {['Summarize my day', 'Find my next focus block', 'Review spending'].map((chip) => <button className="prompt-chip" key={chip} onClick={() => send(chip)} data-testid={`button-prompt-${chip.toLowerCase().replaceAll(' ', '-')}`}>{chip}</button>)}
-          </div>
-          <form className="form-row" onSubmit={(event) => { event.preventDefault(); send(); }}>
-            <input className="text-input" value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Ask JARVIS anything about your cockpit" aria-label="Message JARVIS" data-testid="input-jarvis-message" />
-            <Button type="submit" testId="button-send-message" disabled={isStreaming}><Send /></Button>
-          </form>
-        </Panel>
-      </div>
-      <div className="dashboard-stack">
-        <Panel className="panel-pad" testId="panel-assistant-context"><SectionHeading title="Context window" detail="What JARVIS can see" /><div className="list-row"><Database size={16} className="teal" /><div><div className="row-title">Private database</div><div className="row-meta">Conversations and memories</div></div><StatusPill>Ready</StatusPill></div><div className="list-row"><CreditCard size={16} className="teal" /><div><div className="row-title">Finance snapshot</div><div className="row-meta">Demo data only</div></div><StatusPill tone="amber">Demo</StatusPill></div><div className="list-row"><Globe2 size={16} className="teal" /><div><div className="row-title">Live web context</div><div className="row-meta">Not connected</div></div><StatusPill tone="amber">Off</StatusPill></div></Panel>
-        <Panel className="panel-pad" testId="panel-assistant-note"><Sparkles className="gold" size={18} /><div className="row-title" style={{ marginTop: 12 }}>A useful boundary</div><p className="row-meta" style={{ lineHeight: 1.6 }}>JARVIS will show its source and confidence before making recommendations. It will never place a trade or move money in this demo.</p></Panel>
+        {children}
       </div>
     </div>
   );
-}
-
-function WorkPage() {
-  const [tasks, setTasks] = useState<Array<{ id: string; title: string; project: string; done: boolean }>>([]);
-  const [newTask, setNewTask] = useState('');
-  useEffect(() => {
-    void fetch('/api/tasks').then((response) => response.ok ? response.json() : []).then((items) => {
-      setTasks(items.map((item: { id: string; title: string; project: string; completed: boolean }) => ({
-        id: item.id,
-        title: item.title,
-        project: item.project,
-        done: item.completed,
-      })));
-    });
-  }, []);
-  const addTask = async () => {
-    const title = newTask.trim();
-    if (!title) return;
-    const item = await fetch('/api/tasks', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, project: 'Inbox' }),
-    }).then((response) => response.json());
-    setTasks((current) => [{ id: item.id, title: item.title, project: item.project, done: item.completed }, ...current]);
-    setNewTask('');
-  };
-  const toggleTask = async (task: { id: string; done: boolean }) => {
-    const updated = await fetch(`/api/tasks/${task.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ completed: !task.done }),
-    }).then((response) => response.json());
-    setTasks((current) => current.map((item) => item.id === task.id ? { ...item, done: updated.completed } : item));
-  };
-  return (
-    <>
-      <div className="page-header"><div><div className="eyebrow">Work system · 3 active projects</div><h1 className="display-title" style={{ margin: '11px 0 10px' }}>Make progress visible.</h1><p className="lede">A small, honest view of the work that deserves your attention today.</p></div><div className="page-header-actions"><Button variant="secondary" testId="button-filter-work"><SlidersHorizontal /> Filter</Button><Button onClick={addTask} testId="button-add-task"><Plus /> Add task</Button></div></div>
-      <div className="three-col" style={{ marginBottom: 22 }}><Panel className="metric-card"><span className="mini-label">Open tasks</span><div className="value-lg">{tasks.filter((task) => !task.done).length}</div><div className="metric-foot"><span className="row-meta">across 3 projects</span><span className="metric-change green">−2 this week</span></div></Panel><Panel className="metric-card"><span className="mini-label">Focus this week</span><div className="value-lg">6h 35m</div><div className="metric-foot"><span className="row-meta">of 8h planned</span><span className="metric-change green">82%</span></div></Panel><Panel className="metric-card"><span className="mini-label">Needs a reply</span><div className="value-lg">01</div><div className="metric-foot"><span className="row-meta">vendor security</span><span className="metric-change red">2 days</span></div></Panel></div>
-      <div className="two-col"><Panel className="panel-pad"><SectionHeading title="Tasks" detail="Saved securely" /><div className="form-row" style={{ marginBottom: 15 }}><input className="text-input" value={newTask} onChange={(event) => setNewTask(event.target.value)} placeholder="Add a task to your inbox" aria-label="New task" data-testid="input-new-task" /><Button onClick={() => void addTask()} testId="button-save-task"><Plus /></Button></div>{tasks.length === 0 && <p className="row-meta">No tasks yet. Add the first item to your private inbox.</p>}{tasks.map((task) => <div className="list-row" key={task.id}><button className={`check-button ${task.done ? 'checked' : ''}`} onClick={() => void toggleTask(task)} data-testid={`button-task-${task.id}`}><Check /></button><div><div className="row-title" style={task.done ? { textDecoration: 'line-through', color: 'hsl(var(--muted-foreground))' } : undefined}>{task.title}</div><div className="row-meta">{task.project}</div></div><button className="button-quiet row-end" aria-label={`More options for ${task.title}`} data-testid={`button-task-more-${task.id}`}><MoreHorizontal /></button></div>)}</Panel><div className="dashboard-stack"><Panel className="panel-pad"><SectionHeading title="Projects" action={<Button variant="quiet" testId="button-view-projects">All <ChevronRight /></Button>} /><div className="list-row"><span className="row-icon"><GitBranch /></span><div style={{ flex: 1 }}><div className="row-title">Project persistence</div><div className="row-meta">Project records arrive in the next module pass</div><div className="progress-track" style={{ marginTop: 9 }}><div className="progress-fill" style={{ width: '35%' }} /></div></div><span className="mono muted" style={{ fontSize: 10 }}>35%</span></div></Panel><Panel className="panel-pad"><div className="mini-label">Calendar</div><div className="value-lg" style={{ marginTop: 9 }}>Not connected</div><div className="row-meta" style={{ marginTop: 4 }}>Google Calendar authorization will be requested when needed.</div><Button variant="secondary" testId="button-open-calendar" style={{ marginTop: 17 } as never}><CalendarClock /> Setup required</Button></Panel></div></div>
-    </>
-  );
-}
-
-function FinancePage() {
-  const [range, setRange] = useState('6M');
-  return (
-    <>
-      <div className="page-header"><div><div className="eyebrow">Finance · demo data</div><h1 className="display-title" style={{ margin: '11px 0 10px' }}>Know your runway.</h1><p className="lede">A calm summary of your money. Figures below are illustrative and never connected to a bank.</p></div><div className="page-header-actions"><StatusPill tone="amber">Demo data</StatusPill><Button variant="secondary" testId="button-export-finance"><Download /> Export</Button></div></div>
-      <div className="three-col" style={{ marginBottom: 22 }}><Panel className="metric-card"><span className="mini-label">Estimated net worth</span><div className="value-lg">$84,260</div><div className="metric-foot"><span className="row-meta">across 4 accounts</span><span className="metric-change green"><TrendingUp /> +2.2%</span></div></Panel><Panel className="metric-card"><span className="mini-label">Monthly spend</span><div className="value-lg">$4,812</div><div className="metric-foot"><span className="row-meta">October to date</span><span className="metric-change green">−8.4%</span></div></Panel><Panel className="metric-card"><span className="mini-label">Cash runway</span><div className="value-lg">7.4 mo</div><div className="metric-foot"><span className="row-meta">at current burn</span><span className="metric-change gold">Watch</span></div></Panel></div>
-      <div className="two-col"><Panel className="panel-pad"><SectionHeading title="Net worth trend" detail="Illustrative history" action={<div className="chips">{['1M', '6M', '1Y'].map((item) => <button className={`prompt-chip ${range === item ? 'active-chip' : ''}`} key={item} onClick={() => setRange(item)} data-testid={`button-range-${item}`}>{item}</button>)}</div>} /><div className="value-xl">$84,260 <span className="metric-change green" style={{ fontSize: 12 }}><TrendingUp /> +$1,842</span></div><div className="bars">{[42, 48, 45, 57, 53, 64, 62, 76, 71, 84, 81, 94].map((height, index) => <div className={`bar ${index === 11 ? 'highlight' : ''}`} style={{ height: `${height}%` }} key={index} />)}</div><div className="divider" style={{ marginTop: 14 }} /><div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 11 }}><span className="row-meta">May 15</span><span className="row-meta">Oct 15</span></div></Panel><Panel className="panel-pad"><SectionHeading title="Accounts" detail="Setup required" /><div className="list-row"><span className="row-icon"><WalletCards /></span><div><div className="row-title">High-yield savings</div><div className="row-meta">Manual balance</div></div><div className="row-end mono">$12,480</div></div><div className="list-row"><span className="row-icon"><CreditCard /></span><div><div className="row-title">Daily checking</div><div className="row-meta">Manual balance</div></div><div className="row-end mono">$3,260</div></div><div className="list-row"><span className="row-icon"><CircleDollarSign /></span><div><div className="row-title">Brokerage</div><div className="row-meta">Paper portfolio</div></div><div className="row-end mono">$68,520</div></div><Button variant="secondary" testId="button-connect-finance" style={{ marginTop: 16 } as never}><Plus /> Add account</Button></Panel></div>
-    </>
-  );
-}
-
-function MarketsPage() {
-  const [paused, setPaused] = useState(false);
-  const watchlist: Array<[string, string, string, string, boolean]> = [
-    ['SPY', 'S&P 500 ETF', '$582.11', '+0.41%', false],
-    ['QQQ', 'Nasdaq 100 ETF', '$495.03', '+0.68%', false],
-    ['NVDA', 'NVIDIA Corporation', '$138.07', '−0.82%', true],
-    ['BTC-USD', 'Bitcoin / USD', '$67,842', '+1.24%', false],
-  ];
-  return (
-    <>
-      <div className="page-header"><div><div className="eyebrow">Markets · paper trading only</div><h1 className="display-title" style={{ margin: '11px 0 10px' }}>Observe, then decide.</h1><p className="lede">Prices are illustrative snapshots. There is no Robinhood connection, live feed, or trade execution in Phase 1.</p></div><div className="page-header-actions"><StatusPill tone="amber">Paper trading</StatusPill><Button variant="secondary" onClick={() => setPaused(!paused)} testId="button-pause-market-feed">{paused ? <Play /> : <Pause />}{paused ? 'Resume' : 'Pause'} feed</Button></div></div>
-      <div className="safety-banner" style={{ marginBottom: 22 }}><ShieldCheck /><div><div className="safety-title">Trading safety is on</div><div className="safety-copy">JARVIS can explain a setup, but cannot place an order. Confirm every decision outside this workspace.</div></div><span className="mono muted" style={{ marginLeft: 'auto', fontSize: 10 }}>GUARDRAIL 01</span></div>
-      <div className="two-col"><Panel className="panel-pad"><SectionHeading title="Watchlist" detail={paused ? 'Feed paused · demo snapshot' : 'Demo snapshot · 09:32 ET'} action={<Button variant="quiet" testId="button-add-symbol"><Plus /> Add symbol</Button>} /><div className="table-scroll"><table className="data-table"><thead><tr><th>Instrument</th><th>Price</th><th>Day</th><th>Trend</th></tr></thead><tbody>{watchlist.map(([symbol, name, price, change, down]) => <tr key={symbol}><td><div className="table-name">{symbol}</div><div className="table-sub">{name}</div></td><td className="mono">{price}</td><td className={down ? 'red mono' : 'green mono'}>{change}</td><td><div className="sparkline">{[12, 18, 13, 22, 18, 25, 20].map((height, index) => <i className={down ? 'down' : ''} style={{ height }} key={index} />)}</div></td></tr>)}</tbody></table></div></Panel><div className="dashboard-stack"><Panel className="panel-pad"><SectionHeading title="Market posture" detail="JARVIS readout" /><div className="value-xl">Measured</div><p className="row-meta" style={{ lineHeight: 1.55, marginTop: 8 }}>Breadth is constructive, but no single signal earns a trade today.</p><div className="divider" style={{ margin: '16px 0' }} /><div className="list-row"><span className="status-dot" /><div><div className="row-title">Volatility</div><div className="row-meta">Contained</div></div><span className="mono muted" style={{ fontSize: 10 }}>VIX 18.4</span></div><div className="list-row"><span className="status-dot amber" /><div><div className="row-title">Next review</div><div className="row-meta">After market close</div></div><span className="mono muted" style={{ fontSize: 10 }}>16:10</span></div></Panel><Panel className="panel-pad"><div className="mini-label">Paper portfolio</div><div className="value-lg" style={{ marginTop: 8 }}>$68,520</div><div className="metric-change green" style={{ marginTop: 6 }}><TrendingUp /> +$412 today</div><Button variant="secondary" testId="button-review-paper-portfolio" style={{ marginTop: 17 } as never}><ArrowUpRight /> Review portfolio</Button></Panel></div></div>
-    </>
-  );
-}
-
-function PersonalPage() {
-  const [routines, setRoutines] = useState(['Morning walk', 'Read for 20 minutes']);
-  const reminders = [{ title: 'Book dentist appointment', when: 'Tomorrow · Personal' }, { title: 'Call Mum', when: 'Friday · Personal' }, { title: 'Renew passport', when: 'Oct 30 · Admin' }];
-  return (
-    <>
-      <div className="page-header"><div><div className="eyebrow">Personal · routines and reminders</div><h1 className="display-title" style={{ margin: '11px 0 10px' }}>Keep life human.</h1><p className="lede">Lightweight prompts for the parts of your day that do not belong in a project plan.</p></div><Button testId="button-add-reminder"><Plus /> Add reminder</Button></div>
-      <div className="two-col"><Panel className="panel-pad"><SectionHeading title="Today's rhythm" detail="2 of 4 complete" /><div className="progress-track" style={{ marginBottom: 18 }}><div className="progress-fill" style={{ width: '50%' }} /></div>{['Morning walk', 'Read for 20 minutes', 'No screens after 22:30', 'Prep tomorrow'].map((item, index) => { const checked = routines.includes(item); return <div className="list-row" key={item}><button className={`check-button ${checked ? 'checked' : ''}`} onClick={() => setRoutines((current) => checked ? current.filter((routine) => routine !== item) : [...current, item])} data-testid={`button-routine-${index}`}><Check /></button><div><div className="row-title">{item}</div><div className="row-meta">{index < 2 ? 'Routine · today' : 'Routine · suggested'}</div></div><span className="row-end mono muted" style={{ fontSize: 10 }}>{index < 2 ? 'done' : 'later'}</span></div>; })}</Panel><Panel className="panel-pad"><SectionHeading title="Reminders" detail="Next 7 days" /><div>{reminders.map((reminder, index) => <div className="list-row" key={reminder.title}><span className="row-icon"><Bell /></span><div><div className="row-title">{reminder.title}</div><div className="row-meta">{reminder.when}</div></div><button className="button-quiet row-end" aria-label={`Snooze ${reminder.title}`} data-testid={`button-snooze-reminder-${index}`}><Clock3 /></button></div>)}</div><Button variant="secondary" testId="button-manage-reminders" style={{ marginTop: 17 } as never}><Settings /> Manage reminders</Button></Panel></div>
-    </>
-  );
-}
-
-function AutomationsPage() {
-  const [rules, setRules] = useState([{ title: 'Morning briefing', copy: 'Weekdays at 08:00 · JARVIS summary', icon: Bot, on: true }, { title: 'Low balance nudge', copy: 'When cash runway dips below 6 months', icon: CircleDollarSign, on: true }, { title: 'Friday reset', copy: 'Fridays at 16:00 · prepare next week', icon: RotateCcwFallback, on: false }, { title: 'Market close note', copy: 'Weekdays at 16:15 · paper portfolio', icon: TrendingUp, on: false }]);
-  return (
-    <>
-      <div className="page-header"><div><div className="eyebrow">Automations · local rules</div><h1 className="display-title" style={{ margin: '11px 0 10px' }}>Let the small things run.</h1><p className="lede">Simple rules for recurring care. Every automation is visible, pausable, and local to this demo workspace.</p></div><Button testId="button-create-automation"><Plus /> New automation</Button></div>
-      <div className="two-col"><Panel className="panel-pad"><SectionHeading title="Your rules" detail={`${rules.filter((rule) => rule.on).length} active`} />{rules.map((rule, index) => { const Icon = rule.icon; return <div className="rule-row" key={rule.title}><span className="row-icon"><Icon /></span><div className="switch-copy"><strong>{rule.title}</strong><span>{rule.copy}</span></div><Toggle on={rule.on} onClick={() => setRules((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, on: !item.on } : item))} label={`Toggle ${rule.title}`} /></div>; })}</Panel><div className="dashboard-stack"><Panel className="panel-pad"><div className="mini-label">Automation health</div><div className="value-xl" style={{ marginTop: 9 }}>100%</div><p className="row-meta" style={{ lineHeight: 1.6, marginTop: 7 }}>All active rules ran successfully in the last demo cycle.</p><div className="divider" style={{ margin: '16px 0' }} /><div className="list-row"><span className="status-dot" /><div><div className="row-title">Last run</div><div className="row-meta">Morning briefing</div></div><span className="mono muted" style={{ fontSize: 10 }}>08:00</span></div></Panel><Panel className="panel-pad"><Zap className="gold" size={18} /><div className="row-title" style={{ marginTop: 12 }}>Build slowly</div><p className="row-meta" style={{ lineHeight: 1.6 }}>Start with rules you can explain in one sentence. More control is better than more automation.</p></Panel></div></div>
-    </>
-  );
-}
-
-function RotateCcwFallback(props: { size?: number }) {
-  return <RefreshCw {...props} />;
-}
-
-function IntegrationsPage() {
-  const [connected, setConnected] = useState(['Apple Calendar', 'Notion']);
-  const services = [{ name: 'Apple Calendar', category: 'Schedule', icon: CalendarClock }, { name: 'Notion', category: 'Knowledge', icon: FileText }, { name: 'Robinhood', category: 'Markets', icon: TrendingUp }, { name: 'Gmail', category: 'Communication', icon: MessageSquare }, { name: 'iCloud Reminders', category: 'Personal', icon: Bell }];
-  return (
-    <>
-      <div className="page-header"><div><div className="eyebrow">Integrations · connection health</div><h1 className="display-title" style={{ margin: '11px 0 10px' }}>Choose what gets in.</h1><p className="lede">JARVIS is more useful when it knows enough, not everything. You stay in control of every connection.</p></div><Button variant="secondary" testId="button-scan-integrations"><RefreshCw /> Check status</Button></div>
-      <div className="safety-banner" style={{ marginBottom: 22 }}><LockKeyhole /><div><div className="safety-title">Private by default</div><div className="safety-copy">Connections are simulated in this Phase 1 workspace. No credentials are stored or transmitted.</div></div></div>
-      <Panel className="panel-pad"><SectionHeading title="Service connections" detail={`${connected.length} connected · ${services.length - connected.length} setup required`} />{services.map((service) => { const Icon = service.icon; const isConnected = connected.includes(service.name); return <div className="connection-row" key={service.name}><span className="row-icon"><Icon /></span><div className="switch-copy"><strong>{service.name}</strong><span>{service.category} · {isConnected ? 'Ready for demo context' : service.name === 'Robinhood' ? 'Paper trading only' : 'Not connected'}</span></div><div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>{isConnected ? <StatusPill>Connected</StatusPill> : <StatusPill tone="amber">{service.name === 'Robinhood' ? 'Paper only' : 'Setup required'}</StatusPill>}<Button variant="secondary" onClick={() => setConnected((current) => isConnected ? current.filter((item) => item !== service.name) : [...current, service.name])} testId={`button-connection-${service.name.toLowerCase().replaceAll(' ', '-')}`}>{isConnected ? <Unplug /> : <Link2 />}{isConnected ? 'Disconnect' : 'Connect'}</Button></div></div>; })}</Panel>
-    </>
-  );
-}
-
-function SettingsPage() {
-  const [dark, setDark] = useState(false);
-  const [quiet, setQuiet] = useState(true);
-  const [section, setSection] = useState('Personalization');
-  const sections = ['Personalization', 'Security', 'Notifications'];
-  return (
-    <>
-      <div className="page-header"><div><div className="eyebrow">Settings · your cockpit</div><h1 className="display-title" style={{ margin: '11px 0 10px' }}>Make it yours.</h1><p className="lede">A few considered choices keep the workspace useful without making it loud.</p></div><Button variant="secondary" testId="button-save-settings"><Check /> Saved locally</Button></div>
-      <div className="settings-grid"><div className="settings-nav">{sections.map((item) => <button className={section === item ? 'active' : ''} onClick={() => setSection(item)} key={item} data-testid={`button-settings-${item.toLowerCase()}`}>{item}</button>)}</div><Panel className="settings-card"><h3>{section}</h3><p>{section === 'Personalization' ? 'Tune the feel and focus of your command center.' : section === 'Security' ? 'Boundaries for the private workspace.' : 'Decide what deserves your attention.'}</p>{section === 'Personalization' && <><div className="setting-row"><span className="row-icon"><Moon /></span><div className="switch-copy"><strong>Low-light cockpit</strong><span>Use the deep marine palette when working late.</span></div><Toggle on={dark} onClick={() => { setDark(!dark); document.documentElement.classList.toggle('dark', !dark); }} label="Low-light cockpit" /></div><div className="setting-row"><span className="row-icon"><Sparkles /></span><div className="switch-copy"><strong>Quiet recommendations</strong><span>Prefer fewer, higher-confidence suggestions from JARVIS.</span></div><Toggle on={quiet} onClick={() => setQuiet(!quiet)} label="Quiet recommendations" /></div><div className="setting-row"><span className="row-icon"><UserRound /></span><div className="switch-copy"><strong>Display name</strong><span>Used in greetings and briefings.</span></div><input className="text-input" style={{ maxWidth: 160 }} defaultValue="Shane" aria-label="Display name" data-testid="input-display-name" /></div></>}{section === 'Security' && <><div className="setting-row"><span className="row-icon"><KeyRound /></span><div className="switch-copy"><strong>Private workspace</strong><span>Local demo data stays in this browser session.</span></div><StatusPill>Enabled</StatusPill></div><div className="setting-row"><span className="row-icon"><ShieldCheck /></span><div className="switch-copy"><strong>Trade safety guardrail</strong><span>Live order placement is unavailable by design.</span></div><StatusPill tone="amber">Paper only</StatusPill></div><Button variant="secondary" testId="button-review-permissions"><LockKeyhole /> Review permissions</Button></>}{section === 'Notifications' && <><div className="setting-row"><span className="row-icon"><Bell /></span><div className="switch-copy"><strong>Morning briefing</strong><span>One daily summary at 08:00.</span></div><Toggle on={true} onClick={() => undefined} label="Morning briefing" /></div><div className="setting-row"><span className="row-icon"><MessageSquare /></span><div className="switch-copy"><strong>Task nudges</strong><span>Only when a due date is within 24 hours.</span></div><Toggle on={quiet} onClick={() => setQuiet(!quiet)} label="Task nudges" /></div></>}</Panel></div>
-    </>
-  );
-}
-
-function RoutedErrorBoundary({ children }: { children: ReactNode }) {
-  const [location] = useLocation();
-  return <ErrorBoundary resetKey={location}>{children}</ErrorBoundary>;
 }
 
 function AuthWelcome() {
   return (
-    <div className="auth-welcome">
-      <div className="auth-welcome-card">
-        <div className="brand-mark"><Command /></div>
-        <div className="eyebrow">Private personal command center</div>
-        <h1 className="display-title">Welcome to <em>JARVIS.</em></h1>
-        <p className="lede">Sign in to keep your conversations, settings, and memories securely available across devices.</p>
-        <div className="hero-actions">
-          <Link className="button-primary" href="/sign-in">Sign in</Link>
-          <Link className="button-secondary" href="/sign-up">Create account</Link>
+    <div className="auth-layout px-6">
+      <div className="auth-welcome-grid">
+        <div className="auth-intro">
+          <div className="font-mono text-[10px] tracking-[0.28em] text-primary/70 uppercase mb-5">
+            Private Personal Intelligence System
+          </div>
+          <h1 className="font-display text-5xl md:text-7xl font-light tracking-tight text-white mb-5">
+            JARVIS
+          </h1>
+          <p className="text-muted-foreground leading-relaxed max-w-xl mb-8">
+            An authenticated command environment for persistent conversations, work queues,
+            system context, and controlled research.
+          </p>
+          <div className="flex flex-wrap gap-4">
+            <Link className="btn-tech solid" href="/sign-in">SIGN IN</Link>
+            <Link className="btn-tech" href="/sign-up">CREATE ACCOUNT</Link>
+          </div>
+          <div className="mt-8 font-mono text-[10px] tracking-widest text-amber-500/80 uppercase">
+            Live trading disabled // External systems not connected
+          </div>
         </div>
-        <p className="row-meta">Live trading remains disabled. Demo Mode is available after sign-in.</p>
+        <div className="auth-core-wrap">
+          <JARVISCore processText="AUTHENTICATION REQUIRED" />
+          <div className="auth-orbit-label auth-orbit-a">PRIVATE</div>
+          <div className="auth-orbit-label auth-orbit-b">PERSISTENT</div>
+          <div className="auth-orbit-label auth-orbit-c">CONTROLLED</div>
+        </div>
       </div>
     </div>
   );
 }
 
-function SignInPage() {
-  return <div className="auth-welcome"><SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} /></div>;
-}
+function Shell({ children }: { children: React.ReactNode }) {
+  const [location] = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [refreshed, setRefreshed] = useState(false);
+  const { user } = useUser();
+  const { signOut } = useAuth();
+  
+  // Call useSettings to initialize global reduced motion state
+  useSettings();
 
-function SignUpPage() {
-  return <div className="auth-welcome"><SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} /></div>;
-}
+  const closeMenu = () => setMobileMenuOpen(false);
 
-function ProtectedShell() {
+  useEffect(() => {
+    if (refreshed) {
+      const timer = setTimeout(() => setRefreshed(false), 1000);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [refreshed]);
+
   return (
-    <>
-      <Show when="signed-in">
-        <RoutedErrorBoundary><Shell><Switch><Route path="/" component={Home} /><Route path="/jarvis" component={JarvisPage} /><Route path="/work" component={WorkPage} /><Route path="/finance" component={FinancePage} /><Route path="/markets" component={MarketsPage} /><Route path="/personal" component={PersonalPage} /><Route path="/automations" component={AutomationsPage} /><Route path="/integrations" component={IntegrationsPage} /><Route path="/settings" component={SettingsPage} /><Route component={NotFound} /></Switch></Shell></RoutedErrorBoundary>
-      </Show>
-      <Show when="signed-out"><Redirect to="/" /></Show>
-    </>
+    <div className="cmd-layout bg-background">
+      {/* Sidebar */}
+      <aside className={`cmd-sidebar ${mobileMenuOpen ? 'open' : ''}`}>
+        <div className="h-20 px-6 flex items-center justify-between border-b border-primary/10">
+          <Link href="/" className="flex items-center gap-3 no-underline group" onClick={closeMenu}>
+            <div className="w-8 h-8 bg-primary/10 border border-primary/40 flex items-center justify-center text-primary group-hover:bg-primary/20 transition-colors">
+              <Command size={16} />
+            </div>
+            <div>
+              <div className="font-display font-bold text-white tracking-widest text-sm leading-none">JARVIS</div>
+              <div className="font-mono text-[9px] text-primary/70 tracking-widest uppercase mt-1">KERNEL</div>
+            </div>
+          </Link>
+          <button className="mobile-menu-btn text-primary p-2" onClick={closeMenu}>
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto py-6 px-4 space-y-8 scrollbar-hide">
+          {navGroups.map(group => (
+            <div key={group.label}>
+              <div className="font-mono text-[10px] text-primary/40 tracking-widest uppercase mb-3 px-3">
+                {group.label}
+              </div>
+              <nav className="space-y-1">
+                {group.items.map(item => {
+                  const active = location === item.href;
+                  return (
+                    <Link 
+                      key={item.href} 
+                      href={item.href} 
+                      className={`nav-link ${active ? 'active' : ''}`}
+                      onClick={closeMenu}
+                    >
+                      <item.icon size={16} className={active ? 'text-primary' : 'text-muted-foreground'} />
+                      <span className="flex-1">{item.label}</span>
+                      {item.highlight && <StatusDot status="online" pulse />}
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+          ))}
+        </div>
+
+        <div className="p-4 border-t border-primary/10">
+          <div className="flex items-center gap-3 p-3 bg-black/40 border border-primary/10">
+            <div className="w-8 h-8 bg-primary/20 border border-primary/30 flex items-center justify-center font-mono text-xs text-primary">
+              {user?.firstName?.[0] || 'OP'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-mono text-xs text-white truncate">{user?.firstName || 'Operator'}</div>
+              <div className="font-mono text-[9px] text-primary/60 truncate">Authenticated</div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <main className="cmd-main">
+        <header className="cmd-header">
+          <div className="flex items-center gap-4">
+            <button className="mobile-menu-btn text-primary p-2 border border-primary/20 bg-primary/5 hover:bg-primary/10" onClick={() => setMobileMenuOpen(true)}>
+              <Menu size={20} />
+            </button>
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1 border border-primary/30 bg-primary/5">
+              <span className="font-mono text-[10px] text-primary tracking-widest">RESEARCH ONLY</span>
+            </div>
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1 border border-red-500/30 bg-red-500/5">
+              <span className="font-mono text-[10px] text-red-500 tracking-widest">AGENTIC AUTO DISABLED</span>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3 sm:gap-4">
+            <Button variant="icon" testId="btn-refresh" onClick={() => setRefreshed(true)}>
+              <RefreshCw size={16} className={refreshed ? 'animate-spin' : ''} />
+            </Button>
+            
+            <Button variant="icon" testId="btn-notifications" disabled>
+              <Bell size={16} />
+            </Button>
+          </div>
+        </header>
+
+        <div className="cmd-content">
+          <ErrorBoundary>
+            {children}
+          </ErrorBoundary>
+        </div>
+      </main>
+
+      {/* Mobile Menu Backdrop */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 lg:hidden" onClick={closeMenu} />
+      )}
+    </div>
   );
 }
 
-function Router() {
-  return <Switch><Route path="/sign-in/*?" component={SignInPage} /><Route path="/sign-up/*?" component={SignUpPage} /><Route path="/"><Show when="signed-in"><ProtectedShell /></Show><Show when="signed-out"><AuthWelcome /></Show></Route><Route component={ProtectedShell} /></Switch>;
+function AuthenticatedApp() {
+  return (
+    <Shell>
+      <Switch>
+        <Route path="/" component={OverviewPage} />
+        <Route path="/jarvis" component={JarvisPage} />
+        <Route path="/work" component={WorkPage} />
+        <Route path="/finance" component={FinancePage} />
+        <Route path="/markets" component={MarketsPage} />
+        <Route path="/research" component={ResearchPage} />
+        <Route path="/settings" component={SettingsPage} />
+        <Route path="/personal">
+          <EmptyModulePage title="Personal" id="personal" />
+        </Route>
+        <Route path="/automations">
+          <EmptyModulePage title="Automations" id="automations" />
+        </Route>
+        <Route path="/integrations">
+          <EmptyModulePage title="Integrations" id="integrations" />
+        </Route>
+        <Route>
+          <div className="flex flex-col items-center justify-center h-[60vh] text-center">
+            <TechValue size="lg" className="text-red-500 mb-4">404 - SECTOR NOT FOUND</TechValue>
+            <p className="font-mono text-muted-foreground mb-8">The requested subsystem trajectory is invalid.</p>
+            <Link href="/" className="btn-tech">RETURN TO ORIGIN</Link>
+          </div>
+        </Route>
+      </Switch>
+    </Shell>
+  );
 }
 
-function App() {
-  return <ClerkProvider publishableKey={clerkPubKey} proxyUrl={clerkProxyUrl} appearance={{ theme: shadcn, cssLayerName: 'clerk', variables: { colorPrimary: '#d7a73f', colorForeground: '#173238', colorMutedForeground: '#697b7f', colorBackground: '#f4efe7', colorInput: '#ffffff', colorInputForeground: '#173238', colorDanger: '#b7463f', colorNeutral: '#c9c3b9', fontFamily: 'DM Sans, sans-serif', borderRadius: '0.75rem' } }} signInUrl={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`}><QueryClientProvider client={queryClient}><TooltipProvider><WouterRouter base={basePath}><Router /></WouterRouter><Toaster /></TooltipProvider></QueryClientProvider></ClerkProvider>;
+export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ClerkProvider
+        publishableKey={clerkPubKey!}
+        proxyUrl={clerkProxyUrl}
+        appearance={{
+          theme: shadcn,
+          cssLayerName: 'clerk',
+          variables: {
+            colorPrimary: '#00e7f5',
+            colorForeground: '#d8f7fa',
+            colorMutedForeground: '#739ca1',
+            colorBackground: '#071114',
+            colorInput: '#0b1b1f',
+            colorInputForeground: '#d8f7fa',
+            colorDanger: '#ff5d57',
+            colorNeutral: '#6b8e92',
+            fontFamily: 'DM Sans, sans-serif',
+            borderRadius: '0.25rem',
+          },
+        }}
+      >
+        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+          <Switch>
+            <Route path="/" component={EntryRoute} />
+            <Route path="/sign-in(.*)">
+              <AuthLayout>
+                <SignIn routing="path" path="/sign-in" />
+              </AuthLayout>
+            </Route>
+            <Route path="/sign-up(.*)">
+              <AuthLayout>
+                <SignUp routing="path" path="/sign-up" />
+              </AuthLayout>
+            </Route>
+            <Route>
+              {/* Only show AuthenticatedApp if signed in, but we handle the protection 
+                  in a wrapper to respect ClerkProvider context */}
+              <ProtectedWrapper />
+            </Route>
+          </Switch>
+        </WouterRouter>
+      </ClerkProvider>
+    </QueryClientProvider>
+  );
 }
 
-export default App;
+function EntryRoute() {
+  const { isLoaded, userId } = useAuth();
+  if (!isLoaded) {
+    return (
+      <div className="h-[100dvh] bg-background flex flex-col items-center justify-center">
+        <div className="w-12 h-12 border-2 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
+        <div className="font-mono text-xs text-primary tracking-widest uppercase animate-pulse">Initializing secure shell...</div>
+      </div>
+    );
+  }
+  return userId ? <AuthenticatedApp /> : <AuthWelcome />;
+}
+
+function ProtectedWrapper() {
+  const { isLoaded, userId } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (isLoaded && !userId) {
+      setLocation('/sign-in');
+    }
+  }, [isLoaded, userId, setLocation]);
+
+  if (!isLoaded || !userId) {
+    return (
+      <div className="h-[100dvh] bg-background flex flex-col items-center justify-center">
+        <div className="w-12 h-12 border-2 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
+        <div className="font-mono text-xs text-primary tracking-widest uppercase animate-pulse">Initializing Kernel...</div>
+      </div>
+    );
+  }
+
+  return <AuthenticatedApp />;
+}
