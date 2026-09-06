@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { transitionVoiceState, VoiceEvent, VoiceState } from '@/lib/voice';
+import {
+  createSpokenSummary,
+  decideVoiceActivation,
+  transitionVoiceState,
+  type SpokenDetail,
+  type VoiceEvent,
+  VoiceState,
+} from '@/lib/voice';
 
 interface RecognitionResultLike {
   isFinal: boolean;
@@ -44,7 +51,7 @@ export function browserVoiceSupport() {
     microphone: typeof navigator !== 'undefined'
       && Boolean(navigator.mediaDevices?.getUserMedia)
       && typeof MediaRecorder !== 'undefined',
-    tts: false as const,
+    tts: typeof Audio !== 'undefined',
   };
 }
 
@@ -68,6 +75,9 @@ export function useVoice({
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
+  const speechAbortRef = useRef<AbortController | null>(null);
   const finalTranscriptRef = useRef('');
   const submitRef = useRef(onTranscript);
 
@@ -80,6 +90,23 @@ export function useVoice({
       stateRef.current = next;
       return next;
     });
+  }, []);
+
+  const releasePlayback = useCallback(() => {
+    speechAbortRef.current?.abort();
+    speechAbortRef.current = null;
+    const audio = audioRef.current;
+    audioRef.current = null;
+    if (audio) {
+      audio.onplay = null;
+      audio.onended = null;
+      audio.onerror = null;
+      audio.pause();
+      audio.removeAttribute('src');
+      audio.load();
+    }
+    if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
+    audioUrlRef.current = null;
   }, []);
 
   const releaseCapture = useCallback((abortRecognition = false) => {
@@ -102,9 +129,10 @@ export function useVoice({
 
   const fail = useCallback((message: string) => {
     releaseCapture(true);
+    releasePlayback();
     setError(message);
     move('FAIL');
-  }, [move, releaseCapture]);
+  }, [move, releaseCapture, releasePlayback]);
 
   const submitTranscript = useCallback(() => {
     const final = finalTranscriptRef.current.trim();
@@ -133,6 +161,7 @@ export function useVoice({
     setError(null);
     setTranscript('');
     finalTranscriptRef.current = '';
+    releasePlayback();
     move('REQUEST_MIC');
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
@@ -178,7 +207,7 @@ export function useVoice({
       const denied = caught instanceof DOMException && (caught.name === 'NotAllowedError' || caught.name === 'SecurityError');
       fail(denied ? 'Microphone permission was denied. Allow access, then retry.' : 'The microphone could not be started.');
     }
-  }, [available, enabled, fail, move, submitTranscript]);
+  }, [available, enabled, fail, move, releasePlayback, submitTranscript]);
 
   const stop = useCallback(() => {
     if (stateRef.current !== VoiceState.VOICE_LISTENING) return;
@@ -188,25 +217,76 @@ export function useVoice({
 
   const interrupt = useCallback(() => {
     releaseCapture(true);
+    releasePlayback();
     onCancelThinking();
     move('INTERRUPT');
-  }, [move, onCancelThinking, releaseCapture]);
+  }, [move, onCancelThinking, releaseCapture, releasePlayback]);
 
   const activate = useCallback(() => {
-    if (state === VoiceState.VOICE_LISTENING) stop();
-    else if (state === VoiceState.VOICE_THINKING || state === VoiceState.VOICE_SPEAKING) interrupt();
-    else if (state !== VoiceState.VOICE_REQUESTING_PERMISSION && state !== VoiceState.VOICE_TRANSCRIBING && state !== VoiceState.VOICE_UNAVAILABLE) void start();
-  }, [interrupt, start, state, stop]);
+    const action = decideVoiceActivation(state, isThinking);
+    if (action === 'STOP_CAPTURE') stop();
+    else if (action === 'INTERRUPT') interrupt();
+    else if (action === 'START_CAPTURE') void start();
+  }, [interrupt, isThinking, start, state, stop]);
+
+  const speak = useCallback(async (text: string, detail: SpokenDetail, speechRate: number) => {
+    const spoken = createSpokenSummary(text, detail);
+    if (!enabled || !spoken) return;
+    releaseCapture(true);
+    releasePlayback();
+    setError(null);
+    stateRef.current = VoiceState.VOICE_THINKING;
+    setState(VoiceState.VOICE_THINKING);
+    const controller = new AbortController();
+    speechAbortRef.current = controller;
+    try {
+      const response = await fetch('/api/voice/speech', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: spoken }),
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null) as { error?: string } | null;
+        throw new Error(payload?.error ?? 'Voice synthesis is unavailable.');
+      }
+      const blob = await response.blob();
+      if (!blob.size) throw new Error('Voice synthesis returned no audio.');
+      const url = URL.createObjectURL(blob);
+      audioUrlRef.current = url;
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.playbackRate = Math.min(1.3, Math.max(0.7, speechRate));
+      audio.onplay = () => move('PLAYBACK_STARTED');
+      audio.onended = () => {
+        releasePlayback();
+        move('RESPONSE_FINISHED');
+      };
+      audio.onerror = () => fail('OpenAI voice playback failed. The full text response remains available.');
+      await audio.play();
+    } catch (caught) {
+      if (caught instanceof DOMException && caught.name === 'AbortError') return;
+      fail(caught instanceof Error ? caught.message : 'OpenAI voice synthesis is unavailable.');
+    }
+  }, [enabled, fail, move, releaseCapture, releasePlayback]);
 
   useEffect(() => {
+    if (isThinking && stateRef.current === VoiceState.VOICE_IDLE) move('RESPONSE_STARTED');
     if (isThinking && stateRef.current === VoiceState.VOICE_THINKING) move('RESPONSE_STARTED');
     if (!isThinking && stateRef.current === VoiceState.VOICE_THINKING) move('RESPONSE_FINISHED');
   }, [isThinking, move]);
 
   useEffect(() => {
     const suspend = (force = false) => {
-      if ((force || document.visibilityState === 'hidden') && [VoiceState.VOICE_REQUESTING_PERMISSION, VoiceState.VOICE_LISTENING, VoiceState.VOICE_TRANSCRIBING].includes(stateRef.current)) {
+      if ((force || document.visibilityState === 'hidden') && [
+        VoiceState.VOICE_REQUESTING_PERMISSION,
+        VoiceState.VOICE_LISTENING,
+        VoiceState.VOICE_TRANSCRIBING,
+        VoiceState.VOICE_SPEAKING,
+      ].includes(stateRef.current)) {
         releaseCapture(true);
+        releasePlayback();
         move('INTERRUPT');
       }
     };
@@ -218,8 +298,9 @@ export function useVoice({
       document.removeEventListener('visibilitychange', onVisibilityChange);
       window.removeEventListener('pagehide', onPageHide);
       releaseCapture(true);
+      releasePlayback();
     };
-  }, [move, releaseCapture]);
+  }, [move, releaseCapture, releasePlayback]);
 
-  return { state, transcript, error, support, available, activate };
+  return { state, transcript, error, support, available, activate, speak };
 }

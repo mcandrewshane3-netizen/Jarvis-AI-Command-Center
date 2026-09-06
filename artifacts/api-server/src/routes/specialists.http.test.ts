@@ -5,6 +5,18 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, specialistRecords, users } from "@workspace/db";
 
+const synthesizeVoice = vi.hoisted(() => vi.fn());
+
+vi.mock("@workspace/integrations-openai-ai-server", () => ({
+  openai: {
+    chat: {
+      completions: {
+        create: synthesizeVoice,
+      },
+    },
+  },
+}));
+
 type MockRequest = {
   headers: Record<string, string | string[] | undefined>;
   testAuth?: { userId: string; sessionClaims: { sub: string } };
@@ -116,6 +128,97 @@ describe("specialist HTTP authentication and ownership", () => {
       body: { goal: "Must authenticate", steps: [{ description: "Do work" }] },
     });
     expect(response.status).toBe(401);
+  });
+
+  it("rejects unauthenticated voice synthesis", async () => {
+    const response = await request("/voice/speech", {
+      method: "POST",
+      body: { text: "Private response" },
+    });
+    expect(response.status).toBe(401);
+    expect(synthesizeVoice).not.toHaveBeenCalled();
+  });
+
+  it("returns verified OpenAI audio without persisting it", async () => {
+    const text = "Markets remain in Research Only mode.";
+    const bytes = Buffer.from("RIFF-test-audio");
+    synthesizeVoice.mockResolvedValueOnce({
+      choices: [{
+        message: {
+          audio: { data: bytes.toString("base64"), transcript: text },
+        },
+      }],
+    });
+    const response = await fetch(`${baseUrl}/voice/speech`, {
+      method: "POST",
+      headers: { "x-test-user": `voice-${randomUUID()}`, "content-type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("audio/wav");
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(Buffer.from(await response.arrayBuffer())).toEqual(bytes);
+    expect(synthesizeVoice).toHaveBeenCalledWith(expect.objectContaining({
+      model: "gpt-audio",
+      messages: expect.arrayContaining([
+        expect.objectContaining({ role: "developer" }),
+        expect.objectContaining({ role: "user", content: `<read>${text}</read>` }),
+      ]),
+    }));
+  });
+
+  it("fails closed when generated speech does not match JARVIS text", async () => {
+    synthesizeVoice.mockResolvedValueOnce({
+      choices: [{
+        message: {
+          audio: {
+            data: Buffer.from("RIFF-wrong").toString("base64"),
+            transcript: "The transfer completed.",
+          },
+        },
+      }],
+    });
+    const response = await request("/voice/speech", {
+      user: `voice-${randomUUID()}`,
+      method: "POST",
+      body: { text: "The transfer did not occur." },
+    });
+    expect(response.status).toBe(502);
+    expect(response.body).toEqual({ error: "VOICE_OUTPUT_VERIFICATION_FAILED" });
+  });
+
+  it("bounds and rate-limits paid voice synthesis", async () => {
+    const tooLong = await request("/voice/speech", {
+      user: `voice-${randomUUID()}`,
+      method: "POST",
+      body: { text: "x".repeat(2_001) },
+    });
+    expect(tooLong.status).toBe(413);
+
+    const user = `voice-rate-${randomUUID()}`;
+    const text = "Bounded response.";
+    synthesizeVoice.mockResolvedValue({
+      choices: [{
+        message: {
+          audio: { data: Buffer.from("RIFF-rate").toString("base64"), transcript: text },
+        },
+      }],
+    });
+    for (let index = 0; index < 5; index += 1) {
+      const response = await fetch(`${baseUrl}/voice/speech`, {
+        method: "POST",
+        headers: { "x-test-user": user, "content-type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      expect(response.status).toBe(200);
+    }
+    const limited = await request("/voice/speech", {
+      user,
+      method: "POST",
+      body: { text },
+    });
+    expect(limited.status).toBe(429);
+    expect(limited.body).toEqual({ error: "VOICE_RATE_LIMITED" });
   });
 
   it.each(recordCases)(

@@ -14,3 +14,9 @@ Cross-domain conversation history and stored memory must be minimized before any
 **Why:** Bounded history alone can still leak finance, personal, or work context when one conversation changes domains and later returns to a prior domain.
 
 **How to apply:** Keep only the contiguous current-domain message segment and require both category permission and request-level relevance for stored memory. Treat all provider, tool, and retrieved content as untrusted data.
+
+OpenAI audio output must be treated as generated model content, not deterministic text-to-speech. Use the full `gpt-audio` model with a literal-reader developer instruction and return audio only when its transcript normalizes exactly to the requested text.
+
+**Why:** A live `gpt-audio-mini` probe answered the supplied sentence instead of reading it, while `gpt-audio` followed the strict read instruction. Without transcript verification, spoken output can contradict JARVIS text or alter critical financial details.
+
+**How to apply:** Keep the completed JARVIS text as the source of truth, bound spoken input, wrap it as explicitly delimited read-only content, and fail closed if audio data or the matching transcript is absent. Never silently fall back to a conversational audio response.

@@ -16,6 +16,7 @@ export type VoiceEvent =
   | 'STOP_LISTENING'
   | 'TRANSCRIPT_READY'
   | 'RESPONSE_STARTED'
+  | 'PLAYBACK_STARTED'
   | 'RESPONSE_FINISHED'
   | 'INTERRUPT'
   | 'FAIL'
@@ -25,6 +26,7 @@ export type VoiceEvent =
 const transitions: Partial<Record<VoiceState, Partial<Record<VoiceEvent, VoiceState>>>> = {
   [VoiceState.VOICE_IDLE]: {
     REQUEST_MIC: VoiceState.VOICE_REQUESTING_PERMISSION,
+    RESPONSE_STARTED: VoiceState.VOICE_THINKING,
     UNSUPPORTED: VoiceState.VOICE_UNAVAILABLE,
     FAIL: VoiceState.VOICE_ERROR,
   },
@@ -45,6 +47,7 @@ const transitions: Partial<Record<VoiceState, Partial<Record<VoiceEvent, VoiceSt
   },
   [VoiceState.VOICE_THINKING]: {
     RESPONSE_STARTED: VoiceState.VOICE_THINKING,
+    PLAYBACK_STARTED: VoiceState.VOICE_SPEAKING,
     RESPONSE_FINISHED: VoiceState.VOICE_IDLE,
     INTERRUPT: VoiceState.VOICE_INTERRUPTED,
     FAIL: VoiceState.VOICE_ERROR,
@@ -61,6 +64,23 @@ const transitions: Partial<Record<VoiceState, Partial<Record<VoiceEvent, VoiceSt
 
 export function transitionVoiceState(state: VoiceState, event: VoiceEvent): VoiceState {
   return transitions[state]?.[event] ?? state;
+}
+
+export type VoiceActivation = 'START_CAPTURE' | 'STOP_CAPTURE' | 'INTERRUPT' | 'NONE';
+
+export function decideVoiceActivation(state: VoiceState, externalThinking: boolean): VoiceActivation {
+  if (externalThinking || state === VoiceState.VOICE_THINKING || state === VoiceState.VOICE_SPEAKING) {
+    return 'INTERRUPT';
+  }
+  if (state === VoiceState.VOICE_LISTENING) return 'STOP_CAPTURE';
+  if (
+    state === VoiceState.VOICE_REQUESTING_PERMISSION ||
+    state === VoiceState.VOICE_TRANSCRIBING ||
+    state === VoiceState.VOICE_UNAVAILABLE
+  ) {
+    return 'NONE';
+  }
+  return 'START_CAPTURE';
 }
 
 export type SpokenDetail = 'BRIEF' | 'STANDARD' | 'DETAILED';

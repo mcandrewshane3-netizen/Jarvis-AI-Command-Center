@@ -77,6 +77,7 @@ export function JarvisPage() {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let pending = '';
+      let fullResponse = '';
       const applyEvent = (event: string) => {
         const line = event.split('\n').find((part) => part.startsWith('data: '));
         if (!line) return;
@@ -93,6 +94,7 @@ export function JarvisPage() {
         }
         if (data.run) setLastRun(data.run);
         if (data.content) {
+          fullResponse += data.content;
           setMessages((current) => current.map((item, index) =>
             index === current.length - 1 ? { ...item, text: item.text + data.content } : item,
           ));
@@ -109,6 +111,9 @@ export function JarvisPage() {
         const events = pending.split('\n\n');
         pending = events.pop() ?? '';
         for (const event of events) applyEvent(event);
+      }
+      if (voiceSettings.enabled && voiceSettings.autoSpeak && fullResponse.trim()) {
+        await voice.speak(fullResponse, voiceSettings.spokenDetail, voiceSettings.speechRate);
       }
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') return;
@@ -133,6 +138,10 @@ export function JarvisPage() {
     onTranscript: (value) => send(value),
     onCancelThinking: cancelStream,
   });
+  const displayedVoiceState =
+    isStreaming && voice.state === VoiceState.VOICE_IDLE
+      ? VoiceState.VOICE_THINKING
+      : voice.state;
 
   const voiceStatus: Record<VoiceState, string> = {
     [VoiceState.VOICE_IDLE]: voiceSettings.enabled ? 'Tap core to speak' : 'Voice input disabled',
@@ -216,15 +225,20 @@ export function JarvisPage() {
         <HolographicPanel title="JARVIS KERNEL" className="flex items-center justify-center py-6">
           <div className="w-full flex flex-col items-center px-4">
             <JARVISCore
-              onClick={voiceSettings.enabled && voice.available ? voice.activate : undefined}
-              ariaLabel={`${voiceStatus[voice.state]}. ${voice.state === VoiceState.VOICE_LISTENING ? 'Stop listening' : 'Activate voice input'}`}
-              isThinking={isStreaming || voice.state === VoiceState.VOICE_LISTENING || voice.state === VoiceState.VOICE_REQUESTING_PERMISSION}
-              processText={voice.state === VoiceState.VOICE_THINKING && isStreaming ? activities.at(-1)?.stage ?? 'EVALUATING...' : voice.state.replace('VOICE_', '').replaceAll('_', ' ')}
+              onClick={voiceSettings.enabled && (
+                voice.available ||
+                isStreaming ||
+                voice.state === VoiceState.VOICE_THINKING ||
+                voice.state === VoiceState.VOICE_SPEAKING
+              ) ? voice.activate : undefined}
+              ariaLabel={`${voiceStatus[displayedVoiceState]}. ${displayedVoiceState === VoiceState.VOICE_LISTENING ? 'Stop listening' : 'Activate voice input'}`}
+              isThinking={displayedVoiceState === VoiceState.VOICE_THINKING || displayedVoiceState === VoiceState.VOICE_LISTENING || displayedVoiceState === VoiceState.VOICE_REQUESTING_PERMISSION}
+              processText={displayedVoiceState === VoiceState.VOICE_THINKING && isStreaming ? activities.at(-1)?.stage ?? 'EVALUATING...' : displayedVoiceState.replace('VOICE_', '').replaceAll('_', ' ')}
             />
             <div className="mt-4 w-full border-t border-primary/10 pt-3 text-center" aria-live="polite" role="status">
               <div className="flex items-center justify-center gap-2 font-mono text-[10px] tracking-wider text-primary">
-                {voice.state === VoiceState.VOICE_LISTENING ? <Mic size={13} /> : <MicOff size={13} />}
-                {voiceStatus[voice.state].toUpperCase()}
+                {displayedVoiceState === VoiceState.VOICE_LISTENING ? <Mic size={13} /> : <MicOff size={13} />}
+                {voiceStatus[displayedVoiceState].toUpperCase()}
               </div>
               {voice.transcript ? (
                 <p className="mt-2 text-xs leading-relaxed text-muted-foreground break-words" aria-label="Voice transcript">

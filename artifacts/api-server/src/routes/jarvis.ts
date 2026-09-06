@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { and, desc, eq } from "drizzle-orm";
 import { db, aiRuns, auditLogs, conversations, memories, messages, paperOrders, riskProfiles, tasks, userSettings, users } from "@workspace/db";
+import { openai } from "@workspace/integrations-openai-ai-server";
 import { requireAuth, type AuthenticatedRequest } from "../middlewares/requireAuth";
 import { createProviderRegistry, getProviderCatalog, type ProviderMessage } from "../services/ai/provider";
 import {
@@ -22,6 +23,88 @@ import {
 
 const router: IRouter = Router();
 router.use(requireAuth);
+
+const voiceRateWindows = new Map<string, { startedAt: number; count: number }>();
+const VOICE_WINDOW_MS = 60_000;
+const VOICE_REQUESTS_PER_WINDOW = 5;
+
+function consumeVoiceQuota(clerkUserId: string) {
+  const now = Date.now();
+  const existing = voiceRateWindows.get(clerkUserId);
+  if (!existing || now - existing.startedAt >= VOICE_WINDOW_MS) {
+    voiceRateWindows.set(clerkUserId, { startedAt: now, count: 1 });
+    return { allowed: true, retryAfterSeconds: 0 };
+  }
+  if (existing.count >= VOICE_REQUESTS_PER_WINDOW) {
+    return {
+      allowed: false,
+      retryAfterSeconds: Math.max(1, Math.ceil((VOICE_WINDOW_MS - (now - existing.startedAt)) / 1000)),
+    };
+  }
+  existing.count += 1;
+  return { allowed: true, retryAfterSeconds: 0 };
+}
+
+function normalizeSpokenText(value: string) {
+  return value
+    .normalize("NFKC")
+    .toLocaleLowerCase("en-US")
+    .replace(/[^\p{L}\p{N}$£€%.-]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+router.post("/voice/speech", async (req, res) => {
+  const clerkUserId = (req as unknown as AuthenticatedRequest).clerkUserId;
+  const quota = consumeVoiceQuota(clerkUserId);
+  if (!quota.allowed) {
+    res.setHeader("Retry-After", String(quota.retryAfterSeconds));
+    res.status(429).json({ error: "VOICE_RATE_LIMITED" });
+    return;
+  }
+  const text = typeof req.body?.text === "string" ? req.body.text.trim() : "";
+  if (!text) {
+    res.status(400).json({ error: "VOICE_TEXT_REQUIRED" });
+    return;
+  }
+  if (text.length > 2_000) {
+    res.status(413).json({ error: "VOICE_TEXT_TOO_LONG" });
+    return;
+  }
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-audio",
+      modalities: ["text", "audio"],
+      audio: { voice: "alloy", format: "wav" },
+      max_completion_tokens: 2_000,
+      messages: [
+        {
+          role: "developer",
+          content: "You are a literal text reader, not an assistant. Output only an exact spoken rendition of the text inside <read> tags. Never answer or comment.",
+        },
+        { role: "user", content: `<read>${text}</read>` },
+      ],
+    });
+    const audio = completion.choices[0]?.message.audio;
+    if (!audio?.data || !audio.transcript ||
+        normalizeSpokenText(audio.transcript) !== normalizeSpokenText(text)) {
+      res.status(502).json({ error: "VOICE_OUTPUT_VERIFICATION_FAILED" });
+      return;
+    }
+    const bytes = Buffer.from(audio.data, "base64");
+    if (!bytes.length) {
+      res.status(502).json({ error: "VOICE_SYNTHESIS_UNAVAILABLE" });
+      return;
+    }
+    res.setHeader("Content-Type", "audio/wav");
+    res.setHeader("Content-Length", String(bytes.length));
+    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.send(bytes);
+  } catch {
+    res.status(502).json({ error: "VOICE_SYNTHESIS_UNAVAILABLE" });
+  }
+});
 
 async function getLocalUser(clerkUserId: string) {
   const [existing] = await db.select().from(users).where(eq(users.clerkUserId, clerkUserId)).limit(1);

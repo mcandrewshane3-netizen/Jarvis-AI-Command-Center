@@ -5,6 +5,7 @@ import { pathToFileURL } from "node:url";
 const voiceModulePath = pathToFileURL(resolve(process.cwd(), "../jarvis/src/lib/voice.ts")).href;
 const {
   createSpokenSummary,
+  decideVoiceActivation,
   transitionVoiceState,
   TTSQueue,
   VoiceState,
@@ -30,6 +31,13 @@ describe("JARVIS voice foundation", () => {
   it("does not invent unsupported transitions", () => {
     expect(transitionVoiceState(VoiceState.VOICE_IDLE, "PERMISSION_GRANTED")).toBe(VoiceState.VOICE_IDLE);
     expect(transitionVoiceState(VoiceState.VOICE_UNAVAILABLE, "REQUEST_MIC")).toBe(VoiceState.VOICE_UNAVAILABLE);
+  });
+
+  it("interrupts any active JARVIS stream before starting capture", () => {
+    expect(decideVoiceActivation(VoiceState.VOICE_IDLE, true)).toBe("INTERRUPT");
+    expect(decideVoiceActivation(VoiceState.VOICE_THINKING, true)).toBe("INTERRUPT");
+    expect(decideVoiceActivation(VoiceState.VOICE_SPEAKING, false)).toBe("INTERRUPT");
+    expect(decideVoiceActivation(VoiceState.VOICE_IDLE, false)).toBe("START_CAPTURE");
   });
 
   it("keeps critical numbers and warnings in brief spoken summaries", () => {

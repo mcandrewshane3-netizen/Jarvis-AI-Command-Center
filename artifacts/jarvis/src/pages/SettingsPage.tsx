@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { HolographicPanel, TechLabel, TechValue, Button, StatusDot } from '@/components/primitives';
 import { useSettings } from '@/hooks/use-settings';
 import { Monitor, Volume2, Shield, BrainCircuit, AlertTriangle, RefreshCw } from 'lucide-react';
@@ -39,7 +40,8 @@ export function SettingsPage() {
   const grokAvailable = Boolean(grok?.configured && grok?.available && providerLabel(grok) === 'AVAILABLE');
   const openAIAvailable = Boolean(openai?.configured && openai?.available && providerLabel(openai) === 'AVAILABLE');
   const voiceSupport = browserVoiceSupport();
-  const voiceToggle = (key: keyof Pick<VoiceSettings, 'enabled' | 'greeting'>, label: string, description: string) => (
+  const [voiceTestState, setVoiceTestState] = useState<'IDLE' | 'LOADING' | 'PLAYING' | 'ERROR'>('IDLE');
+  const voiceToggle = (key: keyof Pick<VoiceSettings, 'enabled' | 'autoSpeak'>, label: string, description: string) => (
     <div className="flex items-center justify-between gap-5">
       <div>
         <div className="font-mono text-xs text-white uppercase tracking-wider">{label}</div>
@@ -56,6 +58,34 @@ export function SettingsPage() {
       </button>
     </div>
   );
+  const testVoice = async () => {
+    setVoiceTestState('LOADING');
+    try {
+      const response = await fetch('/api/voice/speech', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: 'JARVIS voice systems are online.' }),
+      });
+      if (!response.ok) throw new Error('Voice synthesis unavailable');
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.playbackRate = voiceSettings.speechRate;
+      audio.onplay = () => setVoiceTestState('PLAYING');
+      audio.onended = () => {
+        URL.revokeObjectURL(url);
+        setVoiceTestState('IDLE');
+      };
+      audio.onerror = () => {
+        URL.revokeObjectURL(url);
+        setVoiceTestState('ERROR');
+      };
+      await audio.play();
+    } catch {
+      setVoiceTestState('ERROR');
+    }
+  };
 
   return (
     <div className="page-enter stagger-1 pb-12 max-w-4xl mx-auto">
@@ -114,8 +144,8 @@ export function SettingsPage() {
               <div className="settings-section-heading">
                 <Volume2 size={18} />
                 <div>
-                  <div className="font-mono text-sm text-white tracking-wider">DEGRADED BROWSER VOICE</div>
-                  <p>JARVIS never persists or uploads raw audio. Browser speech recognition may process microphone audio through the browser vendor's speech service.</p>
+                  <div className="font-mono text-sm text-white tracking-wider">JARVIS VOICE</div>
+                  <p>Browser speech recognition handles voice input. OpenAI generates spoken output from JARVIS's completed text response.</p>
                 </div>
               </div>
               <div className="grid sm:grid-cols-2 gap-3">
@@ -124,8 +154,8 @@ export function SettingsPage() {
                   <StatusDot status={voiceSupport.stt && voiceSupport.microphone ? 'online' : 'offline'} />
                 </div>
                 <div className="provider-row">
-                  <div><strong>VOICE SYNTHESIS</strong><small>PROVIDER UNAVAILABLE // NO BROWSER TTS</small></div>
-                  <StatusDot status="offline" />
+                  <div><strong>OPENAI VOICE OUTPUT</strong><small>{openAIAvailable ? 'GPT-AUDIO // AVAILABLE' : 'PROVIDER UNAVAILABLE'}</small></div>
+                  <StatusDot status={openAIAvailable ? 'online' : 'offline'} />
                 </div>
               </div>
               {voiceToggle('enabled', 'Voice input', 'Allows tap-to-talk from the central JARVIS core when browser support exists.')}
@@ -144,13 +174,24 @@ export function SettingsPage() {
                   <option value="BRIEF">BRIEF</option><option value="STANDARD">STANDARD</option><option value="DETAILED">DETAILED</option>
                 </select>
               </label>
-              {voiceToggle('greeting', 'Optional greeting', 'Stored locally. Playback remains unavailable until a voice provider is connected.')}
+              {voiceToggle('autoSpeak', 'Auto-speak responses', 'Speaks a concise version after JARVIS completes its text response. Full text always remains on screen.')}
               <div className="grid sm:grid-cols-3 gap-2">
-                {['CONVERSATION MODE // OFF', 'AUTO-SPEAK // OFF', 'SAVE VOICE HISTORY // OFF'].map((item) => (
+                {['CONVERSATION MODE // OFF', 'STARTUP GREETING // OFF', 'SAVE RAW AUDIO // OFF'].map((item) => (
                   <div key={item} className="border border-primary/10 bg-black/20 p-3 font-mono text-[9px] text-muted-foreground tracking-wider">{item}</div>
                 ))}
               </div>
-              <Button testId="button-test-voice" disabled className="w-full justify-center" aria-label="Test voice unavailable">TEST VOICE // UNAVAILABLE</Button>
+              <p className="font-mono text-[9px] leading-relaxed tracking-wider text-muted-foreground">
+                RAW AUDIO IS NOT SAVED. VOICE TRANSCRIPTS ARE SAVED AS NORMAL CONVERSATION MESSAGES.
+              </p>
+              <Button
+                testId="button-test-voice"
+                disabled={!openAIAvailable || voiceTestState === 'LOADING' || voiceTestState === 'PLAYING'}
+                className="w-full justify-center"
+                aria-label="Test JARVIS voice"
+                onClick={() => void testVoice()}
+              >
+                {voiceTestState === 'LOADING' ? 'PREPARING VOICE...' : voiceTestState === 'PLAYING' ? 'SPEAKING...' : voiceTestState === 'ERROR' ? 'VOICE TEST FAILED // RETRY' : 'TEST JARVIS VOICE'}
+              </Button>
             </div>
           </HolographicPanel>
           <HolographicPanel title="DISPLAY & INTERFACE">

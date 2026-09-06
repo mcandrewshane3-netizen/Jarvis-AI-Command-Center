@@ -7,7 +7,7 @@ export interface VoiceSettings {
   speechRate: number;
   spokenDetail: SpokenDetail;
   conversationMode: false;
-  autoSpeak: false;
+  autoSpeak: boolean;
   saveVoiceHistory: false;
   greeting: boolean;
 }
@@ -18,12 +18,12 @@ const defaultVoiceSettings: VoiceSettings = {
   speechRate: 1,
   spokenDetail: 'STANDARD',
   conversationMode: false,
-  autoSpeak: false,
+  autoSpeak: true,
   saveVoiceHistory: false,
   greeting: false,
 };
 
-const VOICE_SETTINGS_KEY = 'jarvis-voice-settings-v1';
+const VOICE_SETTINGS_KEY = 'jarvis-voice-settings-v2';
 
 export function loadVoiceSettings(storage: Pick<Storage, 'getItem'> = localStorage): VoiceSettings {
   try {
@@ -35,7 +35,6 @@ export function loadVoiceSettings(storage: Pick<Storage, 'getItem'> = localStora
       ...parsed,
       preset: 'JARVIS ORIGINAL',
       conversationMode: false,
-      autoSpeak: false,
       saveVoiceHistory: false,
     };
   } catch {
