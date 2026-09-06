@@ -1,0 +1,584 @@
+CONTINUE THE EXISTING JARVIS AI COMMAND CENTER PROJECT.
+
+THIS IS A TARGETED REAL-IPAD RESPONSIVE LAYOUT REPAIR.
+
+DO NOT REDESIGN JARVIS.
+DO NOT CHANGE THE VISUAL IDENTITY.
+DO NOT CHANGE THE BACKEND.
+DO NOT CHANGE MARKET/TRADING LOGIC.
+DO NOT CHANGE AI ROUTING.
+DO NOT CHANGE VOICE LOGIC EXCEPT WHERE UI POSITIONING REQUIRES IT.
+DO NOT CONNECT ROBINHOOD.
+DO NOT ENABLE LIVE TRADING.
+DO NOT PUBLISH.
+DO NOT ADD PAID SERVICES.
+
+============================================================
+JARVIS REAL IPAD SAFARI / PWA LAYOUT REPAIR
+============================================================
+
+PRIMARY OBJECTIVE:
+
+Repair the existing JARVIS interface so it correctly fills and responds to the
+REAL viewport of an iPad running Safari and, later, standalone PWA mode.
+
+A real-device screenshot showed that previous simulated iPad validation was not
+sufficient.
+
+DO NOT simply make elements smaller.
+
+Fix the responsive layout architecture.
+
+============================================================
+OBSERVED REAL-IPAD PROBLEMS
+============================================================
+
+On actual iPad Safari in LANDSCAPE:
+
+1. The application does not use the available viewport correctly.
+
+2. The main conversation region ends prematurely vertically.
+
+3. A very large unused blank region appears below the conversation.
+
+4. Conversation cards can extend beyond / become clipped by their intended
+container.
+
+5. The right intelligence/activity rail contains cards that are partially clipped
+at the bottom.
+
+6. The three-column desktop cockpit is consuming too much usable width.
+
+7. The left navigation remains desktop-sized and consumes excessive horizontal
+space.
+
+8. Scrolling behavior between:
+   - page
+   - conversation
+   - left navigation
+   - right intelligence rail
+   is not properly isolated.
+
+9. The central conversation/composer experience is not behaving like a
+full-height application workspace.
+
+10. Safari browser chrome changes the actual usable viewport.
+
+11. Previous responsive/browser-preview tests passed despite the real device
+being visibly incorrect.
+
+Treat the REAL iPad screenshot/behavior as authoritative.
+
+============================================================
+PART 1 — ROOT CAUSE
+============================================================
+
+Inspect the actual application shell and determine the root causes.
+
+Specifically inspect for problematic use of:
+
+100vh
+fixed pixel heights
+max-height
+min-height
+absolute positioning
+fixed positioning
+overflow:hidden
+nested scroll containers
+CSS grid row sizing
+flex min-height defaults
+hardcoded sidebar widths
+hardcoded right-rail widths
+viewport assumptions
+position: sticky
+safe-area handling
+
+Do not patch symptoms blindly.
+
+============================================================
+PART 2 — MODERN MOBILE VIEWPORT
+============================================================
+
+Use modern viewport units where appropriate.
+
+Prefer:
+
+100dvh
+
+with sensible fallbacks where necessary.
+
+Account for Safari dynamic browser chrome.
+
+Support:
+
+env(safe-area-inset-top)
+env(safe-area-inset-bottom)
+env(safe-area-inset-left)
+env(safe-area-inset-right)
+
+Do not blindly use 100vh as the application shell height on iPad Safari.
+
+============================================================
+PART 3 — APPLICATION SHELL
+============================================================
+
+Create/repair a true full-viewport application shell.
+
+Conceptually:
+
+JARVIS APP
+├── navigation
+├── main workspace
+│   ├── conversation
+│   └── contextual intelligence
+└── persistent interaction/composer area
+
+The shell should occupy the available dynamic viewport.
+
+Avoid BODY-level scrolling for normal JARVIS operation where possible.
+
+The app should behave like an application, not a long desktop webpage.
+
+============================================================
+PART 4 — LANDSCAPE IPAD LAYOUT
+============================================================
+
+For typical modern iPad landscape widths:
+
+preserve the cinematic cockpit experience,
+
+BUT optimize usable space.
+
+Preferred behavior:
+
+LEFT NAV
+compact/collapsible
+
+CENTER
+conversation gets dominant width
+
+RIGHT RAIL
+contextual intelligence gets secondary width
+
+Do not give all three regions rigid desktop widths.
+
+Use responsive grid/flex sizing such as:
+
+compact nav
+minmax(0, 1fr) conversation
+bounded contextual rail
+
+Ensure center column cannot overflow because of flex/grid min-content behavior.
+
+Use min-width: 0 where required.
+
+============================================================
+PART 5 — COLLAPSIBLE NAVIGATION
+============================================================
+
+On iPad:
+
+allow the left navigation to collapse to a compact icon rail.
+
+Provide an obvious control to expand it.
+
+Expanded navigation should overlay or temporarily consume space rather than
+permanently starving the conversation area when appropriate.
+
+Preserve all existing navigation destinations.
+
+Desktop can retain the fuller navigation.
+
+============================================================
+PART 6 — RESPONSIVE RIGHT RAIL
+============================================================
+
+The contextual intelligence/right rail must not force the center conversation
+into an unusable width.
+
+On larger landscape iPads:
+
+show the rail when sufficient space exists.
+
+On narrower landscape or portrait:
+
+collapse it into a drawer/panel accessible from an obvious control.
+
+Do not simply hide its functionality.
+
+Its internal content should have its own vertical scrolling when necessary.
+
+============================================================
+PART 7 — CONVERSATION WORKSPACE
+============================================================
+
+The conversation area should use all remaining available vertical space.
+
+Required structure:
+
+conversation header/status if applicable
+→ scrollable message history
+→ persistent composer/voice controls
+
+The MESSAGE HISTORY should scroll.
+
+The entire application shell should not need to scroll simply to reach the
+composer.
+
+Fix:
+
+clipped messages
+premature conversation boundaries
+large blank lower area
+incorrect overflow
+composer displacement
+
+Use:
+
+min-height: 0
+min-width: 0
+overflow-y: auto
+
+appropriately within flex/grid children.
+
+============================================================
+PART 8 — COMPOSER
+============================================================
+
+The text/voice composer must remain reachable and visually stable.
+
+It should remain at the bottom of the conversation workspace.
+
+Account for:
+
+Safari bottom chrome
+PWA standalone mode
+safe-area inset
+on-screen keyboard
+
+When the keyboard opens:
+
+the composer should remain visible.
+
+Do not allow the keyboard to permanently corrupt layout height after closing.
+
+============================================================
+PART 9 — VOICE UI
+============================================================
+
+Preserve existing tap-to-talk behavior.
+
+If recording:
+
+voice status / cancel controls must remain visible without overlapping unrelated
+cards.
+
+Do not change voice backend behavior.
+
+Only repair responsive presentation if needed.
+
+============================================================
+PART 10 — PORTRAIT IPAD
+============================================================
+
+Create a useful portrait layout.
+
+Preferred:
+
+CENTER CONVERSATION = primary
+
+LEFT NAV = collapsed drawer
+
+RIGHT CONTEXT = drawer/panel
+
+Do not attempt to squeeze three desktop columns side-by-side in portrait.
+
+============================================================
+PART 11 — SAFARI VS STANDALONE PWA
+============================================================
+
+Support BOTH:
+
+Safari browser mode
+
+AND
+
+standalone Home Screen PWA mode.
+
+Do not assume their viewport heights are identical.
+
+Check:
+
+display-mode: standalone
+
+where useful.
+
+============================================================
+PART 12 — RESPONSIVE BREAKPOINTS
+============================================================
+
+Do not use device-name detection.
+
+Use viewport/container-based responsive behavior.
+
+Test representative widths/heights including:
+
+iPad landscape
+iPad portrait
+11-inch-class iPad landscape
+11-inch-class iPad portrait
+larger desktop
+smaller tablet widths
+
+Also test reduced vertical height because Safari chrome consumes usable space.
+
+============================================================
+PART 13 — PRESERVE VISUAL DESIGN
+============================================================
+
+KEEP:
+
+near-black technical interface
+cyan/aqua accents
+thin illuminated borders
+technical typography
+JARVIS cockpit aesthetic
+existing cards
+existing status semantics
+existing animations where appropriate
+
+This is RESPONSIVE ENGINEERING, not a redesign.
+
+============================================================
+PART 14 — REALISTIC VIEWPORT TESTING
+============================================================
+
+Improve tests so the previous false-positive does not happen again.
+
+Do not test only CSS viewport width.
+
+Test realistic width + height combinations.
+
+Verify:
+
+no unintended BODY vertical overflow
+no unintended horizontal overflow
+conversation fills available height
+message history scrolls independently
+composer remains reachable
+right rail scrolls independently
+nav does not starve center width
+no cards clipped
+no giant unexplained blank region
+
+============================================================
+PART 15 — VISUAL REGRESSION CHECK
+============================================================
+
+Inspect screenshots at representative tablet viewport sizes.
+
+Specifically compare against the failure pattern:
+
+- conversation ending around upper/middle screen
+- huge empty lower region
+- clipped right-side cards
+- oversized permanent sidebar
+
+Do not call PASS if these remain.
+
+============================================================
+PART 16 — DO NOT TOUCH ECONOMIC SYSTEM
+============================================================
+
+Explicitly preserve:
+
+Twelve Data
+Market conversation routing
+Paper Broker
+Learning Engine
+Strategy Registry
+RiskEngine
+CapitalSurvival
+CapitalGovernor
+OpenAI
+Grok
+PostgreSQL persistence
+scheduler/deployment architecture
+
+This task should primarily affect frontend layout/styles/components/tests.
+
+============================================================
+PART 17 — VALIDATION
+============================================================
+
+Run:
+
+frontend tests
+full relevant test suite
+TypeScript validation
+JARVIS production build
+
+If backend files are untouched, do not waste time rebuilding unrelated systems
+unless existing repository validation requires it.
+
+============================================================
+ACCEPTANCE CRITERIA
+============================================================
+
+Complete only if:
+
+1. JARVIS fills the actual available iPad Safari viewport.
+
+2. Giant unused lower region is eliminated.
+
+3. Conversation uses available height.
+
+4. Message history scrolls independently.
+
+5. Composer remains accessible.
+
+6. No message cards are clipped.
+
+7. Right rail does not clip cards.
+
+8. Right rail has appropriate independent scrolling.
+
+9. Navigation is compact/collapsible on iPad.
+
+10. Conversation receives dominant width.
+
+11. Portrait does not force three columns.
+
+12. Safari dynamic viewport is handled.
+
+13. PWA standalone viewport is handled.
+
+14. Safe areas are handled.
+
+15. Keyboard interaction does not hide composer.
+
+16. No unintended horizontal page scrolling.
+
+17. Existing cinematic design is preserved.
+
+18. Market functionality remains unchanged.
+
+19. Voice functionality remains unchanged.
+
+20. Trading safety remains unchanged.
+
+21. Robinhood remains NOT CONNECTED.
+
+22. Live trading remains DISABLED.
+
+23. Execution remains PAPER ONLY.
+
+24. Nothing is published.
+
+============================================================
+FINAL REPORT
+============================================================
+
+RETURN:
+
+JARVIS REAL IPAD LAYOUT REPAIR
+[COMPLETE / PARTIAL / BLOCKED]
+
+ROOT CAUSE:
+[explain]
+
+APP SHELL:
+[status]
+
+DYNAMIC VIEWPORT:
+[status]
+
+SAFE AREAS:
+[status]
+
+LANDSCAPE IPAD:
+[status]
+
+PORTRAIT IPAD:
+[status]
+
+COLLAPSIBLE NAV:
+[status]
+
+RESPONSIVE RIGHT RAIL:
+[status]
+
+CONVERSATION FULL HEIGHT:
+[status]
+
+MESSAGE SCROLLING:
+[status]
+
+COMPOSER:
+[status]
+
+KEYBOARD HANDLING:
+[status]
+
+VOICE UI:
+[status]
+
+SAFARI MODE:
+[status]
+
+PWA STANDALONE MODE:
+[status]
+
+HORIZONTAL OVERFLOW:
+[status]
+
+GIANT LOWER BLANK AREA:
+[FIXED / NOT FIXED]
+
+CLIPPED CARDS:
+[FIXED / NOT FIXED]
+
+VISUAL DESIGN PRESERVED:
+[YES/NO]
+
+MARKET SYSTEM CHANGED:
+NO
+
+TRADING SYSTEM CHANGED:
+NO
+
+ROBINHOOD:
+NOT CONNECTED
+
+LIVE TRADING:
+DISABLED
+
+EXECUTION:
+PAPER ONLY
+
+TESTS:
+[x/x]
+
+TYPESCRIPT:
+[PASS/FAIL]
+
+JARVIS BUILD:
+[PASS/FAIL]
+
+NEW COST:
+NONE
+
+NEW SECRETS:
+NONE
+
+PUBLISHED:
+NO
+
+READY FOR REAL-IPAD RETEST:
+[YES/NO]
+
+STOP AFTER THIS REPORT.
+
+DO NOT PUBLISH.
+DO NOT ADD CLAUDE YET.
+DO NOT START ANOTHER DEVELOPMENT PHASE.

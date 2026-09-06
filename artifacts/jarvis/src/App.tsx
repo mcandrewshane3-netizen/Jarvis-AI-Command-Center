@@ -149,21 +149,74 @@ function Shell({ children }: { children: React.ReactNode }) {
     return undefined;
   }, [refreshed]);
 
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    let layoutResizeTimer = 0;
+    let layoutResizeSettling = false;
+
+    const setViewportHeight = (height: number) => {
+      document.documentElement.style.setProperty('--app-viewport-height', `${Math.round(height)}px`);
+    };
+
+    const syncVisualViewportHeight = () => {
+      if (layoutResizeSettling) {
+        setViewportHeight(window.innerHeight);
+        return;
+      }
+      const activeElement = document.activeElement;
+      const inputFocused = activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement;
+      const keyboardContraction = viewport
+        ? window.innerHeight - viewport.height
+        : 0;
+      if (inputFocused && keyboardContraction > 160 && viewport) {
+        setViewportHeight(viewport.height);
+      } else {
+        setViewportHeight(window.innerHeight);
+      }
+    };
+
+    const syncLayoutViewportHeight = () => {
+      layoutResizeSettling = true;
+      setViewportHeight(window.innerHeight);
+      window.clearTimeout(layoutResizeTimer);
+      layoutResizeTimer = window.setTimeout(() => {
+        layoutResizeSettling = false;
+        syncVisualViewportHeight();
+      }, 200);
+    };
+
+    syncLayoutViewportHeight();
+    window.addEventListener('resize', syncLayoutViewportHeight);
+    viewport?.addEventListener('resize', syncVisualViewportHeight);
+    viewport?.addEventListener('scroll', syncVisualViewportHeight);
+    return () => {
+      window.clearTimeout(layoutResizeTimer);
+      window.removeEventListener('resize', syncLayoutViewportHeight);
+      viewport?.removeEventListener('resize', syncVisualViewportHeight);
+      viewport?.removeEventListener('scroll', syncVisualViewportHeight);
+      document.documentElement.style.removeProperty('--app-viewport-height');
+    };
+  }, []);
+
+  useEffect(() => {
+    closeMenu();
+  }, [location]);
+
   return (
     <div className="cmd-layout bg-background">
       {/* Sidebar */}
-      <aside className={`cmd-sidebar ${mobileMenuOpen ? 'open' : ''}`}>
+      <aside className={`cmd-sidebar ${mobileMenuOpen ? 'open' : ''}`} aria-label="Primary navigation">
         <div className="h-20 px-6 flex items-center justify-between border-b border-primary/10">
-          <Link href="/" className="flex items-center gap-3 no-underline group" onClick={closeMenu}>
-            <div className="w-8 h-8 bg-primary/10 border border-primary/40 flex items-center justify-center text-primary group-hover:bg-primary/20 transition-colors">
+          <Link href="/" className="flex items-center gap-3 no-underline group logo-wrap" onClick={closeMenu}>
+            <div className="w-8 h-8 flex-shrink-0 bg-primary/10 border border-primary/40 flex items-center justify-center text-primary group-hover:bg-primary/20 transition-colors">
               <Command size={16} />
             </div>
-            <div>
+            <div className="logo-text">
               <div className="font-display font-bold text-white tracking-widest text-sm leading-none">JARVIS</div>
               <div className="font-mono text-[9px] text-primary/70 tracking-widest uppercase mt-1">KERNEL</div>
             </div>
           </Link>
-          <button className="mobile-menu-btn text-primary p-2" onClick={closeMenu}>
+          <button className="mobile-menu-btn text-primary p-2" onClick={closeMenu} aria-label="Collapse navigation">
             <X size={20} />
           </button>
         </div>
@@ -171,7 +224,7 @@ function Shell({ children }: { children: React.ReactNode }) {
         <div className="flex-1 overflow-y-auto py-6 px-4 space-y-8 scrollbar-hide">
           {navGroups.map(group => (
             <div key={group.label}>
-              <div className="font-mono text-[10px] text-primary/40 tracking-widest uppercase mb-3 px-3">
+              <div className="font-mono text-[10px] text-primary/40 tracking-widest uppercase mb-3 px-3 nav-group-label">
                 {group.label}
               </div>
               <nav className="space-y-1">
@@ -183,6 +236,7 @@ function Shell({ children }: { children: React.ReactNode }) {
                       href={item.href} 
                       className={`nav-link ${active ? 'active' : ''}`}
                       onClick={closeMenu}
+                      title={item.label}
                     >
                       <item.icon size={16} className={active ? 'text-primary' : 'text-muted-foreground'} />
                       <span className="flex-1">{item.label}</span>
@@ -195,12 +249,12 @@ function Shell({ children }: { children: React.ReactNode }) {
           ))}
         </div>
 
-        <div className="p-4 border-t border-primary/10">
+        <div className="p-4 border-t border-primary/10 profile-wrap">
           <div className="flex items-center gap-3 p-3 bg-black/40 border border-primary/10">
-            <div className="w-8 h-8 bg-primary/20 border border-primary/30 flex items-center justify-center font-mono text-xs text-primary">
+            <div className="w-8 h-8 flex-shrink-0 bg-primary/20 border border-primary/30 flex items-center justify-center font-mono text-xs text-primary">
               {user?.firstName?.[0] || 'OP'}
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 profile-info">
               <div className="font-mono text-xs text-white truncate">{user?.firstName || 'Operator'}</div>
               <div className="font-mono text-[9px] text-primary/60 truncate">Authenticated</div>
             </div>
@@ -209,10 +263,10 @@ function Shell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main Content Area */}
-      <main className="cmd-main">
+      <main className={`cmd-main ${location === '/jarvis' ? 'cmd-main-workspace' : ''}`}>
         <header className="cmd-header">
           <div className="flex items-center gap-4">
-            <button className="mobile-menu-btn text-primary p-2 border border-primary/20 bg-primary/5 hover:bg-primary/10" onClick={() => setMobileMenuOpen(true)}>
+            <button className="mobile-menu-btn text-primary p-2 border border-primary/20 bg-primary/5 hover:bg-primary/10" onClick={() => setMobileMenuOpen(true)} aria-label="Expand navigation">
               <Menu size={20} />
             </button>
             <div className="hidden sm:flex items-center gap-2 px-3 py-1 border border-primary/30 bg-primary/5">
@@ -234,7 +288,7 @@ function Shell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <div className="cmd-content">
+        <div className={`cmd-content ${location === '/jarvis' ? 'cmd-content-workspace' : ''}`}>
           <ErrorBoundary>
             {children}
           </ErrorBoundary>
@@ -243,7 +297,7 @@ function Shell({ children }: { children: React.ReactNode }) {
 
       {/* Mobile Menu Backdrop */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 lg:hidden" onClick={closeMenu} />
+        <div className="cmd-menu-backdrop" onClick={closeMenu} aria-hidden="true" />
       )}
     </div>
   );

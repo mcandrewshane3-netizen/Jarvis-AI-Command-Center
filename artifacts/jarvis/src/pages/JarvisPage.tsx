@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { HolographicPanel, TechLabel, Button, StatusDot, JARVISCore } from '@/components/primitives';
-import { Database, CreditCard, Globe2, Sparkles, Send, BrainCircuit, Mic, MicOff, AlertTriangle, RotateCcw } from 'lucide-react';
+import { Database, CreditCard, Globe2, Sparkles, Send, BrainCircuit, Mic, MicOff, AlertTriangle, RotateCcw, PanelRight, X } from 'lucide-react';
 import { useSettings } from '@/hooks/use-settings';
 import { useVoice } from '@/hooks/use-voice';
 import { VoiceState } from '@/lib/voice';
@@ -81,6 +81,7 @@ export function JarvisPage() {
     ? null
     : (operationsHealth?.marketData?.status as MarketDataStatus | undefined) ?? 'UNAVAILABLE';
   const marketDataPresentation = marketDataStatus ? marketDataStatusPresentation[marketDataStatus] ?? marketDataStatusPresentation.UNAVAILABLE : null;
+  const [isContextOpen, setIsContextOpen] = useState(false);
 
   useEffect(() => {
     void (async () => {
@@ -215,23 +216,33 @@ export function JarvisPage() {
   };
 
   return (
-    <div className="page-enter stagger-1 h-full flex flex-col md:flex-row gap-6">
-      <div className="flex-1 flex flex-col h-[calc(100vh-160px)]">
-        <div className="mb-6 flex justify-between items-end">
+    <div className="page-enter stagger-1 jarvis-workspace" data-testid="jarvis-workspace">
+      <section className="jarvis-conversation" aria-label="JARVIS conversation">
+        <div className="jarvis-conversation-header">
           <div>
             <TechLabel>Primary Comm Link // Encrypted</TechLabel>
-            <h1 className="font-display text-4xl text-white mt-2 font-light tracking-tight">Talk it through.</h1>
+            <h1 className="font-display text-3xl lg:text-4xl text-white mt-1 lg:mt-2 font-light tracking-tight">Talk it through.</h1>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 lg:gap-4">
             <span className="hidden sm:inline font-mono text-[10px] text-primary uppercase tracking-widest">
               {isStreaming ? `${activities.at(-1)?.stage ?? 'PROCESSING'} QUERY...` : 'SYSTEM IDLE'}
             </span>
             <StatusDot status={isStreaming ? 'amber' : 'online'} pulse={isStreaming} />
+
+            <Button
+              variant="icon"
+              className="jarvis-context-toggle ml-2 h-8 w-8 border-primary/30"
+              onClick={() => setIsContextOpen(true)}
+              aria-label="Open Context Matrix"
+              testId="button-open-context"
+            >
+              <PanelRight size={16} />
+            </Button>
           </div>
         </div>
         
-        <HolographicPanel className="flex-1 flex flex-col min-h-0 relative" glow={isStreaming} scanline={isStreaming}>
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <HolographicPanel className="jarvis-chat-panel flex-1 flex flex-col min-h-0 relative" glow={isStreaming} scanline={isStreaming}>
+          <div className="jarvis-message-history flex-1 overflow-y-auto p-4 lg:p-6 space-y-4 lg:space-y-6 scrollbar-hide" data-testid="jarvis-message-history">
             {messages.length === 0 && (
               <div className="chat-bubble jarvis opacity-80">
                 <div className="author">JARVIS</div>
@@ -247,8 +258,8 @@ export function JarvisPage() {
             <div ref={endOfMessagesRef} />
           </div>
           
-          <div className="p-4 border-t border-primary/20 bg-black/40">
-            <div className="flex flex-wrap gap-2 mb-4">
+          <div className="jarvis-composer p-3 lg:p-4 border-t border-primary/20 bg-black/40 flex-shrink-0" data-testid="jarvis-composer">
+            <div className="flex flex-wrap gap-2 mb-3 lg:mb-4">
               {['Summarize my day', 'Find my next focus block', 'Review spending'].map((chip) => (
                 <button 
                   key={chip} 
@@ -278,10 +289,17 @@ export function JarvisPage() {
             </form>
           </div>
         </HolographicPanel>
-      </div>
+      </section>
       
-      <div className="w-full md:w-80 flex flex-col gap-6">
-        <HolographicPanel title="JARVIS KERNEL" className="flex items-center justify-center py-6">
+      <aside className={`jarvis-context-rail ${isContextOpen ? 'open' : ''}`} aria-label="Contextual intelligence" data-testid="jarvis-context-rail">
+        <div className="jarvis-context-drawer-header">
+          <div className="font-mono text-xs tracking-widest text-primary uppercase">Context Matrix</div>
+          <Button variant="icon" onClick={() => setIsContextOpen(false)} className="h-8 w-8 border-primary/20" testId="button-close-context" aria-label="Close Context Matrix">
+            <X size={16} />
+          </Button>
+        </div>
+
+        <HolographicPanel title="JARVIS KERNEL" className="flex items-center justify-center py-6 flex-shrink-0">
           <div className="w-full flex flex-col items-center px-4">
             <JARVISCore
               onClick={voiceSettings.enabled && (
@@ -321,7 +339,7 @@ export function JarvisPage() {
           </div>
         </HolographicPanel>
 
-        <HolographicPanel title="AI ACTIVITY">
+        <HolographicPanel title="AI ACTIVITY" className="flex-shrink-0">
           <div className="space-y-3">
             {activities.length === 0 ? (
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
@@ -345,7 +363,7 @@ export function JarvisPage() {
           </div>
         </HolographicPanel>
 
-        <HolographicPanel title="CONTEXT MATRIX">
+        <HolographicPanel title="CONTEXT MATRIX" className="flex-shrink-0">
           <div className="space-y-4">
             <div className="flex gap-4 p-3 border border-primary/10 bg-black/20">
               <Database className="text-primary mt-1" size={16} />
@@ -384,14 +402,22 @@ export function JarvisPage() {
           </div>
         </HolographicPanel>
         
-        <div className="p-4 border border-amber-500/20 bg-amber-500/5 text-amber-500/90 text-sm leading-relaxed relative overflow-hidden">
+        <div className="p-4 border border-amber-500/20 bg-amber-500/5 text-amber-500/90 text-[11px] lg:text-sm leading-relaxed relative overflow-hidden flex-shrink-0">
           <div className="absolute top-0 left-0 w-1 h-full bg-amber-500" />
           <div className="flex items-center gap-2 mb-2 font-mono text-[10px] tracking-widest text-amber-500">
             <Sparkles size={12} /> PROTOCOL ZERO
           </div>
           Provider routing and trading authority are server-enforced. Twelve Data status is shown above; Finance Data and Live Web remain separate connections.
         </div>
-      </div>
+      </aside>
+
+      {isContextOpen && (
+        <div
+          className="jarvis-context-backdrop"
+          onClick={() => setIsContextOpen(false)}
+          aria-hidden="true"
+        />
+      )}
     </div>
   );
 }
