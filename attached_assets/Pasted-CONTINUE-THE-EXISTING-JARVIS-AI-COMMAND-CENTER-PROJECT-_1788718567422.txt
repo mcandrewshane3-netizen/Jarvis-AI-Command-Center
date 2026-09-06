@@ -1,0 +1,1920 @@
+CONTINUE THE EXISTING JARVIS AI COMMAND CENTER PROJECT.
+
+DO NOT create a new project.
+DO NOT rebuild the backend from scratch.
+DO NOT publish yet.
+
+This is a FRONTEND / UX / VISUAL SYSTEM upgrade of the existing application.
+
+The goal is to transform the current JARVIS interface into an original,
+cinematic, futuristic AI command center inspired by the design principles
+seen in Tony Stark's technology and JARVIS interactions throughout the
+Iron Man / Avengers style of futuristic interfaces.
+
+IMPORTANT COPYRIGHT / DESIGN REQUIREMENT:
+
+Do NOT directly copy Marvel, Iron Man, Tony Stark, or movie-production assets.
+
+Do NOT use:
+- Marvel logos
+- Iron Man armor artwork
+- movie screenshots
+- copyrighted HUD graphics
+- exact movie interface layouts
+- proprietary fonts
+- copied icons
+- copied animation assets
+
+Instead, create an ORIGINAL JARVIS interface using the underlying design
+principles:
+
+- holographic instrumentation
+- layered information
+- intelligent situational hierarchy
+- circular/radial interfaces
+- technical telemetry
+- transparent illuminated panels
+- contextual information movement
+- sophisticated engineering aesthetic
+- cinematic AI visualization
+- minimal but meaningful animation
+
+The finished application should feel like a REAL advanced personal AI
+operating system rather than a themed website.
+
+==================================================
+CURRENT PROJECT STATE — PRESERVE THIS
+==================================================
+
+The existing project has already implemented substantial Phase 2 backend
+infrastructure.
+
+DO NOT remove, replace, mock, or regress these systems.
+
+Preserve the existing:
+
+- Replit-managed Clerk authentication
+- protected authenticated routes
+- server-side user isolation
+- PostgreSQL database
+- persistent users
+- persistent settings
+- persistent conversations
+- persistent messages
+- categorized memories
+- persistent Work tasks
+- real streaming JARVIS chat through Replit AI Integrations
+- AI provider abstraction
+- deterministic domain routing
+- Work domain
+- Finance domain routing
+- Markets domain routing
+- Personal domain routing
+- Research domain routing
+- Automation domain routing
+- deterministic trading RiskEngine
+- validated OrderIntent boundary
+- Research Only execution mode
+- Approval Required execution mode
+- Agentic Auto execution mode
+- global trading kill switch
+- persistent paper orders
+- audit logging
+- existing trading safety tests
+- existing authentication screens
+
+Existing trading safety tests currently pass.
+
+Preserve those tests.
+
+LIVE ROBINHOOD TRADING MUST REMAIN DISABLED.
+
+Robinhood MCP integration will be completed in a later phase.
+
+Do not make Robinhood connectivity a dependency for this UI redesign.
+
+==================================================
+PRIMARY DESIGN GOAL
+==================================================
+
+Transform JARVIS into an immersive:
+
+PERSONAL AI COMMAND CENTER
+
+designed primarily for:
+
+11-inch iPad landscape orientation
+
+but also responsive to:
+
+iPad portrait
+desktop browser
+larger tablets
+
+The application should feel like an operating environment.
+
+NOT:
+
+a conventional SaaS dashboard.
+
+NOT:
+
+a generic admin panel.
+
+NOT:
+
+a collection of rectangular cards.
+
+NOT:
+
+a Marvel fan website.
+
+NOT:
+
+a video game menu.
+
+The user should feel like they are interacting directly with an advanced AI
+system.
+
+==================================================
+VISUAL LANGUAGE
+==================================================
+
+Create a dark technical environment.
+
+Primary background:
+
+near-black
+charcoal
+very dark blue/green
+
+Primary illumination:
+
+cyan
+aqua
+blue-green
+cool white
+
+Secondary informational accents:
+
+soft blue
+teal
+
+Attention:
+
+amber
+
+Warning:
+
+orange
+
+Critical:
+
+red
+
+Healthy / approved:
+
+green
+
+Use restrained illumination.
+
+Avoid excessive neon.
+
+The interface should feel sophisticated rather than flashy.
+
+==================================================
+DEPTH
+==================================================
+
+Create visual depth through:
+
+- translucent layers
+- subtle blur
+- thin illuminated borders
+- faint technical grids
+- low-opacity geometry
+- subtle shadows
+- soft glows
+- layered radial instrumentation
+- foreground/background hierarchy
+
+Panels should appear like floating technical displays.
+
+Do not make everything equally bright.
+
+The user's attention should naturally move toward the currently important
+information.
+
+==================================================
+TYPOGRAPHY
+==================================================
+
+Use modern, highly legible typography.
+
+Primary information:
+clean geometric sans-serif
+
+Technical labels:
+compact uppercase typography
+slightly increased letter spacing
+
+Examples:
+
+SYSTEM STATUS
+MARKETS
+PORTFOLIO
+RISK ENGINE
+ACTIVE PROCESSES
+AUTOMATIONS
+MEMORY
+WORKSPACE
+
+Numbers should be especially easy to read.
+
+Do not use copyrighted movie fonts.
+
+==================================================
+THE JARVIS CORE
+==================================================
+
+Create a reusable central component:
+
+JARVISCore
+
+This is the visual heart of the application.
+
+It should be a sophisticated circular/radial AI visualization constructed
+using performant:
+
+SVG
+CSS
+Canvas where appropriate
+
+Avoid heavy WebGL unless performance testing proves it is necessary.
+
+The core should include combinations of:
+
+- concentric rings
+- rotating segmented arcs
+- data ticks
+- orbital nodes
+- subtle waveform structures
+- central illuminated intelligence core
+- radial telemetry
+- dynamic status indicators
+
+The Core must communicate ACTUAL application state.
+
+==================================================
+JARVIS CORE STATES
+==================================================
+
+Support:
+
+IDLE
+
+LISTENING
+
+THINKING
+
+SPEAKING
+
+RUNNING_TASK
+
+TOOL_ACTIVITY
+
+WARNING
+
+CRITICAL
+
+OFFLINE
+
+DEGRADED
+
+Each state should have a distinct but coherent animation.
+
+IDLE:
+slow subtle ring movement
+soft breathing illumination
+
+LISTENING:
+responsive central waveform
+expanded cyan illumination
+
+THINKING:
+rotating inner/outer rings
+data pulses
+processing segments
+
+SPEAKING:
+audio-reactive style waveform/radial movement
+
+RUNNING_TASK:
+moving nodes through radial pathways
+
+TOOL_ACTIVITY:
+subtle data transfer visualization
+
+WARNING:
+amber segmented pulse
+
+CRITICAL:
+restrained red alert state
+
+OFFLINE:
+dim/desaturated core
+
+DEGRADED:
+amber status indicators
+
+Do not use constant aggressive animation.
+
+==================================================
+CORE INTERACTION
+==================================================
+
+The JARVIS Core should eventually become the main voice interaction control.
+
+For this UI phase:
+
+Make the Core tappable.
+
+If voice functionality has not yet been implemented, tapping it should open
+or focus the existing JARVIS chat interface.
+
+Do NOT fake microphone functionality.
+
+Prepare clean hooks/state interfaces for the upcoming Voice System phase.
+
+Example states can exist programmatically, but do not falsely claim that
+speech recognition is operational until it actually is.
+
+==================================================
+MAIN IPAD LANDSCAPE LAYOUT
+==================================================
+
+Design the primary iPad landscape experience as a futuristic cockpit.
+
+Use approximately:
+
+LEFT ZONE
+navigation + secondary telemetry
+
+CENTER ZONE
+JARVIS Core + primary active context
+
+RIGHT ZONE
+situational information + important alerts
+
+BOTTOM ZONE
+active processes + quick commands
+
+Do not make the screen overcrowded.
+
+The center should visually dominate.
+
+==================================================
+NAVIGATION
+==================================================
+
+Preserve existing major sections:
+
+HOME
+
+JARVIS
+
+WORK
+
+FINANCE
+
+MARKETS
+
+PERSONAL
+
+RESEARCH
+
+AUTOMATIONS
+
+INTEGRATIONS
+
+SETTINGS
+
+Replace generic navigation styling with a compact technical navigation rail.
+
+Each section should have:
+
+icon
+label
+active indicator
+
+The active section should appear electronically illuminated but remain
+tasteful.
+
+Allow the navigation rail to collapse.
+
+==================================================
+HOME / COMMAND CENTER
+==================================================
+
+Redesign HOME as the primary command environment.
+
+CENTER:
+
+large JARVIS Core
+
+Around/beside it:
+
+current time
+date
+JARVIS state
+system health
+active task
+important context
+
+Example:
+
+JARVIS
+ONLINE
+
+SYSTEMS
+8 / 9 ONLINE
+
+ACTIVE PROCESS
+NONE
+
+TRADING
+RESEARCH ONLY
+
+AUTOMATIONS
+3 ACTIVE
+
+These values must come from real application state whenever available.
+
+Never invent live statuses.
+
+==================================================
+SITUATIONAL INTELLIGENCE
+==================================================
+
+Implement a situational hierarchy system.
+
+This is extremely important.
+
+Information should not remain static simply because it belongs to one card.
+
+When something becomes important, visually promote it.
+
+Examples:
+
+Bill due soon
+→ Finance information becomes more prominent.
+
+Robinhood disconnected
+→ Markets/Integration warning moves into attention area.
+
+Risk limit approached
+→ Risk visualization becomes prominent.
+
+Automation failure
+→ Automation status becomes prominent.
+
+Upcoming task deadline
+→ Work item moves forward.
+
+Trade proposal awaiting approval
+→ proposal becomes primary context.
+
+Critical information should move toward the center of attention.
+
+Routine information should remain peripheral.
+
+Implement a reusable priority model such as:
+
+BACKGROUND
+NORMAL
+ATTENTION
+WARNING
+CRITICAL
+
+==================================================
+HOLOGRAPHIC PANEL COMPONENT
+==================================================
+
+Create a reusable component:
+
+HolographicPanel
+
+Support:
+
+NORMAL
+ACTIVE
+ATTENTION
+WARNING
+CRITICAL
+DISABLED
+
+Visual features:
+
+- translucent dark surface
+- thin illuminated border
+- subtle corner geometry
+- technical label
+- optional status indicator
+- subtle internal grid/texture
+- restrained glow
+
+Panels must remain readable.
+
+Do not sacrifice usability for visual effects.
+
+==================================================
+RADIAL COMPONENT SYSTEM
+==================================================
+
+Build reusable radial visualizations:
+
+SystemHealthRing
+
+RiskExposureRing
+
+SavingsProgressRing
+
+DailyLossRing
+
+PortfolioAllocationRing
+
+AutomationActivityRing
+
+AIStatusCore
+
+Use SVG/Canvas/CSS where appropriate.
+
+These should consume real application data.
+
+When data is unavailable, show:
+
+NO DATA
+
+NOT CONNECTED
+
+or
+
+UNAVAILABLE
+
+Never generate fake metrics just to make the UI look impressive.
+
+==================================================
+JARVIS SCREEN
+==================================================
+
+Redesign the existing chat interface.
+
+It should feel like communication with the operating system itself rather
+than a messaging application.
+
+Primary center:
+conversation
+
+Supporting areas:
+JARVIS Core
+context
+tool activity
+active domain
+system status
+
+User messages should be visually distinct but understated.
+
+JARVIS responses should feel integrated into the interface.
+
+Preserve:
+
+streaming
+conversation history
+persistent messages
+markdown
+timestamps
+copy
+regenerate
+stop
+
+==================================================
+JARVIS PROCESS DISPLAY
+==================================================
+
+While JARVIS is performing an operation, show SAFE high-level processing
+states.
+
+Examples:
+
+ANALYZING REQUEST
+
+ROUTING → MARKETS
+
+CHECKING ACCOUNT DATA
+
+RUNNING RISK ENGINE
+
+REVIEWING CALENDAR
+
+SEARCHING RESEARCH
+
+UPDATING WORKSPACE
+
+RESULT READY
+
+Do NOT expose chain-of-thought.
+
+Do NOT display hidden reasoning.
+
+Only display high-level tool/process status.
+
+==================================================
+SYSTEM MAP
+==================================================
+
+Create a SYSTEM MAP visualization.
+
+Center:
+
+JARVIS
+
+Primary connected nodes:
+
+WORK
+
+FINANCE
+
+MARKETS
+
+PERSONAL
+
+RESEARCH
+
+AUTOMATIONS
+
+Under MARKETS:
+
+RISK ENGINE
+
+ROBINHOOD MCP
+
+TRADINGVIEW
+
+Robinhood should currently display:
+
+NOT CONNECTED
+
+or the actual integration state.
+
+Do not pretend it is operational.
+
+Connections should use subtle animated data paths when a domain is actively
+being used.
+
+Example:
+
+User asks a finance question.
+
+JARVIS
+→ FINANCE
+
+briefly illuminates.
+
+Trading analysis:
+
+JARVIS
+→ MARKETS
+→ RISK ENGINE
+
+The visualization must be tied to real app activity rather than random
+animation.
+
+==================================================
+MARKETS COMMAND CENTER
+==================================================
+
+Create a sophisticated Markets screen.
+
+Approximate layout:
+
+CENTER:
+portfolio / market visualization
+
+LEFT:
+watchlist
+
+RIGHT:
+account and risk telemetry
+
+BOTTOM:
+positions / orders / strategy activity
+
+Display where data exists:
+
+PORTFOLIO VALUE
+
+BUYING POWER
+
+TODAY P/L
+
+TOTAL EXPOSURE
+
+RISK BUDGET
+
+DAILY LOSS
+
+OPEN POSITIONS
+
+TRADES TODAY
+
+EXECUTION MODE
+
+KILL SWITCH STATUS
+
+If Robinhood is not connected:
+
+show:
+
+ROBINHOOD
+NOT CONNECTED
+
+Do not fabricate portfolio information.
+
+Paper trading information should be clearly labeled:
+
+PAPER
+
+==================================================
+RISK ENGINE VISUALIZATION
+==================================================
+
+Create a visual representation of the EXISTING deterministic RiskEngine.
+
+When evaluating an OrderIntent, animate the checks:
+
+ORDER INTENT
+
+↓
+
+POSITION SIZE
+
+ACCOUNT EXPOSURE
+
+DAILY LOSS
+
+CASH RESERVE
+
+ASSET ALLOWED
+
+TRADING HOURS
+
+OPEN POSITION LIMIT
+
+TRADE COUNT
+
+KILL SWITCH
+
+↓
+
+APPROVED
+
+or
+
+BLOCKED
+
+This visualization is informational only.
+
+The real deterministic server-side RiskEngine remains authoritative.
+
+Never move risk decisions into frontend animation code.
+
+==================================================
+TRADE ANALYSIS MODULE
+==================================================
+
+Create a reusable futuristic trade-analysis interface.
+
+Display:
+
+SYMBOL
+
+ASSET TYPE
+
+DIRECTION
+
+ENTRY
+
+STOP
+
+TARGET
+
+RISK / REWARD
+
+POSITION SIZE
+
+DOLLAR RISK
+
+ACCOUNT EXPOSURE
+
+STRATEGY
+
+CONFIDENCE
+
+CATALYSTS
+
+BULL CASE
+
+BEAR CASE
+
+RISKS
+
+Where appropriate create a visual price-zone diagram.
+
+Use technical chart styling.
+
+Do not claim predictions are certain.
+
+==================================================
+EXECUTION MODE DISPLAY
+==================================================
+
+Trading mode must ALWAYS be visible within Markets.
+
+Modes:
+
+RESEARCH ONLY
+
+APPROVAL REQUIRED
+
+AGENTIC AUTO
+
+Visual treatment:
+
+Research Only:
+cool neutral/cyan
+
+Approval Required:
+amber
+
+Agentic Auto:
+persistent amber/orange attention state
+
+AGENTIC AUTO must never visually resemble a harmless background setting.
+
+When Agentic Auto is eventually enabled, prominently display:
+
+AGENTIC AUTO ACTIVE
+
+RISK BUDGET
+
+DAILY LOSS
+
+TRADES TODAY
+
+TOTAL EXPOSURE
+
+PAUSE
+
+STOP
+
+Do not enable Agentic Auto as part of this UI redesign.
+
+==================================================
+KILL SWITCH
+==================================================
+
+Create a highly visible but protected:
+
+TRADING KILL SWITCH
+
+It should display current real state.
+
+Interaction should use the existing backend safety control.
+
+Do not create a frontend-only fake switch.
+
+The kill switch should remain accessible from Markets even if other panels
+are collapsed.
+
+==================================================
+WORK COMMAND CENTER
+==================================================
+
+Transform Work into an engineering/project workspace.
+
+Include:
+
+active projects
+tasks
+deadlines
+notes
+checklists
+documents
+recent activity
+priority items
+
+Use technical timeline and status visualizations.
+
+Existing persistent Work tasks must continue working.
+
+Do not replace them with browser-only mock data.
+
+==================================================
+FINANCE COMMAND CENTER
+==================================================
+
+Create a financial telemetry interface.
+
+Sections:
+
+CURRENT CASH FLOW
+
+UPCOMING BILLS
+
+PAYCHECKS
+
+EXPENSES
+
+SAVINGS
+
+GOALS
+
+MONTHLY OVERVIEW
+
+Use radial and timeline visualization where appropriate.
+
+Savings goals can use:
+
+SavingsProgressRing
+
+Bills should be shown chronologically.
+
+Important upcoming obligations can be promoted through the situational
+intelligence system.
+
+Do not fabricate financial data.
+
+==================================================
+PERSONAL COMMAND CENTER
+==================================================
+
+Create a clean personal dashboard for:
+
+personal tasks
+reminders
+notes
+calendar context when available
+important upcoming items
+saved preferences
+
+Keep this screen less dense than Markets.
+
+==================================================
+RESEARCH COMMAND CENTER
+==================================================
+
+Create a research workspace.
+
+Support existing/planned categories:
+
+companies
+markets
+stocks
+crypto
+real estate
+business
+products
+general research
+
+Saved reports should visually include:
+
+TITLE
+
+DATE
+
+SUMMARY
+
+SOURCES
+
+KEY FINDINGS
+
+RISKS
+
+OPPORTUNITIES
+
+Allow reports to be opened into a focused reading mode.
+
+==================================================
+AUTOMATIONS COMMAND CENTER
+==================================================
+
+Do not display automations as a boring settings table.
+
+Represent each automation as a process node.
+
+Show:
+
+NAME
+
+TRIGGER
+
+STATUS
+
+LAST RUN
+
+NEXT RUN
+
+LAST RESULT
+
+ACTIVE / PAUSED / ERROR
+
+Use subtle animated pathways for currently running automations.
+
+Example:
+
+TRADINGVIEW SIGNAL
+↓
+MARKETS AGENT
+↓
+RISK ENGINE
+↓
+EXECUTION CONTROLLER
+
+Do not animate a process as active unless the application actually reports
+activity.
+
+==================================================
+INTEGRATIONS
+==================================================
+
+Create a technical integrations screen.
+
+Each integration should show:
+
+NAME
+
+CONNECTION STATUS
+
+HEALTH
+
+LAST SYNC
+
+CAPABILITIES
+
+AUTHORIZATION STATUS
+
+Examples:
+
+AI
+
+DATABASE
+
+ROBINHOOD MCP
+
+TRADINGVIEW
+
+CALENDAR
+
+EMAIL
+
+Clearly distinguish:
+
+CONNECTED
+
+NOT CONNECTED
+
+AUTHORIZATION REQUIRED
+
+DEGRADED
+
+OFFLINE
+
+Do not fake connection status.
+
+==================================================
+SYSTEM HEALTH
+==================================================
+
+Create a system health interface.
+
+Monitor actual available health state for:
+
+DATABASE
+
+AUTHENTICATION
+
+AI
+
+AUTOMATIONS
+
+RISK ENGINE
+
+ROBINHOOD MCP
+
+MARKET DATA
+
+TRADINGVIEW
+
+CALENDAR
+
+EMAIL
+
+Use:
+
+ONLINE
+
+DEGRADED
+
+OFFLINE
+
+NOT CONFIGURED
+
+Display overall health using:
+
+SystemHealthRing
+
+==================================================
+NOTIFICATIONS / ALERTS
+==================================================
+
+Create an integrated alert system.
+
+Levels:
+
+INFORMATION
+
+ATTENTION
+
+WARNING
+
+CRITICAL
+
+Examples:
+
+task due
+
+bill approaching
+
+automation failed
+
+Robinhood disconnected
+
+RiskEngine rejection
+
+trade awaiting approval
+
+kill switch activated
+
+Critical alerts may temporarily influence JARVIS Core color/state.
+
+Do not use excessive modal dialogs.
+
+==================================================
+ACTIVE PROCESS BAR
+==================================================
+
+Create a bottom process strip.
+
+Show current/very recent operations such as:
+
+JARVIS THINKING
+
+RESEARCH RUNNING
+
+AUTOMATION EXECUTING
+
+RISK CHECK
+
+DATABASE SYNC
+
+No activity:
+
+SYSTEM READY
+
+The bar should remain compact.
+
+==================================================
+QUICK COMMANDS
+==================================================
+
+Add contextual quick commands.
+
+Home examples:
+
+ASK JARVIS
+
+RUN MY DAY
+
+OPEN BRIEFING
+
+WORK
+
+FINANCE
+
+MARKETS
+
+AUTOMATIONS
+
+Commands should use actual application actions/routes.
+
+Do not create dead buttons.
+
+==================================================
+DAILY BRIEFING
+==================================================
+
+Create a cinematic briefing view.
+
+Potential sections:
+
+TODAY
+
+WORK
+
+FINANCE
+
+MARKETS
+
+PERSONAL
+
+SYSTEM STATUS
+
+IMPORTANT ITEMS
+
+JARVIS SUMMARY
+
+Only show data that exists.
+
+If a system is not connected, say so.
+
+==================================================
+STARTUP / BOOT EXPERIENCE
+==================================================
+
+Create an OPTIONAL short boot sequence.
+
+Maximum target duration:
+approximately 1.5–2 seconds.
+
+Example visual sequence:
+
+JARVIS
+
+INITIALIZING CORE
+
+DATABASE ........ ONLINE
+
+AI .............. ONLINE
+
+RISK ENGINE ..... ONLINE
+
+AUTOMATIONS ..... ONLINE
+
+ROBINHOOD ....... NOT CONNECTED
+
+SYSTEM READY
+
+These values MUST come from actual health checks.
+
+Do not fake ONLINE statuses.
+
+Add setting:
+
+SHOW STARTUP SEQUENCE
+ON / OFF
+
+Users should be able to disable it.
+
+==================================================
+ANIMATION PHILOSOPHY
+==================================================
+
+Animations must communicate meaning.
+
+Good:
+
+data moving while syncing
+
+ring changing while processing
+
+node illumination when domain is active
+
+risk checks illuminating sequentially
+
+waveform while voice is actually active later
+
+Bad:
+
+random blinking
+
+constant meaningless spinning
+
+large background animations
+
+excessive particles
+
+decorative animation consuming battery
+
+Target approximately 60 FPS on modern iPad hardware.
+
+==================================================
+PERFORMANCE
+==================================================
+
+This application is primarily used on an iPad.
+
+Prioritize:
+
+CSS transforms
+
+SVG
+
+efficient Canvas rendering
+
+requestAnimationFrame where necessary
+
+lazy loading
+
+reduced rerenders
+
+GPU-friendly transforms
+
+Avoid unnecessarily heavy:
+
+WebGL
+
+3D libraries
+
+particle engines
+
+video backgrounds
+
+huge animation libraries
+
+Test performance on an iPad-sized viewport.
+
+==================================================
+REDUCED MOTION
+==================================================
+
+Respect:
+
+prefers-reduced-motion
+
+Provide application setting:
+
+REDUCE INTERFACE MOTION
+
+When enabled:
+
+reduce ring rotations
+
+remove decorative data movement
+
+retain only state-critical transitions
+
+==================================================
+IPAD LANDSCAPE
+==================================================
+
+Primary target:
+
+11-inch iPad landscape.
+
+Optimize touch targets.
+
+Avoid tiny controls.
+
+Respect safe areas.
+
+Avoid hover-dependent functionality.
+
+Everything important must work through touch.
+
+No interaction may require a mouse.
+
+==================================================
+IPAD PORTRAIT
+==================================================
+
+Create a responsive portrait layout.
+
+Do not simply shrink the landscape cockpit.
+
+Reorganize:
+
+JARVIS Core first
+
+primary contextual information second
+
+alerts third
+
+modules below
+
+Navigation should collapse appropriately.
+
+==================================================
+PWA
+==================================================
+
+Preserve/build toward standalone PWA behavior.
+
+Ensure:
+
+manifest
+
+standalone display
+
+safe-area CSS
+
+touch-friendly navigation
+
+appropriate icons where already available
+
+responsive viewport
+
+Do not break authentication when running as an installed PWA.
+
+==================================================
+AUTHENTICATION EXPERIENCE
+==================================================
+
+Keep the new authentication functionality.
+
+Restyle the current:
+
+WELCOME TO JARVIS
+
+screen so it belongs to the new command-center design.
+
+Do not remove:
+
+SIGN IN
+
+CREATE ACCOUNT
+
+Do not weaken authentication.
+
+The signed-out screen should visually introduce the JARVIS Core.
+
+Example:
+
+JARVIS
+PRIVATE PERSONAL INTELLIGENCE SYSTEM
+
+AUTHENTICATION REQUIRED
+
+SIGN IN
+
+CREATE ACCOUNT
+
+Keep it sophisticated and minimal.
+
+==================================================
+DEMO MODE
+==================================================
+
+Preserve Demo Mode where it is genuinely required.
+
+However:
+
+Do not use Demo Mode for functionality that has already been replaced with
+real backend systems.
+
+Clearly label simulated data.
+
+Never mix simulated financial/trading data with real data without an obvious
+label.
+
+==================================================
+VOICE SYSTEM PREPARATION
+==================================================
+
+The full voice implementation will happen AFTER this UI phase.
+
+Prepare the UI architecture now.
+
+Create clean frontend state/events for:
+
+VOICE_IDLE
+
+VOICE_LISTENING
+
+VOICE_TRANSCRIBING
+
+VOICE_THINKING
+
+VOICE_SPEAKING
+
+VOICE_INTERRUPTED
+
+VOICE_ERROR
+
+Prepare:
+
+microphone control area
+
+JARVIS Core voice states
+
+audio visualizer container
+
+live transcript area
+
+spoken response status
+
+BUT:
+
+DO NOT pretend speech recognition or TTS is operational.
+
+Do not install a paid voice provider during this phase.
+
+Do not clone any actor's voice.
+
+The next build phase will implement the original British JARVIS voice system.
+
+==================================================
+JARVIS PERSONALITY VISUALIZATION
+==================================================
+
+JARVIS should feel present throughout the application.
+
+The central AI should respond visually to system events.
+
+Examples:
+
+User sends request
+→ Core activates.
+
+JARVIS routes to Finance
+→ Finance node illuminates.
+
+RiskEngine runs
+→ Markets/Risk nodes illuminate.
+
+Task completes
+→ Core returns to idle.
+
+Warning occurs
+→ attention indicator appears.
+
+This should be driven by actual application events.
+
+==================================================
+DESIGN SYSTEM
+==================================================
+
+Create reusable design primitives rather than hard-coding every screen.
+
+Components should include approximately:
+
+JARVISCore
+
+HolographicPanel
+
+TechnicalLabel
+
+StatusIndicator
+
+SystemHealthRing
+
+RiskExposureRing
+
+SavingsProgressRing
+
+DailyLossRing
+
+PortfolioAllocationRing
+
+AutomationActivityRing
+
+SystemMap
+
+ProcessIndicator
+
+AlertPanel
+
+TelemetryValue
+
+ExecutionModeIndicator
+
+KillSwitchControl
+
+CommandButton
+
+VoiceControlPlaceholder
+
+==================================================
+ACCESSIBILITY
+==================================================
+
+Despite the cinematic interface:
+
+maintain sufficient text contrast
+
+provide semantic labels
+
+support keyboard navigation on desktop
+
+support touch on iPad
+
+use accessible button semantics
+
+do not communicate critical status through color alone
+
+provide readable alternatives for visual telemetry
+
+==================================================
+NO FAKE DATA
+==================================================
+
+This requirement is absolute.
+
+Do not make the application look impressive by inventing:
+
+portfolio balances
+
+stock prices
+
+P/L
+
+Robinhood status
+
+bank balances
+
+bill information
+
+system health
+
+automation activity
+
+AI activity
+
+If information is unavailable, display:
+
+NO DATA
+
+NOT CONNECTED
+
+NOT CONFIGURED
+
+UNAVAILABLE
+
+WAITING FOR DATA
+
+as appropriate.
+
+==================================================
+DO NOT BREAK THE BACKEND
+==================================================
+
+Before changing components:
+
+inspect the existing implementation.
+
+Understand:
+
+routes
+
+API calls
+
+database interactions
+
+authentication
+
+state management
+
+streaming chat
+
+RiskEngine integration
+
+paper trading
+
+tests
+
+Then redesign around those systems.
+
+Do not replace working functionality with visual mocks.
+
+==================================================
+TESTING
+==================================================
+
+After implementation test:
+
+1. Signed-out screen
+2. Sign-in flow
+3. Account creation flow
+4. Authenticated Home
+5. JARVIS chat
+6. Streaming responses
+7. Persistent conversation
+8. Work task creation
+9. Work task persistence
+10. Finance navigation
+11. Markets navigation
+12. Research navigation
+13. Personal navigation
+14. Automations navigation
+15. Integrations navigation
+16. Settings navigation
+17. RiskEngine visualization
+18. Research Only mode
+19. Approval Required mode
+20. Agentic Auto remains disabled
+21. Kill switch
+22. Paper trading
+23. System Map
+24. Alerts
+25. iPad landscape
+26. iPad portrait
+27. reduced-motion mode
+28. page refresh
+29. logout/login persistence
+30. existing trading safety tests
+
+Do not remove or weaken existing safety tests to make the build pass.
+
+==================================================
+VISUAL QUALITY PASS
+==================================================
+
+After functionality works, perform a dedicated visual pass.
+
+Look specifically for:
+
+misaligned panels
+
+clipped text
+
+tiny touch targets
+
+unnecessary scrollbars
+
+overlapping elements
+
+poor contrast
+
+excessive glow
+
+excessive animation
+
+inconsistent spacing
+
+generic-looking components
+
+desktop layouts simply shrunk onto iPad
+
+The final result should feel intentional and premium.
+
+==================================================
+IMPORTANT — DO NOT PUBLISH YET
+==================================================
+
+Do NOT publish the application during this phase.
+
+Continue using preview/development mode.
+
+We will publish after:
+
+UI
+
+voice
+
+integrations
+
+Robinhood
+
+automation
+
+and final security testing
+
+are complete.
+
+==================================================
+WHEN TO ASK ME FOR INPUT
+==================================================
+
+Do not ask me to write code.
+
+Do not ask me to manually modify source files.
+
+Handle implementation yourself.
+
+Only stop for me if:
+
+- authentication requires my interaction
+- an external service requires authorization
+- a secret must be supplied
+- there is a genuine platform limitation
+- an irreversible decision requires my approval
+
+If that happens, tell me:
+
+WHAT IS NEEDED
+
+WHY IT IS NEEDED
+
+WHERE I NEED TO TAP
+
+WHAT I NEED TO ENTER
+
+WHETHER IT IS SENSITIVE
+
+WHAT WILL HAPPEN AFTERWARD
+
+Never ask me to paste passwords, OAuth tokens, brokerage credentials, or
+other sensitive credentials directly into the Replit Agent chat.
+
+==================================================
+FINAL REPORT
+==================================================
+
+When this UI phase is finished, give me a concise report:
+
+JARVIS UI STATUS
+
+Command Center:
+[complete/incomplete]
+
+JARVIS Core:
+[status]
+
+System Map:
+[status]
+
+JARVIS Chat:
+[status]
+
+Work:
+[status]
+
+Finance:
+[status]
+
+Markets:
+[status]
+
+Personal:
+[status]
+
+Research:
+[status]
+
+Automations:
+[status]
+
+Integrations:
+[status]
+
+System Health:
+[status]
+
+Risk Visualization:
+[status]
+
+iPad Landscape:
+[test result]
+
+iPad Portrait:
+[test result]
+
+PWA:
+[test result]
+
+Authentication:
+[test result]
+
+Backend Regression Tests:
+[test result]
+
+Trading Safety Tests:
+[x/x passed]
+
+Robinhood:
+NOT CONNECTED / actual status
+
+Known Issues:
+[list]
+
+NEXT RECOMMENDED PHASE:
+JARVIS VOICE SYSTEM
+
+==================================================
+BEGIN
+==================================================
+
+First inspect the existing project and current backend implementation.
+
+Then redesign the existing frontend IN PLACE.
+
+Do not rebuild the project.
+
+Do not remove working functionality.
+
+Do not connect Robinhood yet.
+
+Do not implement live trading.
+
+Do not publish.
+
+BEGIN THE COMPLETE JARVIS COMMAND CENTER UI REDESIGN NOW.
