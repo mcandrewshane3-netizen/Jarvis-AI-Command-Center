@@ -10,7 +10,8 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { 
   Menu, X, Command, Home as HomeIcon, Bot, BriefcaseBusiness, 
   CircleDollarSign, TrendingUp, CalendarClock, Microscope, 
-  Zap, Link2, Settings as SettingsIcon, Bell, RefreshCw, Network
+  Zap, Link2, Settings as SettingsIcon, Bell, RefreshCw, Network,
+  Landmark, ShoppingCart
 } from 'lucide-react';
 
 // Pages
@@ -27,6 +28,8 @@ import { SoftwarePage } from '@/pages/SoftwarePage';
 import { ActionPlansPage } from '@/pages/ActionPlansPage';
 import { EmptyModulePage } from '@/pages/EmptyPages';
 import { SystemMapPage } from '@/pages/SystemMapPage';
+import { EconomicsPage } from '@/pages/EconomicsPage';
+import { CommercePage } from '@/pages/CommercePage';
 
 // Primitives
 import { StatusDot, TechValue, Button, JARVISCore } from '@/components/primitives';
@@ -51,7 +54,9 @@ const navGroups = [
     items: [
       { href: '/work', label: 'Work', icon: BriefcaseBusiness },
       { href: '/finance', label: 'Finance', icon: CircleDollarSign },
+      { href: '/economics', label: 'Economics', icon: Landmark },
       { href: '/markets', label: 'Markets', icon: TrendingUp },
+      { href: '/commerce', label: 'Commerce', icon: ShoppingCart },
       { href: '/research', label: 'Research', icon: Microscope },
       { href: '/career', label: 'Career', icon: BriefcaseBusiness },
       { href: '/business', label: 'Business', icon: Bot },
@@ -253,7 +258,9 @@ function AuthenticatedApp() {
         <Route path="/plans" component={ActionPlansPage} />
         <Route path="/work" component={WorkPage} />
         <Route path="/finance" component={FinancePage} />
+        <Route path="/economics" component={EconomicsPage} />
         <Route path="/markets" component={MarketsPage} />
+        <Route path="/commerce" component={CommercePage} />
         <Route path="/research" component={ResearchPage} />
         <Route path="/career" component={CareerPage} />
         <Route path="/business" component={BusinessPage} />

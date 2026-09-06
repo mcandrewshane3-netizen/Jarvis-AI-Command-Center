@@ -1,2 +1,3 @@
 - [Trading UI truthfulness](trading-ui-truthfulness.md) — never infer live financial or execution state; show unavailable until the server provides it.
 - [AI orchestration safety](ai-orchestration-safety.md) — verify provider health at runtime and minimize context across domain boundaries.
+- [Paper-cycle concurrency](paper-cycle-concurrency.md) — commit a cycle generation only with its accounting transaction; failed cycles must not advance it.
