@@ -1,8 +1,9 @@
 import { Router, type IRouter } from "express";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import {
-  autonomousPaperRuns, db, economicResearchRecords, paperExecutions, paperPortfolios, paperPositions,
-  projectEconomicEntries, users,
+  autonomousPaperRuns, db, economicResearchRecords, learningArtifacts, learningReviews, marketBars, paperExecutions,
+  marketBarRetentionCutoff, paperPortfolios, paperPositions, projectEconomicEntries, researchValueEvents, strategyDecisionOutcomes,
+  strategyPerformances, strategyRegistryEntries, users,
 } from "@workspace/db";
 import { requireAuth, type AuthenticatedRequest } from "../middlewares/requireAuth";
 import {
@@ -10,8 +11,9 @@ import {
 } from "../services/commerce";
 import { ProjectEconomicsService, type EconomicScope, type ProjectEconomicEntry } from "../services/economics";
 import {
-  AIResearchGate, BacktestEngine, INITIAL_STRATEGIES, MarketDataQualityService, OpportunityScanner, TradeQualityEngine,
+  AIResearchGate, BacktestEngine, createExecutableStrategy, DailyLearningReview, INITIAL_STRATEGIES, JarvisLearningEngine, MarketDataQualityService, OpportunityScanner, TradeQualityEngine,
   TwelveDataProvider, TradingUniverse, synthesizeResearch, type MarketDataProvider,
+  WeeklyStrategyReview,
 } from "../services/market-intelligence";
 import {
   AutonomousPaperTradingService, CapitalGovernor, ExitEngine, LiveReadinessEvaluator, PaperBroker, PaperPortfolio,
@@ -19,6 +21,7 @@ import {
 } from "../services/paper-trading";
 import { OpenAIProvider, type AIProvider } from "../services/ai/provider";
 import { GrokProvider } from "../services/ai/xai-provider";
+import { RiskEngine } from "../services/trading/risk-engine";
 
 const router: IRouter = Router();
 router.use(requireAuth);
@@ -69,6 +72,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 function cents(value: unknown, signed = false): value is number {
   return Number.isSafeInteger(value) && (signed || (value as number) >= 0);
+}
+function validAllocations(value: unknown): value is Record<string, number> {
+  if (!isRecord(value)) return false;
+  const allowed = new Set(["STOCK", "ETF", "CRYPTO"]);
+  const entries = Object.entries(value);
+  return entries.every(([key, amount]) => allowed.has(key) && typeof amount === "number" &&
+    Number.isFinite(amount) && amount >= 0 && amount <= 1) &&
+    entries.reduce((sum, [, amount]) => sum + Number(amount), 0) <= 1;
 }
 function configuredProvider() {
   return runtime.marketDataProvider();
@@ -191,7 +202,8 @@ router.get("/economic-engine/status", async (req, res, next) => {
       .orderBy(desc(autonomousPaperRuns.startedAt)).limit(1);
     res.json({
       mode: "PAPER_ONLY", scheduler: { enabled: false, mode: "MANUAL_ONLY" },
-      marketData: { provider: health.provider, configured: health.configured, status: health.status },
+      marketData: { provider: health.provider, configured: health.configured, status: health.status,
+        requestBudget: health.requestBudget ?? null },
       portfolioConfigured: Boolean(portfolio), liveTradingEnabled: false, brokerageExecution: false,
       commerceExecution: false, latestRun: latestRun ?? null,
     });
@@ -211,19 +223,44 @@ router.get("/economic-engine/market/bars", async (req, res, next) => {
     const size = req.query.outputSize === undefined ? 30 : Number(req.query.outputSize);
     const interval = typeof req.query.interval === "string" ? req.query.interval : "";
     if (!Number.isInteger(size) || size < 1 || size > 5000 || !interval || interval.length > 12) return bad(res, "INVALID_BARS_REQUEST");
-    const provider = configuredProvider(); res.json(await provider.getBars(await assetFromQuery(req), interval, size));
+    const provider = configuredProvider();
+    const bars = await provider.getBars(await assetFromQuery(req), interval, size);
+    // Persist provider facts separately from modeled PAPER execution costs.
+    await db.insert(marketBars).values(bars.bars.map((bar) => ({
+      provider: bars.provider, symbol: bars.asset.symbol, assetClass: bars.asset.assetClass,
+      interval: bars.interval, timestamp: new Date(bar.timestamp), open: bar.open, high: bar.high,
+      low: bar.low, close: bar.close, volume: bar.volume, retrievedAt: new Date(bars.retrievedAt),
+      freshness: bars.freshness,
+    }))).onConflictDoUpdate({
+      target: [marketBars.provider, marketBars.symbol, marketBars.assetClass, marketBars.interval, marketBars.timestamp],
+      set: { open: sql`excluded.open`, high: sql`excluded.high`, low: sql`excluded.low`,
+        close: sql`excluded.close`, volume: sql`excluded.volume`, retrievedAt: sql`excluded.retrieved_at`,
+        freshness: sql`excluded.freshness` },
+    });
+    res.json(bars);
   } catch (error) { next(error); }
 });
 
 router.post("/economic-engine/paper/portfolio", async (req, res, next) => {
   try {
     if (!cents(req.body?.startingCapitalCents) || req.body.startingCapitalCents <= 0) return bad(res, "EXPLICIT_STARTING_CAPITAL_CENTS_REQUIRED");
+    if (req.body?.allocations !== undefined && !validAllocations(req.body.allocations)) return bad(res, "INVALID_PAPER_ALLOCATIONS");
+    if (req.body?.maxPaperRiskPerTradeBps !== undefined &&
+      (!Number.isInteger(req.body.maxPaperRiskPerTradeBps) || req.body.maxPaperRiskPerTradeBps < 1 || req.body.maxPaperRiskPerTradeBps > 1_000)) {
+      return bad(res, "INVALID_MAX_PAPER_RISK_PER_TRADE");
+    }
+    if (req.body?.dailyPaperLossLimitCents !== undefined &&
+      (!cents(req.body.dailyPaperLossLimitCents))) return bad(res, "INVALID_DAILY_PAPER_LOSS_LIMIT");
     const user = await getLocalUser(userId(req));
     const [existing] = await db.select().from(paperPortfolios).where(eq(paperPortfolios.userId, user.id)).limit(1);
     if (existing) return bad(res, "PAPER_PORTFOLIO_ALREADY_CONFIGURED", 409);
     const capital = req.body.startingCapitalCents;
     const [portfolio] = await db.insert(paperPortfolios).values({ userId: user.id, currency: "USD", startingCapitalCents: capital,
-      cashCents: capital, equityCents: capital, highWaterMarkCents: capital, allocations: {}, status: "ACTIVE_PAPER" }).returning();
+      cashCents: capital, equityCents: capital, highWaterMarkCents: capital,
+      allocations: req.body.allocations ?? { STOCK: 0.5, ETF: 0.3, CRYPTO: 0.2 },
+      maxPaperRiskPerTradeBps: req.body.maxPaperRiskPerTradeBps ?? 100,
+      dailyPaperLossLimitCents: req.body.dailyPaperLossLimitCents ?? 0,
+      status: "ACTIVE_PAPER" }).returning();
     res.status(201).json(portfolio);
   } catch (error) { next(error); }
 });
@@ -236,6 +273,56 @@ router.get("/economic-engine/paper/portfolio", async (req, res, next) => {
   } catch (error) { next(error); }
 });
 router.get("/economic-engine/paper/strategies", (_req, res) => res.json({ definitions: INITIAL_STRATEGIES, mode: "PAPER_ONLY" }));
+router.get("/economic-engine/paper/strategies/registry", async (req, res, next) => {
+  try {
+    const user = await getLocalUser(userId(req));
+    const rows = await db.select().from(strategyRegistryEntries)
+      .where(eq(strategyRegistryEntries.userId, user.id)).orderBy(desc(strategyRegistryEntries.updatedAt));
+    // Registry defaults are inspectable definitions, not authorization to trade.
+    res.json({ mode: "PAPER_ONLY", entries: rows.length ? rows : INITIAL_STRATEGIES.map((definition) => ({
+      strategyId: definition.id, strategyVersion: definition.version, definition,
+      validationStage: definition.validationStage, activationState: "CHALLENGER", experimentState: "NONE",
+    })) });
+  } catch (error) { next(error); }
+});
+router.get("/economic-engine/paper/strategies/health", async (req, res, next) => {
+  try {
+    const user = await getLocalUser(userId(req));
+    const performance = await db.select().from(strategyPerformances)
+      .where(eq(strategyPerformances.userId, user.id)).orderBy(desc(strategyPerformances.measuredAt));
+    res.json({ mode: "PAPER_ONLY", performance });
+  } catch (error) { next(error); }
+});
+router.get("/economic-engine/paper/decisions", async (req, res, next) => {
+  try {
+    const user = await getLocalUser(userId(req));
+    const rows = await db.select().from(strategyDecisionOutcomes)
+      .where(eq(strategyDecisionOutcomes.userId, user.id)).orderBy(desc(strategyDecisionOutcomes.decidedAt)).limit(200);
+    res.json({ mode: "PAPER_ONLY", decisions: rows });
+  } catch (error) { next(error); }
+});
+router.get("/economic-engine/paper/learning", async (req, res, next) => {
+  try {
+    const user = await getLocalUser(userId(req));
+    const [artifacts, reviews, valueEvents] = await Promise.all([
+      db.select().from(learningArtifacts).where(eq(learningArtifacts.userId, user.id)).orderBy(desc(learningArtifacts.createdAt)).limit(200),
+      db.select().from(learningReviews).where(eq(learningReviews.userId, user.id)).orderBy(desc(learningReviews.createdAt)).limit(100),
+      db.select().from(researchValueEvents).where(eq(researchValueEvents.userId, user.id)).orderBy(desc(researchValueEvents.occurredAt)).limit(200),
+    ]);
+    res.json({ mode: "PAPER_ONLY", artifacts, reviews, researchValueEvents: valueEvents });
+  } catch (error) { next(error); }
+});
+router.get("/economic-engine/paper/learning/:cadence", async (req, res, next) => {
+  try {
+    const cadence = req.params.cadence.toUpperCase();
+    if (!["DAILY", "WEEKLY"].includes(cadence)) return bad(res, "INVALID_REVIEW_CADENCE");
+    const user = await getLocalUser(userId(req));
+    const rows = await db.select().from(learningReviews).where(and(
+      eq(learningReviews.userId, user.id), eq(learningReviews.cadence, cadence),
+    )).orderBy(desc(learningReviews.createdAt)).limit(100);
+    res.json({ mode: "PAPER_ONLY", cadence, reviews: rows });
+  } catch (error) { next(error); }
+});
 router.get("/economic-engine/paper/strategies/leaderboard", async (req, res, next) => {
   try {
     const user = await getLocalUser(userId(req)); const rows = await db.select().from(paperExecutions).where(eq(paperExecutions.userId, user.id));
@@ -294,6 +381,13 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
     const [portfolio] = await db.select().from(paperPortfolios)
       .where(eq(paperPortfolios.userId, user.id)).limit(1);
     if (!portfolio) return bad(res, "PAPER_PORTFOLIO_NOT_CONFIGURED", 409);
+    const todayStart = new Date();
+    todayStart.setUTCHours(0, 0, 0, 0);
+    const closedToday = await db.select().from(paperExecutions).where(and(
+      eq(paperExecutions.userId, user.id), eq(paperExecutions.status, "FILLED"),
+      gte(paperExecutions.updatedAt, todayStart),
+    ));
+    const dailyRealizedPnl = closedToday.reduce((total, execution) => total + (execution.netPnlCents ?? 0), 0) / 100;
     const existingPositions = await db.select().from(paperPositions).where(and(
       eq(paperPositions.userId, user.id), eq(paperPositions.status, "OPEN"),
     ));
@@ -321,7 +415,7 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
             tradingHoursType: position.assetClass === "CRYPTO" ? "TWENTY_FOUR_SEVEN" as const : "EXCHANGE_SESSION" as const,
             fractionalSupport: "UNKNOWN" as const, liquidityData: null, providerMetadata: {},
           };
-          const quote = await provider.getQuote(asset);
+          const quote = await provider.getQuote(asset, { openPosition: true, priority: "HIGH" });
           if (!["LIVE_OR_CURRENT", "DELAYED"].includes(quote.freshness)) throw new Error(`DATA_${quote.freshness}`);
           if (!Number.isFinite(quote.price) || quote.price <= 0) throw new Error("EXECUTABLE_QUOTE_REQUIRED");
           const providerBidAskAvailable = quote.bidAskStatus === "AVAILABLE";
@@ -477,6 +571,33 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
               exitReason: item.exitReason,
               rejectionReasons: [],
             });
+            const entryPrice = item.position.averageEntryCents / 100;
+            const highestPrice = Number(item.position.metadata.highestPrice ?? entryPrice);
+            await tx.update(strategyDecisionOutcomes).set({
+              outcome: {
+                mode: "PAPER",
+                status: "CLOSED",
+                netPnlCents,
+                grossPnlCents,
+                feesCents,
+                slippageCents,
+                exitReason: item.exitReason ?? "PAPER_EXIT",
+                maximumFavorableExcursionBps: entryPrice > 0
+                  ? Math.round((highestPrice - entryPrice) * 10_000 / entryPrice)
+                  : 0,
+                observedAdverseExcursionBps: entryPrice > 0
+                  ? Math.min(0, Math.round((item.quotePrice - entryPrice) * 10_000 / entryPrice))
+                  : 0,
+              },
+              outcomeAt: new Date(item.marketTimestamp),
+            }).where(and(
+              eq(strategyDecisionOutcomes.userId, user.id),
+              eq(strategyDecisionOutcomes.strategyId, item.position.strategyId),
+              eq(strategyDecisionOutcomes.strategyVersion, item.position.strategyVersion),
+              eq(strategyDecisionOutcomes.symbol, item.position.symbol),
+              eq(strategyDecisionOutcomes.decision, "TRADE"),
+              isNull(strategyDecisionOutcomes.outcomeAt),
+            ));
             cashCents += proceedsCents - feesCents;
             realizedPnlCents += netPnlCents;
             exited.push({ symbol: item.position.symbol, reason: item.exitReason });
@@ -548,18 +669,45 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
      * PAPER execution may use the broker's separately labeled deterministic cost model;
      * those modeled costs are never stored as provider liquidity observations.
      */
+    // Discovery is intentionally bounded.  Open positions above always consume the
+    // high-priority path before this staggerable, crypto-only core universe.
     const requested = [
-      { symbol: "SPY", assetClass: "ETF" as const }, { symbol: "AAPL", assetClass: "STOCK" as const },
-      { symbol: "BTC", assetClass: "CRYPTO" as const },
+      { symbol: "BTC/USD", assetClass: "CRYPTO" as const },
+      { symbol: "ETH/USD", assetClass: "CRYPTO" as const },
+      { symbol: "SOL/USD", assetClass: "CRYPTO" as const },
+      { symbol: "XRP/USD", assetClass: "CRYPTO" as const },
+      { symbol: "ADA/USD", assetClass: "CRYPTO" as const },
+      { symbol: "DOGE/USD", assetClass: "CRYPTO" as const },
+      { symbol: "AVAX/USD", assetClass: "CRYPTO" as const },
+      { symbol: "LINK/USD", assetClass: "CRYPTO" as const },
     ];
+    // Core is rotated by the CAS version, so a constrained provider budget cannot
+    // repeatedly hammer the same cold universe.  Open positions returned earlier
+    // always take precedence and use the provider's high-priority option.
+    const scanLimit = 2;
+    const scanStart = portfolio.cycleVersion % requested.length;
+    const scheduled = Array.from({ length: scanLimit }, (_, index) =>
+      requested[(scanStart + index) % requested.length]!);
+    const deferred = requested.filter((item) => !scheduled.includes(item))
+      .map((item) => ({ symbol: item.symbol, reason: "DEFERRED_REQUEST_BUDGET_ROTATION" }));
     const quality = new MarketDataQualityService();
     const universe = new TradingUniverse({ id: "manual-liquid-v1", name: "Manual liquid universe",
-      assetClasses: ["STOCK", "ETF", "CRYPTO"], symbols: requested.map((item) => item.symbol),
+      // `requested` bounds discovery. Do not also require the provider's canonical
+      // symbol to equal that request: providers legitimately normalize pairs/symbols.
+      assetClasses: ["STOCK", "ETF", "CRYPTO"],
       liquidity: { minimumAverageDailyVolume: 1, minimumAverageDailyDollarVolume: 1, maximumSpreadBps: 100 } });
     const inspected: Array<{ symbol: string; reason: string }> = [];
     const candidates: Array<{ symbol: string; assetClass: "STOCK" | "ETF" | "CRYPTO"; referencePrice: number; strategyId: string; strategyVersion: string; score: number; dataTimestamp: string; stopPrice: number; targetPrice: number }> = [];
     const candidateFreshness = new Map<string, "LIVE_OR_CURRENT" | "DELAYED">();
     const objectiveQuality = new Map<string, Record<string, number>>();
+    const oosPerformance: Array<{
+      strategyId: string; strategyVersion: string; symbol: string; assetClass: string; regime: string;
+      timeframe: string; measuredPeriod: string; sampleSize: number; tradeCount: number; wins: number;
+      losses: number; netPnlCents: number; grossPnlCents: number; expectancyCents: number;
+      winRate: number; averageWinnerCents: number; averageLoserCents: number; profitFactor: number | null;
+      feesCents: number; slippageCents: number; maxDrawdownBps: number; averageHoldMs: number;
+      riskAdjustedReturn: number | null; sampleStatus: string;
+    }> = [];
     const researchAgreement = new Map<string, "STRONG_AGREEMENT" | "PARTIAL_AGREEMENT" | "MIXED" | "STRONG_DISAGREEMENT" | "INSUFFICIENT_INFORMATION">();
     let candidateExecution: {
       assetClass: "STOCK" | "ETF" | "CRYPTO";
@@ -568,11 +716,23 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
       paperExecutionCost: "PROVIDER_BID_ASK_DERIVED" | "MODELED";
     } | null = null;
     const modeledSpreadBps = { STOCK: 2, ETF: 1, CRYPTO: 10 } as const;
-    for (const item of requested) {
+    for (const item of scheduled) {
       try {
         const rawAsset = await provider.getAssetMetadata(item.symbol, item.assetClass);
         const bars = await provider.getBars(rawAsset, "1h", 200);
         const quote = await provider.getQuote(rawAsset);
+        await db.insert(marketBars).values(bars.bars.map((bar) => ({
+          provider: bars.provider, symbol: rawAsset.symbol, assetClass: rawAsset.assetClass,
+          interval: bars.interval, timestamp: new Date(bar.timestamp), open: bar.open, high: bar.high,
+          low: bar.low, close: bar.close, volume: bar.volume, retrievedAt: new Date(bars.retrievedAt),
+          freshness: bars.freshness,
+        }))).onConflictDoUpdate({
+          target: [marketBars.provider, marketBars.symbol, marketBars.assetClass, marketBars.interval, marketBars.timestamp],
+          set: { open: sql`excluded.open`, high: sql`excluded.high`, low: sql`excluded.low`,
+            close: sql`excluded.close`, volume: sql`excluded.volume`, retrievedAt: sql`excluded.retrieved_at`,
+            freshness: sql`excluded.freshness` },
+        });
+        await db.delete(marketBars).where(lt(marketBars.retrievedAt, marketBarRetentionCutoff()));
         if (!quality.isUsableForCurrentStrategy(bars.freshness) || !quality.isUsableForCurrentStrategy(quote.freshness)) {
           inspected.push({ symbol: item.symbol, reason: `DATA_${bars.freshness}` }); continue;
         }
@@ -589,7 +749,9 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
         }
         const executionSpreadBps = providerBidAskAvailable
           ? (quote.ask! - quote.bid!) / quote.price * 10_000
-          : modeledSpreadBps[item.assetClass];
+          // Costs are properties of the canonical asset returned by the provider,
+          // not of the discovery request alias.
+          : modeledSpreadBps[rawAsset.assetClass];
         const asset = { ...rawAsset, liquidityData: { averageDailyVolume: averageVolume,
           averageDailyDollarVolume: averageDollarVolume,
           ...(providerBidAskAvailable ? { spreadBps: executionSpreadBps } : {}),
@@ -608,14 +770,89 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
         if (candidate.status !== "CANDIDATE") {
           inspected.push({ symbol: item.symbol, reason: candidate.reason ?? "NO_TRADE" }); continue;
         }
-        const backtest = new BacktestEngine({ startingCapital: portfolio.cashCents / 100, feePerOrder: 0,
-          feeRate: 0.0005, slippageBps: 5, trainFraction: 0.7, minimumTrades: 5 }).run(bars.bars, {
-          id: "momentum",
-          shouldEnter: (history) => history.length >= 20 && history.at(-1)!.close >
-            history.slice(-20).reduce((sum, bar) => sum + bar.close, 0) / 20,
-          shouldExit: (history, position) => history.at(-1)!.close < position.entryPrice,
-          positionSize: (cash, price) => Math.floor((cash * 0.01) / price),
-        });
+        const persistedPeerBars = asset.assetClass === "CRYPTO"
+          ? await db.select().from(marketBars).where(and(
+            eq(marketBars.provider, bars.provider),
+            eq(marketBars.assetClass, "CRYPTO"),
+            eq(marketBars.interval, bars.interval),
+          )).orderBy(desc(marketBars.timestamp)).limit(2_500)
+          : [];
+        const peerBarsBySymbol = new Map<string, Array<(typeof bars.bars)[number]>>();
+        for (const row of persistedPeerBars) {
+          const peer = peerBarsBySymbol.get(row.symbol) ?? [];
+          peer.push({
+            timestamp: row.timestamp.toISOString(),
+            open: row.open,
+            high: row.high,
+            low: row.low,
+            close: row.close,
+            volume: row.volume,
+          });
+          peerBarsBySymbol.set(row.symbol, peer);
+        }
+        const relativeStrengthUniverse = [...peerBarsBySymbol.entries()].map(([symbol, peerBars]) => ({
+          symbol,
+          bars: peerBars.sort((left, right) => Date.parse(left.timestamp) - Date.parse(right.timestamp)),
+        }));
+        const eligibleDefinitions = INITIAL_STRATEGIES.filter((definition) =>
+          definition.assetClasses.includes(asset.assetClass) &&
+          !["SECTOR_ROTATION", "CATALYST_NEWS"].includes(definition.family));
+        const backtests = eligibleDefinitions.map((definition) => ({
+          definition,
+          result: new BacktestEngine({ startingCapital: portfolio.cashCents / 100, feePerOrder: 0,
+            feeRate: 0.0005, slippageBps: 5, trainFraction: 0.7, minimumTrades: 5 })
+            .run(bars.bars, createExecutableStrategy(definition, definition.family === "RELATIVE_STRENGTH"
+              ? { relativeStrengthUniverse, relativeStrengthSymbol: asset.symbol }
+              : {})),
+        }));
+        for (const tested of backtests) {
+          const metrics = tested.result.outOfSample;
+          const outOfSampleTrades = tested.result.trades.filter((trade) => trade.sample === "OUT_OF_SAMPLE");
+          const regime = candidate.features.trend > 0.002 ? "TRENDING_UP"
+            : candidate.features.trend < -0.002 ? "TRENDING_DOWN" : "RANGE_BOUND";
+          oosPerformance.push({
+            strategyId: tested.definition.id,
+            strategyVersion: tested.definition.version,
+            symbol: asset.symbol,
+            assetClass: asset.assetClass,
+            regime,
+            timeframe: bars.interval,
+            measuredPeriod: `${bars.bars.at(0)!.timestamp}/${bars.bars.at(-1)!.timestamp}`,
+            sampleSize: metrics.tradeCount,
+            tradeCount: metrics.tradeCount,
+            wins: metrics.wins,
+            losses: metrics.losses,
+            netPnlCents: Number.isFinite(metrics.netReturn) ? Math.round(metrics.netReturn * 100) : 0,
+            grossPnlCents: Number.isFinite(metrics.grossReturn) ? Math.round(metrics.grossReturn * 100) : 0,
+            expectancyCents: Number.isFinite(metrics.expectancy) ? metrics.expectancy * 100 : 0,
+            winRate: Number.isFinite(metrics.winRate) ? metrics.winRate : 0,
+            averageWinnerCents: Number.isFinite(metrics.averageWinner) ? metrics.averageWinner * 100 : 0,
+            averageLoserCents: Number.isFinite(metrics.averageLoser) ? metrics.averageLoser * 100 : 0,
+            profitFactor: metrics.profitFactor !== null && Number.isFinite(metrics.profitFactor)
+              ? metrics.profitFactor
+              : null,
+            feesCents: Number.isFinite(metrics.estimatedFees) ? Math.round(metrics.estimatedFees * 100) : 0,
+            slippageCents: Number.isFinite(metrics.estimatedSlippage)
+              ? Math.round(metrics.estimatedSlippage * 100)
+              : 0,
+            maxDrawdownBps: Number.isFinite(metrics.maxDrawdown)
+              ? Math.round(metrics.maxDrawdown * 10_000)
+              : 0,
+            averageHoldMs: Number.isFinite(metrics.averageHoldingMs) ? metrics.averageHoldingMs : 0,
+            riskAdjustedReturn: metrics.riskAdjustedReturn !== null && Number.isFinite(metrics.riskAdjustedReturn)
+              ? metrics.riskAdjustedReturn
+              : null,
+            sampleStatus: metrics.sampleStatus,
+          });
+        }
+        const selected = backtests.filter((item) => item.result.outOfSample.sampleStatus === "SUFFICIENT")
+          .sort((a, b) => b.result.outOfSample.expectancy - a.result.outOfSample.expectancy ||
+            a.definition.id.localeCompare(b.definition.id))[0];
+        if (!selected) {
+          inspected.push({ symbol: item.symbol, reason: "OUT_OF_SAMPLE_INSUFFICIENT" });
+          continue;
+        }
+        const backtest = selected.result;
         const expectancyScore = Math.max(0, Math.min(100, 50 + backtest.outOfSample.expectancy * 10));
         const objective = {
           strategyEvidence: candidate.score, historicalExpectancy: expectancyScore,
@@ -628,12 +865,12 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
           executionQuality: 100 - Math.min(100, executionSpreadBps / 2),
         };
         objectiveQuality.set(asset.symbol, objective);
-        if (candidate.score < 70 || backtest.outOfSample.sampleStatus !== "SUFFICIENT") {
+        if (candidate.score < 70) {
           inspected.push({ symbol: item.symbol, reason: "OBJECTIVE_STRATEGY_EVIDENCE_INSUFFICIENT" }); continue;
         }
         // At most one candidate is allowed into a manually triggered cycle.
         candidates.push({ symbol: asset.symbol, assetClass: asset.assetClass, referencePrice: quote.price,
-          strategyId: "momentum", strategyVersion: "1.0.0", score: candidate.score, dataTimestamp: quote.marketTimestamp,
+          strategyId: selected.definition.id, strategyVersion: selected.definition.version, score: candidate.score, dataTimestamp: quote.marketTimestamp,
           stopPrice: quote.price * (1 - Math.max(candidate.features.atrPercent * 2, 0.002)),
           targetPrice: quote.price * (1 + Math.max(candidate.features.atrPercent * 3, 0.004)) });
         candidateExecution = {
@@ -731,11 +968,44 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
         if (finalQuality.decision !== "TRADE_ELIGIBLE") {
           return { approved: false, quantity: 0, reason: "FINAL_TRADE_QUALITY_NO_TRADE" };
         }
-        const paperCash = paper.snapshot().cash;
-        const quantity = Math.floor(Math.min(paperCash * 0.01, paperCash * 0.2) / candidate.referencePrice);
-        return quantity > 0 ? { approved: true, quantity } : { approved: false, quantity: 0, reason: "INSUFFICIENT_PAPER_CASH" };
+        const snapshot = paper.snapshot();
+        const riskBudget = snapshot.equity * portfolio.maxPaperRiskPerTradeBps / 10_000;
+        const unitRisk = Math.abs(candidate.referencePrice - (candidate.stopPrice ?? candidate.referencePrice));
+        const quantity = Math.floor(Math.min(
+          unitRisk > 0 ? riskBudget / unitRisk : 0,
+          snapshot.cash * 0.2 / candidate.referencePrice,
+        ));
+        if (quantity <= 0) return { approved: false, quantity: 0, reason: "INSUFFICIENT_PAPER_RISK_BUDGET" };
+        // This independent, server-side gate precedes survival/governor controls.
+        // Zero daily limit explicitly means no dollar daily-loss cap.
+        const intentSymbol = candidate.symbol.replace("/", "-");
+        const noDailyLimit = portfolio.dailyPaperLossLimitCents === 0;
+        const engine = RiskEngine.validate({
+          symbol: intentSymbol, assetType: candidate.assetClass === "CRYPTO" ? "CRYPTO" : "EQUITY",
+          side: "BUY", quantity, notional: quantity * candidate.referencePrice, orderType: "MARKET",
+          stopPrice: candidate.stopPrice, timeInForce: "DAY", reason: "OBJECTIVE_PAPER_SIGNAL", confidence: 1,
+        }, {
+          equity: snapshot.equity, cash: snapshot.cash, dailyPnl: dailyRealizedPnl,
+          openPositions: snapshot.positions.length, tradesToday: closedToday.length,
+          totalExposure: snapshot.grossExposure, now: new Date(candidate.dataTimestamp),
+        }, {
+          maxPositionDollars: snapshot.equity * 0.2, maxPositionPercent: 0.2,
+          maxRiskPerTradeDollars: riskBudget, maxRiskPerTradePercent: portfolio.maxPaperRiskPerTradeBps / 10_000,
+          maxDailyLossDollars: noDailyLimit ? Number.MAX_SAFE_INTEGER : portfolio.dailyPaperLossLimitCents / 100,
+          maxDailyLossPercent: noDailyLimit ? Number.MAX_VALUE : 1,
+          maxOpenPositions: 20, maxTradesPerDay: 100, maxTotalExposure: snapshot.equity * 0.8,
+          minimumCashReserve: portfolio.startingCapitalCents / 100 * 0.1,
+          allowedAssetClasses: ["EQUITY", "CRYPTO"], allowedSymbols: [], blockedSymbols: [],
+          allowedTradingHours: { startUtcHour: 0, endUtcHour: 24 }, requireStopLoss: true, killSwitch: false,
+        });
+        return engine.approved ? { approved: true, quantity } : {
+          approved: false, quantity: 0, reason: `RISK_ENGINE:${engine.evaluations.find((item) => !item.passed)?.rule ?? "REJECTED"}`,
+        };
       } },
-      new CapitalGovernor({ allocations: { STOCK: 0.5, ETF: 0.5, CRYPTO: 0.2 }, minimumCashReservePercent: 0.1,
+      new CapitalGovernor({ allocations: {
+        STOCK: portfolio.allocations.STOCK ?? 0.5, ETF: portfolio.allocations.ETF ?? 0.3,
+        CRYPTO: portfolio.allocations.CRYPTO ?? 0.2,
+      }, minimumCashReservePercent: 0.1,
         maxGrossExposurePercent: 0.8, maxPositionPercent: 0.2, maxStrategyPercent: 0.3,
         maxCorrelatedExposurePercent: 0.3, maxDrawdownPercent: 0.2, maxLosingStreak: 3, protectedProfitPercent: 0.5 }),
       broker, paper,
@@ -744,6 +1014,32 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
     const snapshot = paper.snapshot();
     await db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${portfolio.id}))`);
+    for (const definition of INITIAL_STRATEGIES) {
+      await tx.insert(strategyRegistryEntries).values({
+        userId: user.id, strategyId: definition.id, strategyVersion: definition.version,
+        definition: definition as unknown as Record<string, unknown>, validationStage: definition.validationStage,
+        activationState: "CHALLENGER", experimentState: "NONE", updatedAt: new Date(),
+      }).onConflictDoUpdate({
+        target: [strategyRegistryEntries.userId, strategyRegistryEntries.strategyId, strategyRegistryEntries.strategyVersion],
+        set: { definition: definition as unknown as Record<string, unknown>, updatedAt: new Date() },
+      });
+    }
+    for (const performance of oosPerformance) {
+      await tx.insert(strategyPerformances).values({
+        userId: user.id, strategyId: performance.strategyId, strategyVersion: performance.strategyVersion,
+        symbol: performance.symbol, assetClass: performance.assetClass, regime: performance.regime,
+        timeframe: performance.timeframe, evaluationStage: "OOS", measuredPeriod: performance.measuredPeriod,
+        mode: "PAPER", sampleSize: performance.sampleSize, tradeCount: performance.tradeCount,
+        wins: performance.wins, losses: performance.losses, netPnlCents: performance.netPnlCents,
+        grossPnlCents: performance.grossPnlCents, expectancyCents: performance.expectancyCents,
+        winRate: performance.winRate, averageWinnerCents: performance.averageWinnerCents,
+        averageLoserCents: performance.averageLoserCents, profitFactor: performance.profitFactor,
+        feesCents: performance.feesCents, slippageCents: performance.slippageCents,
+        maxDrawdownBps: performance.maxDrawdownBps, averageHoldMs: performance.averageHoldMs,
+        riskAdjustedReturn: performance.riskAdjustedReturn, sampleStatus: performance.sampleStatus,
+        measuredAt: new Date(),
+      }).onConflictDoNothing();
+    }
     if (snapshot.positions.length) {
       const concurrent = await tx.select().from(paperPositions).where(and(
         eq(paperPositions.portfolioId, portfolio.id), eq(paperPositions.status, "OPEN"),
@@ -797,17 +1093,205 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
     if (!updatedPortfolio) throw new Error("PAPER_CYCLE_CONFLICT_RETRY");
     });
     if (structuredResearch) {
-      await db.insert(economicResearchRecords).values({
+      const [researchRecord] = await db.insert(economicResearchRecords).values({
         userId: user.id, opportunityClass: "MARKET_PAPER_CANDIDATE", question: "Manual paper-cycle research",
         decision: "NO_TRADE", evidence: [structuredResearch], freshness: "CURRENT_CANDIDATE",
         uncertainty: "MODEL_OUTPUT_NOT_TRADE_AUTHORIZATION", assumptions: [], modelsUsed: ["OPENAI", "GROK"],
         dataUsed: ["TWELVE_DATA"],
+      }).returning();
+      await db.insert(researchValueEvents).values({
+        userId: user.id, researchRecordId: researchRecord.id, costCents: null,
+        baselineOutcomeCents: 0, researchedOutcomeCents: 0,
       });
     }
     const [run] = await db.insert(autonomousPaperRuns).values({ userId: user.id, status: "COMPLETED",
       outcome: result.outcome, provider: "TWELVE_DATA", completedAt: new Date(), candidatesEvaluated: result.candidatesEvaluated,
       candidatesRejected: result.candidatesRejected, tradesTaken: result.tradesTaken, noTradeDecisions: result.noTradeDecisions,
-      summary: { mode: "PAPER", inspected, rejectionReasons: result.rejectionReasons } }).returning();
+      summary: { mode: "PAPER", inspected, deferred, rejectionReasons: result.rejectionReasons } }).returning();
+    // A declined candidate is a first-class durable outcome.  The rationale is a
+    // concise, inspectable reason code only; it never stores model reasoning.
+    if (result.noTradeDecisions > 0) {
+      const reasons = new Map(inspected.map((item) => [item.symbol, item.reason]));
+      for (const item of scheduled) {
+        const candidate = candidates.find((entry) => entry.symbol === item.symbol);
+        await db.insert(strategyDecisionOutcomes).values({
+          userId: user.id, runId: run.id, strategyId: candidate?.strategyId ?? "NO_EXECUTABLE_STRATEGY",
+          strategyVersion: candidate?.strategyVersion ?? "NONE", symbol: item.symbol, assetClass: item.assetClass,
+          decision: "NO_TRADE", reasonCode: reasons.get(item.symbol) ??
+            Object.keys(result.rejectionReasons)[0] ?? "NO_ELIGIBLE_CANDIDATE",
+          rationale: {
+            mode: "PAPER",
+            candidatesEvaluated: result.candidatesEvaluated,
+            ...(candidate ? {
+              referencePrice: candidate.referencePrice,
+              observationInterval: "1h",
+              dataTimestamp: candidate.dataTimestamp,
+            } : {}),
+          },
+        });
+      }
+    } else {
+      for (const candidate of candidates) {
+        await db.insert(strategyDecisionOutcomes).values({
+          userId: user.id, runId: run.id, strategyId: candidate.strategyId, strategyVersion: candidate.strategyVersion,
+          symbol: candidate.symbol, assetClass: candidate.assetClass, decision: "TRADE", reasonCode: "PAPER_FILLED",
+          rationale: { mode: "PAPER", score: candidate.score },
+        });
+      }
+    }
+    // Complete prior NO_TRADE observations only from later persisted provider bars.
+    // The same-cycle bar is earlier than decidedAt and therefore cannot become an
+    // outcome; this prevents circular scoring and future-data leakage.
+    const pendingNoTrades = await db.select().from(strategyDecisionOutcomes).where(and(
+      eq(strategyDecisionOutcomes.userId, user.id),
+      eq(strategyDecisionOutcomes.decision, "NO_TRADE"),
+      isNull(strategyDecisionOutcomes.outcomeAt),
+    )).orderBy(desc(strategyDecisionOutcomes.decidedAt)).limit(100);
+    for (const decision of pendingNoTrades) {
+      const referencePrice = Number(decision.rationale.referencePrice);
+      if (!Number.isFinite(referencePrice) || referencePrice <= 0) continue;
+      const observations = await db.select().from(marketBars).where(and(
+        eq(marketBars.symbol, decision.symbol),
+        eq(marketBars.assetClass, decision.assetClass),
+        gt(marketBars.timestamp, decision.decidedAt),
+      )).orderBy(desc(marketBars.timestamp)).limit(168);
+      if (!observations.length) continue;
+      const closes = observations.map((bar) => bar.close);
+      const latest = observations[0]!;
+      await db.update(strategyDecisionOutcomes).set({
+        outcome: {
+          mode: "PAPER_OBSERVATION",
+          status: "OBSERVED",
+          hypotheticalReturnBps: Math.round((latest.close - referencePrice) * 10_000 / referencePrice),
+          maximumAdverseExcursionBps: Math.round((Math.min(...closes) - referencePrice) * 10_000 / referencePrice),
+          maximumFavorableExcursionBps: Math.round((Math.max(...closes) - referencePrice) * 10_000 / referencePrice),
+          observationBars: observations.length,
+        },
+        outcomeAt: latest.timestamp,
+      }).where(and(
+        eq(strategyDecisionOutcomes.id, decision.id),
+        eq(strategyDecisionOutcomes.userId, user.id),
+        isNull(strategyDecisionOutcomes.outcomeAt),
+      ));
+    }
+
+    // Learning and cadence reviews are derived from accumulated, user-owned
+    // persisted evidence. They only emit immutable observations/hypotheses/proposals;
+    // they never mutate risk controls, activation state, or trading authorization.
+    const persistedPerformances = await db.select().from(strategyPerformances)
+      .where(eq(strategyPerformances.userId, user.id))
+      .orderBy(desc(strategyPerformances.measuredAt))
+      .limit(1_000);
+    const completedDecisions = await db.select().from(strategyDecisionOutcomes).where(and(
+      eq(strategyDecisionOutcomes.userId, user.id),
+      isNotNull(strategyDecisionOutcomes.outcomeAt),
+    )).orderBy(desc(strategyDecisionOutcomes.outcomeAt)).limit(1_000);
+    const learningByStrategy = new Map<string, ReturnType<JarvisLearningEngine["analyze"]>>();
+    for (const definition of INITIAL_STRATEGIES) {
+      const decisionOutcomes = completedDecisions
+        .filter((decision) => decision.strategyId === definition.id && decision.strategyVersion === definition.version)
+        .map((decision) => Number(decision.outcome?.netPnlCents ?? decision.outcome?.hypotheticalReturnBps))
+        .filter(Number.isFinite);
+      const performanceOutcomes = persistedPerformances
+        .filter((performance) => performance.strategyId === definition.id &&
+          performance.strategyVersion === definition.version)
+        .map((performance) => performance.expectancyCents);
+      const learning = new JarvisLearningEngine().analyze({
+        strategyId: definition.id,
+        strategyVersion: definition.version,
+        recentOutcomes: [...decisionOutcomes, ...performanceOutcomes].slice(0, 250),
+        minimumSample: 30,
+      });
+      learningByStrategy.set(`${definition.id}@${definition.version}`, learning);
+      await db.insert(learningArtifacts).values({
+        userId: user.id,
+        strategyId: definition.id,
+        strategyVersion: definition.version,
+        kind: "PERSISTED_EVIDENCE_REVIEW",
+        artifact: learning as unknown as Record<string, unknown>,
+      });
+    }
+    const now = new Date();
+    const dayPeriod = now.toISOString().slice(0, 10);
+    const weekEndingDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    weekEndingDate.setUTCDate(weekEndingDate.getUTCDate() + ((7 - weekEndingDate.getUTCDay()) % 7));
+    const weekPeriod = weekEndingDate.toISOString().slice(0, 10);
+    const combinedLearning = {
+      observations: [...learningByStrategy.values()].flatMap((learning) => [...learning.observations]),
+      hypotheses: [...learningByStrategy.values()].flatMap((learning) => [...learning.hypotheses]),
+      proposals: [...learningByStrategy.values()].flatMap((learning) => [...learning.proposals]),
+    };
+    const noTradeOutcomes = completedDecisions
+      .filter((decision) => decision.decision === "NO_TRADE" &&
+        Number.isFinite(Number(decision.outcome?.hypotheticalReturnBps)))
+      .map((decision) => ({
+        id: decision.id,
+        reason: decision.reasonCode,
+        hypotheticalReturn: Number(decision.outcome!.hypotheticalReturnBps) / 10_000,
+        maximumAdverseExcursion: Number(decision.outcome!.maximumAdverseExcursionBps ?? 0) / 10_000,
+      }));
+    const dailyReview = new DailyLearningReview().build({
+      date: dayPeriod,
+      learning: combinedLearning,
+      noTradeOutcomes,
+    });
+    await db.insert(learningReviews).values({
+      userId: user.id,
+      cadence: "DAILY",
+      period: dayPeriod,
+      review: dailyReview as unknown as Record<string, unknown>,
+    }).onConflictDoUpdate({
+      target: [learningReviews.userId, learningReviews.cadence, learningReviews.period],
+      set: { review: dailyReview as unknown as Record<string, unknown>, createdAt: new Date() },
+    });
+    const weeklyStrategyReviews: Array<Record<string, unknown>> = [];
+    for (const definition of INITIAL_STRATEGIES) {
+      const performance = persistedPerformances.find((entry) =>
+        entry.strategyId === definition.id && entry.strategyVersion === definition.version);
+      if (!performance) continue;
+      const learning = learningByStrategy.get(`${definition.id}@${definition.version}`)!;
+      const weeklyReview = new WeeklyStrategyReview().build({
+        weekEnding: weekPeriod,
+        strategyId: definition.id,
+        strategyVersion: definition.version,
+        metrics: {
+          tradeCount: performance.tradeCount,
+          wins: performance.wins,
+          losses: performance.losses,
+          winRate: performance.winRate,
+          averageWinner: performance.averageWinnerCents / 100,
+          averageLoser: performance.averageLoserCents / 100,
+          expectancy: performance.expectancyCents / 100,
+          profitFactor: performance.profitFactor,
+          grossReturn: performance.grossPnlCents / 100,
+          netReturn: performance.netPnlCents / 100,
+          maxDrawdown: performance.maxDrawdownBps / 10_000,
+          averageHoldingMs: performance.averageHoldMs,
+          estimatedFees: performance.feesCents / 100,
+          estimatedSlippage: performance.slippageCents / 100,
+          riskAdjustedReturn: performance.riskAdjustedReturn,
+          sampleStatus: performance.sampleStatus === "SUFFICIENT"
+            ? "SUFFICIENT"
+            : "INSUFFICIENT_SAMPLE",
+        },
+        learning,
+      });
+      weeklyStrategyReviews.push(weeklyReview as unknown as Record<string, unknown>);
+    }
+    const weeklyReview = {
+      period: weekPeriod,
+      cadence: "WEEKLY",
+      strategies: weeklyStrategyReviews,
+    };
+    await db.insert(learningReviews).values({
+      userId: user.id,
+      cadence: "WEEKLY",
+      period: weekPeriod,
+      review: weeklyReview,
+    }).onConflictDoUpdate({
+      target: [learningReviews.userId, learningReviews.cadence, learningReviews.period],
+      set: { review: weeklyReview, createdAt: new Date() },
+    });
     res.status(201).json({ ...run, mode: "PAPER", result, liveTradingEnabled: false });
   } catch (error) {
     if (error instanceof Error && error.message === "PAPER_CYCLE_CONFLICT_RETRY") {

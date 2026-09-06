@@ -1,0 +1,1227 @@
+CONTINUE THE EXISTING JARVIS AI COMMAND CENTER PROJECT.
+
+DO NOT CREATE A NEW PROJECT.
+DO NOT REDESIGN THE UI.
+DO NOT PUBLISH.
+DO NOT CONNECT ROBINHOOD.
+DO NOT ENABLE LIVE TRADING.
+DO NOT ADD AN UNNECESSARY PAID SERVICE.
+DO NOT WEAKEN RISK CONTROLS.
+DO NOT FORCE TRADES.
+
+THIS PHASE IS:
+
+============================================================
+JARVIS ECONOMIC ENGINE II
+PERSISTENT PAPER OPERATIONS + RATE-LIMIT OPTIMIZATION
++ FULL CRYPTO STRATEGY EXECUTION + CONTROLLED LEARNING ENGINE
+============================================================
+
+PRIMARY OBJECTIVE:
+
+Turn the current crypto paper lab from a one-session test into a persistent,
+rate-limit-aware, authenticated paper-trading system that can:
+
+- remember what it did
+- remember why it did it
+- remember what happened afterward
+- measure strategy performance over time
+- identify when strategies work or fail
+- propose improved strategy versions
+- validate those versions safely before promotion
+
+THIS IS NOT UNRESTRICTED SELF-MODIFICATION.
+
+JARVIS MAY LEARN, TEST, COMPARE, AND PROPOSE.
+
+JARVIS MAY NOT AUTONOMOUSLY WEAKEN:
+
+RiskEngine
+CapitalGovernor
+CapitalSurvivalEngine
+live-trading authorization
+kill switches
+maximum loss controls
+user authorization boundaries
+
+============================================================
+CURRENT VERIFIED BASELINE
+============================================================
+
+Preserve the latest actual repository baseline.
+
+Latest known state:
+
+- Twelve Data connected
+- real BTC/USD and ETH/USD crypto data working
+- 24/7 crypto handling working
+- interval-aware freshness working
+- modeled paper execution costs supported
+- Robinhood NOT CONNECTED
+- live trading DISABLED
+- execution PAPER ONLY
+- crypto paper lab completed
+- first crypto session returned NO_TRADE
+- Twelve Data rate limits prevented full bounded-universe evaluation
+- MOMENTUM has directly implemented backtestable rules
+- additional strategy families exist architecturally but are not all fully executable/backtestable
+- temporary $1,000 paper capital was not fully persisted to the authenticated user
+- OpenAI/Grok were correctly gated because candidates did not survive quantitative filters
+
+FIRST:
+
+Inspect the repository and verify the ACTUAL baseline before modifying code.
+
+Report any discrepancy in the final report.
+
+============================================================
+PART 1 — AUTHENTICATED PERSISTENT PAPER PORTFOLIO
+============================================================
+
+Make paper trading persistent per authenticated user.
+
+Create or finalize durable storage for:
+
+paperPortfolio
+paperCash
+paperEquity
+paperPositions
+paperOrders
+paperFills
+paperRealizedPnL
+paperUnrealizedPnL
+paperHighWaterMark
+paperDrawdown
+paperMaxDrawdown
+paperStartingCapital
+paperRiskBudget
+
+The paper portfolio must:
+
+- survive server restarts
+- survive browser refreshes
+- remain isolated per user
+- never become live brokerage capital
+- be clearly labeled PAPER
+
+If the user has no paper account configured:
+
+require an explicit starting paper capital configuration.
+
+For testing, preserve the ability to use a default/test value only in tests.
+
+Do NOT silently assume live capital.
+
+============================================================
+PART 2 — PAPER CAPITAL CONFIGURATION
+============================================================
+
+Create a clear authenticated paper-account configuration flow.
+
+Allow the user to set:
+
+starting paper capital
+optional asset-class allocations
+optional max paper risk per trade
+optional daily paper loss limit
+
+Validate all values server-side.
+
+Do not allow UI-only risk controls.
+
+============================================================
+PART 3 — RATE-LIMIT-AWARE MARKET DATA SERVICE
+============================================================
+
+The previous crypto lab hit Twelve Data HTTP 429 limits.
+
+Fix this efficiently without purchasing a larger plan unless absolutely required.
+
+Create or extend:
+
+MarketDataCacheService
+MarketDataRequestBudgetService
+
+Goals:
+
+- cache recent quotes/bars safely
+- deduplicate identical requests
+- reuse recent data across strategies where valid
+- batch where provider/API supports it
+- stagger lower-priority asset refreshes
+- prioritize open positions over new scans
+- prioritize top-liquidity universe assets
+- avoid re-fetching unchanged historical bars
+- persist historical market data where appropriate
+- track request timestamps and rate-limit state
+- use exponential/backoff behavior for 429
+- never hammer the API
+- never fabricate missing data
+
+Expose provider state:
+
+HEALTHY
+RATE_LIMIT_WARNING
+RATE_LIMITED
+DEGRADED
+UNAVAILABLE
+
+============================================================
+PART 4 — MARKET DATA STORE
+============================================================
+
+Create a durable normalized market-data store for useful historical bars.
+
+Store enough metadata to prevent ambiguity:
+
+provider
+symbol
+assetClass
+interval
+timestamp
+open
+high
+low
+close
+volume
+retrievedAt
+freshnessClassification
+
+Avoid duplicate candles.
+
+Do not store unlimited redundant data without retention controls.
+
+============================================================
+PART 5 — CRYPTO UNIVERSE SCHEDULING
+============================================================
+
+Create an efficient bounded crypto scanning plan.
+
+Target supported assets such as:
+
+BTC/USD
+ETH/USD
+SOL/USD
+XRP/USD
+ADA/USD
+DOGE/USD
+AVAX/USD
+LINK/USD
+
+But:
+
+do not require every asset to refresh every cycle.
+
+Create priority tiers such as:
+
+TIER 1:
+open paper positions
+assets near exit/invalidation
+highest-quality active candidates
+
+TIER 2:
+BTC/USD
+ETH/USD
+top-liquidity core assets
+
+TIER 3:
+broader discovery universe
+
+Make refresh interval configurable by data interval and importance.
+
+============================================================
+PART 6 — FULLY EXECUTABLE CRYPTO STRATEGIES
+============================================================
+
+The following strategy families must become real executable/backtestable
+implementations where technically valid with existing available OHLCV data:
+
+MOMENTUM
+BREAKOUT
+TREND_FOLLOWING
+MEAN_REVERSION
+SWING
+RELATIVE_STRENGTH
+
+Do not leave them as label-only architecture.
+
+Each implemented strategy must define deterministic:
+
+requiredData
+entryRules
+exitRules
+invalidationRules
+riskRules
+allowedRegimes
+parameters
+version
+
+Do NOT create arbitrary overfit rules merely to increase trade count.
+
+============================================================
+PART 7 — MOMENTUM
+============================================================
+
+Preserve the working momentum strategy.
+
+Verify:
+
+- deterministic rules
+- no look-ahead
+- fees/slippage
+- regime awareness where existing policy requires it
+- versioning
+- reproducibility
+
+============================================================
+PART 8 — BREAKOUT
+============================================================
+
+Implement a real breakout strategy using objective inputs such as:
+
+lookback high/low
+range expansion
+volatility
+volume where available
+confirmation rules
+invalidation level
+
+Avoid look-ahead bias.
+
+============================================================
+PART 9 — TREND FOLLOWING
+============================================================
+
+Implement a deterministic trend-following strategy using objective structures
+such as:
+
+moving averages
+trend slope
+price structure
+volatility
+regime compatibility
+
+Avoid arbitrary AI-defined entries.
+
+============================================================
+PART 10 — MEAN REVERSION
+============================================================
+
+Implement a deterministic mean-reversion strategy using objective measures
+such as:
+
+distance from moving mean
+volatility normalization
+z-score-like distance where mathematically appropriate
+range-bound compatibility
+invalidation
+
+Do not use mean reversion blindly in strongly trending regimes.
+
+============================================================
+PART 11 — SWING
+============================================================
+
+Implement a deterministic swing strategy using objective multi-bar structure.
+
+Support explicit:
+
+setup
+entry
+stop
+target/exit
+time horizon
+invalidation
+
+============================================================
+PART 12 — RELATIVE STRENGTH
+============================================================
+
+Implement relative-strength ranking across the supported crypto universe.
+
+This strategy must compare assets using consistent windows and normalized metrics.
+
+Do not confuse absolute momentum with cross-sectional relative strength.
+
+============================================================
+PART 13 — STRATEGY REGISTRY
+============================================================
+
+Create a central deterministic StrategyRegistry with:
+
+strategyId
+version
+status
+assetClasses
+requiredIntervals
+requiredData
+parameters
+validationStage
+activationState
+
+Possible activation states:
+
+ACTIVE
+WATCH
+PAUSED
+RETIRED
+CHALLENGER
+
+============================================================
+PART 14 — BACKTEST ALL IMPLEMENTED STRATEGIES
+============================================================
+
+Run proper chronological backtests for all executable crypto strategies.
+
+Requirements:
+
+- no future leakage
+- modeled fees
+- modeled slippage
+- chronological fills
+- starting capital
+- entry/exit discipline
+- drawdown
+- strategy-level results
+
+Do not tune against the entire dataset and call it validation.
+
+============================================================
+PART 15 — OUT-OF-SAMPLE VALIDATION
+============================================================
+
+Add proper train/test separation where possible.
+
+For each strategy:
+
+DEVELOPMENT/TRAIN PERIOD
+→ OUT-OF-SAMPLE PERIOD
+
+Report separately:
+
+train results
+out-of-sample results
+
+Do not merge them into one flattering metric.
+
+Where enough data exists, support rolling/walk-forward evaluation.
+
+============================================================
+PART 16 — STRATEGY PERFORMANCE MEMORY
+============================================================
+
+Create durable per-user/per-strategy performance history.
+
+Track by:
+
+strategy
+version
+asset
+assetClass
+regime
+timeframe
+
+Metrics:
+
+tradeCount
+wins
+losses
+winRate
+avgWinner
+avgLoser
+expectancy
+profitFactor
+grossPnL
+netPnL
+fees
+slippage
+maxDrawdown
+averageHoldTime
+riskAdjustedReturnWhereAppropriate
+sampleSize
+outOfSamplePerformance
+paperPerformance
+
+============================================================
+PART 17 — PREDICTION VS OUTCOME MEMORY
+============================================================
+
+Create:
+
+DecisionOutcomeRecord
+
+For each serious candidate or paper trade record:
+
+decisionId
+timestamp
+asset
+strategy
+strategyVersion
+regime
+objectiveEvidence
+TradeQualityScore
+modelAgreement
+expectedThesis
+expectedInvalidation
+expectedTimeHorizon
+decision
+entryIfAny
+exitIfAny
+actualOutcome
+actualPnL
+actualMaxAdverseExcursionWhereAvailable
+actualMaxFavorableExcursionWhereAvailable
+ruleViolations
+lessonSummary
+
+Do not store hidden chain-of-thought.
+
+Store concise structured rationale only.
+
+============================================================
+PART 18 — LEARNING ENGINE
+============================================================
+
+Create:
+
+JarvisLearningEngine
+
+Its job is to analyze persistent historical records and identify evidence-based
+patterns.
+
+It may detect:
+
+strategy deterioration
+strategy improvement
+regime-specific strengths
+regime-specific weaknesses
+asset-specific performance differences
+timeframe-specific performance
+excessive false breakouts
+stop-distance issues
+poor expectancy
+slippage sensitivity
+concentration problems
+model-disagreement patterns
+candidate rejection quality
+
+It must distinguish:
+
+OBSERVATION
+HYPOTHESIS
+PROPOSED_CHANGE
+VALIDATED_CHANGE
+
+Never treat a hypothesis as proven.
+
+============================================================
+PART 19 — CONTROLLED SELF-IMPROVEMENT
+============================================================
+
+JARVIS may propose a new strategy version.
+
+Example:
+
+BREAKOUT v1
+→ observed weakness in low-volatility range-bound regimes
+→ proposed BREAKOUT v2 with additional deterministic regime filter
+
+The new strategy version must NOT replace the existing strategy immediately.
+
+Required lifecycle:
+
+PROPOSED
+→ BACKTEST
+→ OUT_OF_SAMPLE
+→ PAPER_CHALLENGER
+→ REVIEW
+→ PROMOTED or REJECTED
+
+No skipping.
+
+============================================================
+PART 20 — CHAMPION / CHALLENGER FRAMEWORK
+============================================================
+
+Create:
+
+StrategyExperimentService
+
+Each established strategy may have:
+
+CHAMPION
+CHALLENGER(S)
+
+Compare on identical or appropriately controlled data.
+
+Track:
+
+expectancy
+profit factor
+drawdown
+risk-adjusted performance
+sample size
+regime stability
+slippage sensitivity
+
+A challenger must not be promoted because of one lucky run.
+
+============================================================
+PART 21 — PROMOTION RULES
+============================================================
+
+Create deterministic promotion criteria.
+
+A challenger may become champion only if sufficient evidence exists.
+
+Possible conditions:
+
+minimum sample size
+positive out-of-sample expectancy
+acceptable max drawdown
+profit factor threshold
+no critical safety violations
+stable regime performance
+acceptable slippage sensitivity
+paper evidence where required
+
+Make thresholds configurable.
+
+Do not let an LLM directly promote a strategy.
+
+============================================================
+PART 22 — DEGRADATION DETECTION
+============================================================
+
+Create:
+
+StrategyHealthService
+
+Possible states:
+
+HEALTHY
+WATCH
+DEGRADING
+PAUSE_RECOMMENDED
+RETEST_REQUIRED
+RETIRED
+
+Use measured rolling performance.
+
+Do not react to one ordinary loss.
+
+Do not ignore sustained deterioration.
+
+============================================================
+PART 23 — RESEARCH MEMORY
+============================================================
+
+Extend EconomicResearchRecord for markets.
+
+Track:
+
+candidate
+research date
+source freshness
+Grok summary
+OpenAI summary
+BullCase
+BearCase
+model agreement
+decision
+later outcome
+
+Allow JARVIS to evaluate later whether its research predictions were useful.
+
+============================================================
+PART 24 — AI VALUE MEASUREMENT
+============================================================
+
+Create:
+
+AIResearchValueTracker
+
+Measure whether invoking OpenAI/Grok adds measurable value.
+
+Track:
+
+AI call cost/usage where available
+candidate before AI
+decision after AI
+whether AI changed decision
+subsequent outcome
+model agreement
+false positives prevented
+good trades rejected
+bad trades avoided where measurable
+
+Do NOT fabricate cost values if billing metadata is unavailable.
+
+This is intended to determine whether expensive AI analysis is worth using.
+
+============================================================
+PART 25 — NO-TRADE QUALITY
+============================================================
+
+Track NO_TRADE decisions and later market outcomes.
+
+Create metrics that can answer:
+
+Did JARVIS correctly avoid poor opportunities?
+Did rejected assets later move strongly?
+Was rejection based on insufficient evidence or a bad rule?
+Are thresholds too restrictive?
+Are thresholds appropriately selective?
+
+Do not automatically loosen thresholds because price later increased.
+
+Evaluate decision quality using the information available at the time.
+
+============================================================
+PART 26 — PAPER AUTONOMOUS CYCLE
+============================================================
+
+Upgrade AutonomousPaperTradingService so the persistent cycle can:
+
+REFRESH PRIORITY DATA
+→ MANAGE OPEN POSITIONS
+→ SCAN BOUNDED UNIVERSE
+→ GENERATE CANDIDATES
+→ STRATEGY COMPETITION
+→ AI GATE
+→ TRADE QUALITY
+→ RISK ENGINE
+→ CAPITAL SURVIVAL
+→ CAPITAL GOVERNOR
+→ PAPER EXECUTION
+→ JOURNAL
+→ PERFORMANCE UPDATE
+→ LEARNING UPDATE
+
+OPEN POSITION MANAGEMENT MUST HAVE PRIORITY OVER NEW TRADE DISCOVERY.
+
+============================================================
+PART 27 — SCHEDULING / CONTINUOUS OPERATION
+============================================================
+
+Inspect what persistent job execution is realistically available in the current
+Replit environment.
+
+Implement only what is technically legitimate.
+
+If persistent autonomous scheduling requires deployment:
+
+state this clearly.
+
+Do not pretend development mode runs forever.
+
+Create scheduler tasks conceptually for:
+
+frequent open-position checks
+candidate scanning
+daily performance review
+strategy-health review
+learning analysis
+historical-data maintenance
+
+Use a frequency that respects Twelve Data limits.
+
+============================================================
+PART 28 — DAILY LEARNING REVIEW
+============================================================
+
+Create:
+
+DailyLearningReview
+
+It should summarize:
+
+trades opened
+trades closed
+NO_TRADE decisions
+P/L
+best strategy
+worst strategy
+strategy health changes
+regime observations
+AI disagreement observations
+data quality issues
+rate-limit events
+new hypotheses
+pending challengers
+
+Do not create a new challenger every day without evidence.
+
+============================================================
+PART 29 — WEEKLY STRATEGY REVIEW
+============================================================
+
+Create:
+
+WeeklyStrategyReview
+
+Analyze larger samples.
+
+Possible outputs:
+
+NO_CHANGE
+WATCH
+RETEST
+PAUSE
+CREATE_CHALLENGER
+RETIRE
+
+Any CREATE_CHALLENGER output must still pass the controlled lifecycle.
+
+============================================================
+PART 30 — CAPITAL SURVIVAL REMAINS ABOVE LEARNING
+============================================================
+
+The Learning Engine MUST NEVER modify or override:
+
+RiskEngine
+CapitalGovernor
+CapitalSurvivalEngine
+kill switch
+maximum exposure
+live-trading state
+broker authorization
+user authorization boundaries
+
+Explicitly test this.
+
+============================================================
+PART 31 — PROJECT ECONOMICS
+============================================================
+
+Continue tracking:
+
+Replit development cost
+AI usage where measurable
+market data cost
+infrastructure cost
+
+Also track the economic value of paper testing separately.
+
+Never count paper P/L as real realized revenue.
+
+Add the ability to measure:
+
+AI research cost per qualified candidate
+AI research cost per paper trade
+market-data request cost if known
+paper-lab operating cost
+
+Do not invent unknown pricing.
+
+============================================================
+PART 32 — UI
+============================================================
+
+DO NOT REDESIGN.
+
+Extend existing Markets/Economics screens only where helpful.
+
+Add truthful views for:
+
+PERSISTENT PAPER PORTFOLIO
+DATA PROVIDER REQUEST BUDGET
+RATE LIMIT STATUS
+STRATEGY REGISTRY
+STRATEGY HEALTH
+CHAMPION / CHALLENGER
+LEARNING OBSERVATIONS
+ACTIVE HYPOTHESES
+VALIDATION QUEUE
+DECISION VS OUTCOME
+DAILY LEARNING REVIEW
+
+Keep the interface concise.
+
+============================================================
+PART 33 — VOICE
+============================================================
+
+Preserve existing voice.
+
+Support questions such as:
+
+"Jarvis, what have you learned from your trades?"
+
+"Which crypto strategy is performing best?"
+
+"Which strategy is getting worse?"
+
+"Why did you reject BTC yesterday?"
+
+"Do you have any challengers beating the current strategy?"
+
+"How many paper trades have you recorded?"
+
+"Are your results statistically meaningful yet?"
+
+Answers must come from actual persistent data.
+
+============================================================
+PART 34 — SECURITY
+============================================================
+
+All new persistent records must remain:
+
+authenticated
+user-isolated
+server-authoritative
+
+Test cross-user isolation.
+
+No browser access to provider secrets.
+
+============================================================
+PART 35 — CRITICAL TESTS
+============================================================
+
+Add tests for:
+
+PERSISTENCE
+- paper account survives restart
+- positions survive restart
+- journals survive restart
+- strategy records survive restart
+- user isolation
+
+RATE LIMITS
+- deduplication
+- caching
+- backoff
+- 429 handling
+- no request storm
+- open positions prioritized
+
+STRATEGIES
+- momentum executable
+- breakout executable
+- trend following executable
+- mean reversion executable
+- swing executable
+- relative strength executable
+- deterministic outputs
+- no look-ahead
+
+LEARNING
+- records decisions/outcomes
+- identifies deterioration from sufficient evidence
+- does not overreact to one loss
+- generates hypothesis
+- creates new strategy version
+- challenger cannot skip validation
+- LLM cannot promote strategy
+- failed challenger rejected
+- successful challenger requires deterministic promotion rules
+
+SAFETY
+- Learning Engine cannot change RiskEngine
+- Learning Engine cannot change CapitalGovernor
+- Learning Engine cannot change CapitalSurvival
+- cannot enable live trading
+- cannot connect Robinhood
+- cannot count paper P/L as real revenue
+- cannot revenge trade
+
+AI VALUE
+- preserves independent model evidence
+- measures AI usage where available
+- does not fabricate cost
+
+============================================================
+PART 36 — VALIDATION
+============================================================
+
+Run:
+
+FULL TEST SUITE
+TYPESCRIPT VALIDATION
+API PRODUCTION BUILD
+JARVIS PRODUCTION BUILD
+
+Do not claim success if any fail.
+
+============================================================
+ACCEPTANCE CRITERIA
+============================================================
+
+This phase is complete only if:
+
+1. Existing functionality remains intact.
+
+2. Paper portfolio is persistent per authenticated user.
+
+3. Paper trades/positions/journal persist.
+
+4. Twelve Data requests are cache/dedup/rate-limit aware.
+
+5. HTTP 429 does not cause uncontrolled repeated requests.
+
+6. BTC/ETH remain functional.
+
+7. Broader crypto universe can be scanned progressively without exceeding provider limits where practical.
+
+8. Momentum is executable/backtestable.
+
+9. Breakout is executable/backtestable.
+
+10. Trend Following is executable/backtestable.
+
+11. Mean Reversion is executable/backtestable.
+
+12. Swing is executable/backtestable.
+
+13. Relative Strength is executable/backtestable.
+
+14. Strategy rules are deterministic.
+
+15. Backtests avoid look-ahead.
+
+16. Out-of-sample results are separated.
+
+17. Strategy performance persists.
+
+18. Decision-vs-outcome records persist.
+
+19. JarvisLearningEngine exists.
+
+20. Learning Engine detects evidence-based patterns.
+
+21. Strategy modifications create NEW versions.
+
+22. Champion/Challenger framework exists.
+
+23. New versions cannot skip validation stages.
+
+24. Strategy promotion is deterministic.
+
+25. LLMs cannot promote themselves.
+
+26. Learning cannot weaken safety systems.
+
+27. Open positions are prioritized over new scanning.
+
+28. NO_TRADE decisions are recorded.
+
+29. AI research value can be evaluated.
+
+30. Paper P/L remains separate from real revenue.
+
+31. Robinhood remains NOT CONNECTED.
+
+32. Live trading remains DISABLED.
+
+33. Execution remains PAPER ONLY.
+
+34. Voice remains operational.
+
+35. OpenAI remains operational.
+
+36. Grok remains operational.
+
+37. All tests pass.
+
+38. TypeScript passes.
+
+39. API production build passes.
+
+40. JARVIS production build passes.
+
+41. Nothing is published.
+
+============================================================
+FINAL REPORT
+============================================================
+
+RETURN:
+
+JARVIS ECONOMIC ENGINE II
+[COMPLETE / PARTIAL / BLOCKED]
+
+BASELINE BEFORE CHANGES:
+
+PERSISTENT PAPER PORTFOLIO:
+[status]
+
+PAPER ACCOUNT CONFIGURATION:
+[status]
+
+MARKET DATA CACHE:
+[status]
+
+MARKET DATA REQUEST BUDGET:
+[status]
+
+TWELVE DATA RATE LIMIT HANDLING:
+[status]
+
+HTTP 429 HANDLING:
+[status]
+
+BTC/USD:
+[status]
+
+ETH/USD:
+[status]
+
+BROADER CRYPTO UNIVERSE:
+[status]
+
+STRATEGY REGISTRY:
+[status]
+
+MOMENTUM:
+[executable/backtestable status]
+
+BREAKOUT:
+[executable/backtestable status]
+
+TREND FOLLOWING:
+[executable/backtestable status]
+
+MEAN REVERSION:
+[executable/backtestable status]
+
+SWING:
+[executable/backtestable status]
+
+RELATIVE STRENGTH:
+[executable/backtestable status]
+
+BACKTEST ENGINE:
+[status]
+
+OUT-OF-SAMPLE VALIDATION:
+[status]
+
+PERSISTENT STRATEGY PERFORMANCE:
+[status]
+
+DECISION VS OUTCOME MEMORY:
+[status]
+
+JARVIS LEARNING ENGINE:
+[status]
+
+STRATEGY HEALTH:
+[status]
+
+CHAMPION / CHALLENGER:
+[status]
+
+STRATEGY VERSIONING:
+[status]
+
+PROMOTION RULES:
+[status]
+
+AI RESEARCH VALUE TRACKER:
+[status]
+
+NO-TRADE QUALITY TRACKING:
+[status]
+
+DAILY LEARNING REVIEW:
+[status]
+
+WEEKLY STRATEGY REVIEW:
+[status]
+
+AUTONOMOUS PAPER CYCLE:
+[status]
+
+SCHEDULING:
+[mechanism]
+[deployment required YES/NO]
+[limitations]
+
+CAPITAL SURVIVAL:
+[status]
+
+CAPITAL GOVERNOR:
+[status]
+
+RISK ENGINE:
+[status]
+
+CAN LEARNING MODIFY SAFETY SYSTEMS:
+NO
+
+PROJECT ECONOMICS:
+[status]
+
+VOICE:
+[status]
+
+OPENAI:
+[status]
+
+GROK:
+[status]
+
+ROBINHOOD:
+NOT CONNECTED
+
+LIVE TRADING:
+DISABLED
+
+EXECUTION:
+PAPER ONLY
+
+EXISTING TESTS:
+[x/x]
+
+NEW TESTS:
+[x/x]
+
+TOTAL TESTS:
+[x/x]
+
+TYPESCRIPT:
+[PASS/FAIL]
+
+API PRODUCTION BUILD:
+[PASS/FAIL]
+
+JARVIS PRODUCTION BUILD:
+[PASS/FAIL]
+
+NEW SECRETS REQUIRED:
+[list exact secret names only]
+
+NEW REQUIRED COST:
+[list]
+
+CODE CHANGES:
+[summary]
+
+KNOWN LIMITATIONS:
+[list]
+
+WHAT JARVIS CAN REMEMBER NOW:
+[list]
+
+WHAT JARVIS CAN LEARN NOW:
+[list]
+
+WHAT JARVIS CAN IMPROVE AUTOMATICALLY:
+[list]
+
+WHAT JARVIS IS FORBIDDEN FROM CHANGING:
+[list]
+
+READY FOR LONG-RUN PAPER TESTING:
+[YES/NO]
+
+NEXT HIGHEST-ROI ACTION:
+[recommendation]
+
+DO NOT PUBLISH.
+DO NOT CONNECT ROBINHOOD.
+DO NOT ENABLE LIVE TRADING.
+
+BEGIN IMPLEMENTATION NOW.

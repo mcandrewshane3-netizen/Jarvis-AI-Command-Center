@@ -3,7 +3,10 @@ import type { Server } from "node:http";
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { and, eq } from "drizzle-orm";
-import { db, paperExecutions, paperPortfolios, paperPositions, users } from "@workspace/db";
+import {
+  db, learningReviews, paperExecutions, paperPortfolios, paperPositions,
+  strategyDecisionOutcomes, strategyPerformances, users,
+} from "@workspace/db";
 
 type MockRequest = { headers: Record<string, string | string[] | undefined>; testAuth?: { userId: string; sessionClaims: { sub: string } } };
 vi.mock("@clerk/express", () => ({
@@ -174,6 +177,22 @@ describe("economic engine HTTP boundaries", () => {
     const [localUser] = await db.select().from(users).where(eq(users.clerkUserId, c)).limit(1);
     const [portfolioRow] = await db.select().from(paperPortfolios)
       .where(eq(paperPortfolios.userId, localUser.id)).limit(1);
+    const persistedStrategies = await db.select().from(strategyPerformances)
+      .where(eq(strategyPerformances.userId, localUser.id));
+    expect(new Set(persistedStrategies.map((row) => row.strategyId)).size).toBe(6);
+    expect(persistedStrategies.some((row) => row.strategyId === "relative-strength")).toBe(true);
+    expect(persistedStrategies.every((row) =>
+      row.symbol === "SPY" && row.timeframe === "1h" && row.evaluationStage === "OOS",
+    )).toBe(true);
+    const initialReviews = await db.select().from(learningReviews)
+      .where(eq(learningReviews.userId, localUser.id));
+    expect(initialReviews.some((row) => row.cadence === "DAILY")).toBe(true);
+    const weeklyReview = initialReviews.find((row) => row.cadence === "WEEKLY");
+    expect(weeklyReview).toBeDefined();
+    expect((weeklyReview!.review.strategies as unknown[])).toHaveLength(6);
+    const weeklyReviewsResponse = await request("/economic-engine/paper/learning/WEEKLY", { user: c });
+    expect(weeklyReviewsResponse.status).toBe(200);
+    expect((weeklyReviewsResponse.body.reviews as unknown[])).toHaveLength(1);
     await db.insert(paperPositions).values({
       portfolioId: portfolioRow.id,
       userId: localUser.id,
@@ -210,6 +229,14 @@ describe("economic engine HTTP boundaries", () => {
     const review = await request("/economic-engine/paper/review", { user: c });
     expect(review.body.trades).toBe(2);
     expect(typeof review.body.netPnl).toBe("number");
+    const completedTradeDecisions = await db.select().from(strategyDecisionOutcomes).where(and(
+      eq(strategyDecisionOutcomes.userId, localUser.id),
+      eq(strategyDecisionOutcomes.decision, "TRADE"),
+    ));
+    expect(completedTradeDecisions.some((decision) =>
+      decision.outcomeAt !== null && decision.outcome?.status === "CLOSED" &&
+      typeof decision.outcome.netPnlCents === "number",
+    )).toBe(true);
 
     quotePrice = bars.at(-1)!.close;
     const beforeRace = await request("/economic-engine/paper/portfolio", { user: c });

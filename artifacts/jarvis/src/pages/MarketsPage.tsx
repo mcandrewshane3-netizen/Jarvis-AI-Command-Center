@@ -16,7 +16,11 @@ import {
   useStrategyLeaderboard,
   useTradingReview,
   useLiveReadiness,
-  useRunAutonomousCycle
+  useRunAutonomousCycle,
+  usePaperStrategiesRegistry,
+  usePaperStrategiesHealth,
+  usePaperDecisions,
+  usePaperLearning
 } from '@/hooks/use-jarvis-api';
 
 function formatCents(cents: number) {
@@ -31,20 +35,37 @@ export function MarketsPage() {
   const { data: leaderboard, isLoading: loadingLeaderboard } = useStrategyLeaderboard();
   const { data: review, isLoading: loadingReview } = useTradingReview();
   const { data: readiness, isLoading: loadingReadiness } = useLiveReadiness();
+  const { data: registry, isLoading: loadingRegistry } = usePaperStrategiesRegistry();
+  const { data: health } = usePaperStrategiesHealth();
+  const { data: decisions, isLoading: loadingDecisions } = usePaperDecisions();
+  const { data: learning, isLoading: loadingLearning } = usePaperLearning();
   const runCycle = useRunAutonomousCycle();
 
   const [startingCapitalStr, setStartingCapitalStr] = useState('');
+  const [maxRiskBpsStr, setMaxRiskBpsStr] = useState('100');
+  const [dailyLossLimitStr, setDailyLossLimitStr] = useState('');
   const [showPortfolioSetup, setShowPortfolioSetup] = useState(false);
 
   const handleSetupPortfolio = (e: React.FormEvent) => {
     e.preventDefault();
     if (!startingCapitalStr) return;
-    updatePortfolio.mutate({
+
+    const updates: any = {
       startingCapitalCents: parseInt(startingCapitalStr, 10),
-    }, {
+      maxPaperRiskPerTradeBps: parseInt(maxRiskBpsStr, 10) || 100,
+    };
+
+    const dailyLimit = parseInt(dailyLossLimitStr, 10);
+    if (dailyLimit > 0) {
+      updates.dailyPaperLossLimitCents = dailyLimit;
+    }
+
+    updatePortfolio.mutate(updates, {
       onSuccess: () => {
         setShowPortfolioSetup(false);
         setStartingCapitalStr('');
+        setMaxRiskBpsStr('100');
+        setDailyLossLimitStr('');
       }
     });
   };
@@ -94,9 +115,14 @@ export function MarketsPage() {
                   <div className="p-3 border border-primary/10 bg-black/20">
                     <TechLabel className="mb-2">Data Provider</TechLabel>
                     {labStatus.providers?.length > 0 && labStatus.providers[0]?.configured ? (
-                      <div className="flex items-center gap-2">
-                        <StatusDot status="online" />
-                        <span className="font-mono text-sm">{labStatus.providers[0]?.provider}</span>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <StatusDot status={labStatus.providers[0]?.status === 'HEALTHY' ? 'online' : 'amber'} />
+                          <span className="font-mono text-sm">{labStatus.providers[0]?.provider}</span>
+                        </div>
+                        <div className="font-mono text-[9px] uppercase text-muted-foreground">
+                          {labStatus.providers[0]?.status || 'STATUS UNAVAILABLE'}
+                        </div>
                       </div>
                     ) : (
                       <div className="flex flex-col gap-1">
@@ -119,9 +145,9 @@ export function MarketsPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-3 border border-primary/10 bg-black/20">
-                    <TechLabel className="mb-2">Scheduler</TechLabel>
+                    <TechLabel className="mb-2">Request Budget</TechLabel>
                     <div className="font-mono text-xs text-muted-foreground">
-                      {labStatus.scheduler?.enabled ? 'ACTIVE' : 'IDLE'}
+                      {labStatus.providers?.[0]?.requestBudget?.state || 'UNAVAILABLE'}
                     </div>
                   </div>
                   <div className="p-3 border border-primary/10 bg-black/20">
@@ -166,8 +192,28 @@ export function MarketsPage() {
                       type="number"
                       value={startingCapitalStr}
                       onChange={(e) => setStartingCapitalStr(e.target.value)}
-                      className="tech-input"
+                      className="tech-input mb-3"
                       placeholder="e.g. 10000000 for $100k"
+                      disabled={isBusy}
+                    />
+
+                    <label className="block font-mono text-[9px] text-primary tracking-widest uppercase mb-2">Max Risk Per Trade (BPS)</label>
+                    <input
+                      type="number"
+                      value={maxRiskBpsStr}
+                      onChange={(e) => setMaxRiskBpsStr(e.target.value)}
+                      className="tech-input mb-3"
+                      placeholder="e.g. 100 (1%)"
+                      disabled={isBusy}
+                    />
+
+                    <label className="block font-mono text-[9px] text-primary tracking-widest uppercase mb-2">Daily Loss Limit (Cents)</label>
+                    <input
+                      type="number"
+                      value={dailyLossLimitStr}
+                      onChange={(e) => setDailyLossLimitStr(e.target.value)}
+                      className="tech-input"
+                      placeholder="e.g. 200000 for $2k (blank for none)"
                       disabled={isBusy}
                     />
                   </div>
@@ -196,6 +242,27 @@ export function MarketsPage() {
                     <TechLabel className="mb-2">Available Cash</TechLabel>
                     <div className="font-mono text-xl text-foreground">
                       {formatCents(portfolio.cashCents || 0)}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="p-3 border border-primary/10 bg-black/20">
+                    <TechLabel className="mb-1">Risk Per Trade</TechLabel>
+                    <div className="font-mono text-sm text-amber-500">
+                      {portfolio.maxPaperRiskPerTradeBps} BPS
+                    </div>
+                  </div>
+                  <div className="p-3 border border-primary/10 bg-black/20">
+                    <TechLabel className="mb-1">Daily Loss Limit</TechLabel>
+                    <div className="font-mono text-sm text-amber-500">
+                      {portfolio.dailyPaperLossLimitCents > 0 ? formatCents(portfolio.dailyPaperLossLimitCents) : 'NONE'}
+                    </div>
+                  </div>
+                  <div className="p-3 border border-primary/10 bg-black/20">
+                    <TechLabel className="mb-1">Drawdown</TechLabel>
+                    <div className="font-mono text-sm text-red-400">
+                      {((portfolio.highWaterMarkCents - portfolio.equityCents) / portfolio.highWaterMarkCents * 100).toFixed(2)}%
                     </div>
                   </div>
                 </div>
@@ -397,6 +464,158 @@ export function MarketsPage() {
             </HolographicPanel>
           </div>
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+        <HolographicPanel title="STRATEGY REGISTRY">
+          {loadingRegistry ? (
+            <div className="py-8 text-center font-mono text-[10px] text-primary tracking-widest animate-pulse">
+              LOADING REGISTRY...
+            </div>
+          ) : !registry?.entries || registry.entries.length === 0 ? (
+            <div className="py-8 text-center font-mono text-[10px] text-muted-foreground tracking-widest">
+              NO REGISTERED STRATEGIES
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="tech-table w-full">
+                <thead>
+                  <tr>
+                    <th>Strategy ID</th>
+                    <th>Version</th>
+                    <th>Validation</th>
+                    <th>State</th>
+                    <th className="text-right">Health Score</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {registry.entries.map((entry: any) => {
+                    const strategyHealth = health?.performance?.find((p: any) => p.strategyId === entry.strategyId && p.strategyVersion === entry.strategyVersion);
+                    return (
+                      <tr key={`${entry.strategyId}-${entry.strategyVersion}`}>
+                        <td className="font-mono text-[11px] text-primary">{entry.strategyId}</td>
+                        <td className="font-mono text-xs">{entry.strategyVersion}</td>
+                        <td className="font-mono text-[10px] text-muted-foreground uppercase">{entry.validationStage}</td>
+                        <td className="font-mono text-[10px] text-amber-500 uppercase">{entry.activationState}</td>
+                        <td className="font-mono text-right text-xs">
+                          {strategyHealth ? (strategyHealth.healthScore * 100).toFixed(1) + '%' : '--'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </HolographicPanel>
+
+        <HolographicPanel title="RECENT DECISIONS">
+          {loadingDecisions ? (
+            <div className="py-8 text-center font-mono text-[10px] text-primary tracking-widest animate-pulse">
+              LOADING DECISIONS...
+            </div>
+          ) : !decisions?.decisions || decisions.decisions.length === 0 ? (
+            <div className="py-8 text-center font-mono text-[10px] text-muted-foreground tracking-widest">
+              NO DECISIONS RECORDED
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="tech-table w-full">
+                <thead>
+                  <tr>
+                    <th>Symbol</th>
+                    <th>Strategy</th>
+                    <th>Decision</th>
+                    <th>Reason</th>
+                    <th className="text-right">Decided At</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {decisions.decisions.slice(0, 5).map((dec: any) => (
+                    <tr key={dec.id}>
+                      <td className="font-mono text-[11px] text-primary">{dec.symbol}</td>
+                      <td className="font-mono text-[10px] text-muted-foreground">{dec.strategyId} / {dec.strategyVersion}</td>
+                      <td className="font-mono text-[10px]">
+                        <span className={dec.decision === 'TRADE' ? 'text-green-400' : 'text-amber-500'}>
+                          {dec.decision}
+                        </span>
+                      </td>
+                      <td className="font-mono text-[10px] text-muted-foreground">
+                        {dec.reasonCode}
+                      </td>
+                      <td className="font-mono text-right text-[10px]">
+                        {new Date(dec.decidedAt).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </HolographicPanel>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 mb-8">
+        <HolographicPanel title="MACHINE LEARNING ARTIFACTS & REVIEWS">
+          {loadingLearning ? (
+            <div className="py-8 text-center font-mono text-[10px] text-primary tracking-widest animate-pulse">
+              LOADING LEARNING...
+            </div>
+          ) : !learning || (!learning.artifacts?.length && !learning.reviews?.length) ? (
+            <div className="py-8 text-center font-mono text-[10px] text-muted-foreground tracking-widest">
+              NO LEARNING DATA RECORDED
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <TechLabel className="mb-2">Artifacts</TechLabel>
+                {learning.artifacts?.length === 0 ? (
+                  <div className="font-mono text-[10px] text-muted-foreground">NO ARTIFACTS</div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4">
+                    {learning.artifacts?.slice(0, 4).map((artifact: any) => (
+                      <div key={artifact.id} className="p-4 border border-primary/20 bg-primary/5 flex flex-col gap-2">
+                        <div className="flex justify-between items-start">
+                          <span className="font-mono text-[10px] text-primary uppercase tracking-widest">{artifact.kind}</span>
+                          <span className="font-mono text-[9px] text-muted-foreground">{new Date(artifact.createdAt).toLocaleDateString()}</span>
+                        </div>
+                        <div className="font-mono text-[9px] text-muted-foreground uppercase">
+                          {artifact.strategyId} / {artifact.strategyVersion}
+                        </div>
+                        <p className="font-mono text-[10px] text-foreground mt-2 line-clamp-3">
+                          {JSON.stringify(artifact.artifact)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="space-y-4">
+                <TechLabel className="mb-2">Reviews</TechLabel>
+                {learning.reviews?.length === 0 ? (
+                  <div className="font-mono text-[10px] text-muted-foreground">NO REVIEWS</div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4">
+                    {learning.reviews?.slice(0, 4).map((review: any) => (
+                      <div key={review.id} className="p-4 border border-primary/20 bg-primary/5 flex flex-col gap-2">
+                        <div className="flex justify-between items-start">
+                          <span className="font-mono text-[10px] text-amber-500 uppercase tracking-widest">{review.cadence} REVIEW</span>
+                          <span className="font-mono text-[9px] text-muted-foreground">{new Date(review.createdAt).toLocaleDateString()}</span>
+                        </div>
+                        <div className="font-mono text-[9px] text-muted-foreground uppercase">
+                          PERIOD: {review.period}
+                        </div>
+                        <p className="font-mono text-[10px] text-foreground mt-2 line-clamp-3">
+                          {JSON.stringify(review.review)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </HolographicPanel>
       </div>
     </div>
   );

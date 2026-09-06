@@ -1,5 +1,7 @@
 export * from "./types";
 export * from "./market-data-quality";
+export * from "./market-data-cache";
+export * from "./market-data-request-budget";
 export * from "./twelve-data-provider";
 export * from "./universe";
 export * from "./opportunity-scanner";
@@ -8,3 +10,4 @@ export * from "./market-regime";
 export * from "./research";
 export * from "./trade-quality";
 export * from "./backtest";
+export * from "./learning";

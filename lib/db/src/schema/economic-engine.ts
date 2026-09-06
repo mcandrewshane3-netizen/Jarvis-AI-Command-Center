@@ -50,6 +50,8 @@ export const paperPortfolios = pgTable(
     currentDrawdownBps: integer("current_drawdown_bps").notNull().default(0),
     maxDrawdownBps: integer("max_drawdown_bps").notNull().default(0),
     allocations: jsonb("allocations").$type<Record<string, number>>().notNull().default({}),
+    maxPaperRiskPerTradeBps: integer("max_paper_risk_per_trade_bps").notNull().default(100),
+    dailyPaperLossLimitCents: integer("daily_paper_loss_limit_cents").notNull().default(0),
     cycleVersion: integer("cycle_version").notNull().default(0),
     status: text("status").notNull().default("ACTIVE_PAPER"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -57,6 +59,39 @@ export const paperPortfolios = pgTable(
   },
   (table) => [uniqueIndex("paper_portfolios_user_id_idx").on(table.userId)],
 );
+
+/** Provider observations are shared facts, never modeled execution prices. */
+export const marketBars = pgTable(
+  "market_bars",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    provider: text("provider").notNull(),
+    symbol: text("symbol").notNull(),
+    assetClass: text("asset_class").notNull(),
+    interval: text("interval").notNull(),
+    timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
+    open: doublePrecision("open").notNull(),
+    high: doublePrecision("high").notNull(),
+    low: doublePrecision("low").notNull(),
+    close: doublePrecision("close").notNull(),
+    volume: doublePrecision("volume").notNull(),
+    retrievedAt: timestamp("retrieved_at", { withTimezone: true }).notNull(),
+    freshness: text("freshness").notNull(),
+  },
+  (table) => [
+    uniqueIndex("market_bars_candle_key_idx").on(
+      table.provider, table.symbol, table.assetClass, table.interval, table.timestamp,
+    ),
+    index("market_bars_retention_idx").on(table.retrievedAt),
+    index("market_bars_lookup_idx").on(table.symbol, table.interval, table.timestamp),
+  ],
+);
+
+/** Returns the oldest allowed retrieval time for bounded market-bar retention. */
+export function marketBarRetentionCutoff(retentionDays = 90, now = new Date()): Date {
+  if (!Number.isInteger(retentionDays) || retentionDays < 1) throw new Error("VALID_MARKET_BAR_RETENTION_DAYS_REQUIRED");
+  return new Date(now.getTime() - retentionDays * 86_400_000);
+}
 
 export const paperPositions = pgTable(
   "paper_positions",
@@ -134,6 +169,133 @@ export const autonomousPaperRuns = pgTable(
   (table) => [index("autonomous_paper_runs_user_started_idx").on(table.userId, table.startedAt)],
 );
 
+export const strategyRegistryEntries = pgTable(
+  "strategy_registry_entries",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    strategyId: text("strategy_id").notNull(),
+    strategyVersion: text("strategy_version").notNull(),
+    definition: jsonb("definition").$type<Record<string, unknown>>().notNull(),
+    validationStage: text("validation_stage").notNull(),
+    activationState: text("activation_state").notNull(),
+    experimentState: text("experiment_state").notNull().default("NONE"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("strategy_registry_user_version_idx").on(table.userId, table.strategyId, table.strategyVersion),
+    index("strategy_registry_user_updated_idx").on(table.userId, table.updatedAt),
+  ],
+);
+
+export const strategyPerformances = pgTable(
+  "strategy_performances",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    strategyId: text("strategy_id").notNull(),
+    strategyVersion: text("strategy_version").notNull(),
+    symbol: text("symbol").notNull().default("PORTFOLIO"),
+    assetClass: text("asset_class").notNull(),
+    regime: text("regime").notNull().default("UNKNOWN"),
+    timeframe: text("timeframe").notNull().default("1h"),
+    evaluationStage: text("evaluation_stage").notNull().default("OOS"),
+    measuredPeriod: text("measured_period").notNull(),
+    mode: text("mode").notNull().default("PAPER"),
+    sampleSize: integer("sample_size").notNull().default(0), // compatibility summary
+    tradeCount: integer("trade_count").notNull().default(0),
+    wins: integer("wins").notNull().default(0),
+    losses: integer("losses").notNull().default(0),
+    netPnlCents: integer("net_pnl_cents").notNull().default(0),
+    grossPnlCents: integer("gross_pnl_cents").notNull().default(0),
+    expectancyCents: doublePrecision("expectancy_cents").notNull().default(0),
+    winRate: doublePrecision("win_rate").notNull().default(0),
+    averageWinnerCents: doublePrecision("average_winner_cents").notNull().default(0),
+    averageLoserCents: doublePrecision("average_loser_cents").notNull().default(0),
+    profitFactor: doublePrecision("profit_factor"),
+    feesCents: integer("fees_cents").notNull().default(0),
+    slippageCents: integer("slippage_cents").notNull().default(0),
+    maxDrawdownBps: integer("max_drawdown_bps").notNull().default(0),
+    averageHoldMs: doublePrecision("average_hold_ms").notNull().default(0),
+    riskAdjustedReturn: doublePrecision("risk_adjusted_return"),
+    sampleStatus: text("sample_status").notNull().default("INSUFFICIENT"),
+    measuredAt: timestamp("measured_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("strategy_performance_snapshot_idx").on(
+      table.userId, table.strategyId, table.strategyVersion, table.symbol, table.assetClass,
+      table.regime, table.timeframe, table.evaluationStage, table.measuredPeriod,
+    ),
+    index("strategy_performance_user_measured_idx").on(table.userId, table.measuredAt),
+  ],
+);
+
+export const strategyDecisionOutcomes = pgTable(
+  "strategy_decision_outcomes",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    runId: uuid("run_id").references(() => autonomousPaperRuns.id, { onDelete: "set null" }),
+    strategyId: text("strategy_id").notNull(),
+    strategyVersion: text("strategy_version").notNull(),
+    symbol: text("symbol").notNull(),
+    assetClass: text("asset_class").notNull(),
+    decision: text("decision").notNull(), // TRADE or NO_TRADE
+    reasonCode: text("reason_code").notNull(),
+    rationale: jsonb("rationale").$type<Record<string, string | number | boolean>>().notNull().default({}),
+    outcome: jsonb("outcome").$type<Record<string, string | number | boolean>>(),
+    decidedAt: timestamp("decided_at", { withTimezone: true }).defaultNow().notNull(),
+    outcomeAt: timestamp("outcome_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("strategy_decisions_user_decided_idx").on(table.userId, table.decidedAt),
+    index("strategy_decisions_user_strategy_idx").on(table.userId, table.strategyId, table.strategyVersion),
+  ],
+);
+
+export const learningArtifacts = pgTable(
+  "learning_artifacts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    strategyId: text("strategy_id").notNull(),
+    strategyVersion: text("strategy_version").notNull(),
+    kind: text("kind").notNull(),
+    artifact: jsonb("artifact").$type<Record<string, unknown>>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("learning_artifacts_user_created_idx").on(table.userId, table.createdAt)],
+);
+
+export const learningReviews = pgTable(
+  "learning_reviews",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    cadence: text("cadence").notNull(),
+    period: text("period").notNull(),
+    review: jsonb("review").$type<Record<string, unknown>>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [uniqueIndex("learning_reviews_user_cadence_period_idx").on(table.userId, table.cadence, table.period)],
+);
+
+export const researchValueEvents = pgTable(
+  "research_value_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    researchRecordId: uuid("research_record_id"),
+    // Unknown provider billing is deliberately null, never represented as a made-up zero.
+    costCents: integer("cost_cents"),
+    baselineOutcomeCents: integer("baseline_outcome_cents").notNull().default(0),
+    researchedOutcomeCents: integer("researched_outcome_cents").notNull().default(0),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("research_value_events_user_occurred_idx").on(table.userId, table.occurredAt)],
+);
+
 export const economicResearchRecords = pgTable(
   "economic_research_records",
   {
@@ -178,3 +340,10 @@ export type PaperPosition = typeof paperPositions.$inferSelect;
 export type PaperExecution = typeof paperExecutions.$inferSelect;
 export type AutonomousPaperRun = typeof autonomousPaperRuns.$inferSelect;
 export type EconomicResearchRecord = typeof economicResearchRecords.$inferSelect;
+export type MarketBar = typeof marketBars.$inferSelect;
+export type StrategyRegistryEntry = typeof strategyRegistryEntries.$inferSelect;
+export type StrategyPerformance = typeof strategyPerformances.$inferSelect;
+export type StrategyDecisionOutcome = typeof strategyDecisionOutcomes.$inferSelect;
+export type LearningArtifact = typeof learningArtifacts.$inferSelect;
+export type LearningReview = typeof learningReviews.$inferSelect;
+export type ResearchValueEvent = typeof researchValueEvents.$inferSelect;

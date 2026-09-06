@@ -248,6 +248,7 @@ export function useUpdatePaperPortfolio() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['markets-paper-portfolio'] });
+      queryClient.invalidateQueries({ queryKey: ['markets-lab-status'] });
     },
   });
 }
@@ -269,6 +270,50 @@ export function useStrategyLeaderboard() {
     queryFn: async () => {
       const res = await fetch('/api/economic-engine/paper/strategies/leaderboard');
       if (!res.ok) throw new Error('Failed to fetch leaderboard');
+      return res.json() as Promise<any>;
+    },
+  });
+}
+
+export function usePaperStrategiesRegistry() {
+  return useQuery({
+    queryKey: ['markets-paper-strategies-registry'],
+    queryFn: async () => {
+      const res = await fetch('/api/economic-engine/paper/strategies/registry');
+      if (!res.ok) throw new Error('Failed to fetch strategy registry');
+      return res.json() as Promise<any>;
+    },
+  });
+}
+
+export function usePaperStrategiesHealth() {
+  return useQuery({
+    queryKey: ['markets-paper-strategies-health'],
+    queryFn: async () => {
+      const res = await fetch('/api/economic-engine/paper/strategies/health');
+      if (!res.ok) throw new Error('Failed to fetch strategy health');
+      return res.json() as Promise<any>;
+    },
+  });
+}
+
+export function usePaperDecisions() {
+  return useQuery({
+    queryKey: ['markets-paper-decisions'],
+    queryFn: async () => {
+      const res = await fetch('/api/economic-engine/paper/decisions');
+      if (!res.ok) throw new Error('Failed to fetch paper decisions');
+      return res.json() as Promise<any>;
+    },
+  });
+}
+
+export function usePaperLearning() {
+  return useQuery({
+    queryKey: ['markets-paper-learning'],
+    queryFn: async () => {
+      const res = await fetch('/api/economic-engine/paper/learning');
+      if (!res.ok) throw new Error('Failed to fetch paper learning');
       return res.json() as Promise<any>;
     },
   });
@@ -309,9 +354,14 @@ export function useRunAutonomousCycle() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['markets-lab-status'] });
       queryClient.invalidateQueries({ queryKey: ['markets-strategies'] });
+      queryClient.invalidateQueries({ queryKey: ['markets-paper-strategies-registry'] });
+      queryClient.invalidateQueries({ queryKey: ['markets-paper-strategies-health'] });
       queryClient.invalidateQueries({ queryKey: ['markets-strategy-leaderboard'] });
       queryClient.invalidateQueries({ queryKey: ['markets-trading-review'] });
       queryClient.invalidateQueries({ queryKey: ['markets-live-readiness'] });
+      queryClient.invalidateQueries({ queryKey: ['markets-paper-portfolio'] });
+      queryClient.invalidateQueries({ queryKey: ['markets-paper-decisions'] });
+      queryClient.invalidateQueries({ queryKey: ['markets-paper-learning'] });
     },
   });
 }

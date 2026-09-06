@@ -1,3 +1,5 @@
+import type { MarketDataRequestPriority } from "./market-data-cache";
+
 export type AssetClass = "STOCK" | "ETF" | "CRYPTO";
 export type TradingHoursType = "EXCHANGE_SESSION" | "TWENTY_FOUR_SEVEN" | "UNKNOWN";
 export type FractionalSupport = "SUPPORTED" | "NOT_SUPPORTED" | "UNKNOWN";
@@ -66,16 +68,37 @@ export interface MarketStatus {
 export interface ProviderHealth {
   provider: string;
   configured: boolean;
-  status: "HEALTHY" | "NOT_CONFIGURED" | "UNAVAILABLE";
+  status: "HEALTHY" | "RATE_LIMIT_WARNING" | "RATE_LIMITED" | "DEGRADED" | "NOT_CONFIGURED" | "UNAVAILABLE";
   requiredSecret?: string;
   message?: string;
+  requestBudget?: Readonly<Record<string, unknown>>;
+}
+
+export interface MarketDataCallOptions {
+  priority?: MarketDataRequestPriority;
+  openPosition?: boolean;
 }
 
 export interface MarketDataProvider {
-  getQuote(asset: TradableAsset): Promise<MarketQuote>;
-  getBars(asset: TradableAsset, interval: string, outputSize?: number): Promise<MarketBars>;
-  getHistoricalBars(asset: TradableAsset, interval: string, start: string, end: string): Promise<MarketBars>;
-  getAssetMetadata(symbol: string, assetClass: AssetClass): Promise<TradableAsset>;
+  getQuote(asset: TradableAsset, options?: MarketDataCallOptions): Promise<MarketQuote>;
+  getBars(
+    asset: TradableAsset,
+    interval: string,
+    outputSize?: number,
+    options?: MarketDataCallOptions,
+  ): Promise<MarketBars>;
+  getHistoricalBars(
+    asset: TradableAsset,
+    interval: string,
+    start: string,
+    end: string,
+    options?: MarketDataCallOptions,
+  ): Promise<MarketBars>;
+  getAssetMetadata(
+    symbol: string,
+    assetClass: AssetClass,
+    options?: MarketDataCallOptions,
+  ): Promise<TradableAsset>;
   getMarketStatus(exchange?: string): Promise<MarketStatus>;
   getSupportedAssets(assetClass?: AssetClass): Promise<readonly TradableAsset[]>;
   getProviderHealth(): Promise<ProviderHealth>;

@@ -1,4 +1,10 @@
 import { MarketDataQualityService } from "./market-data-quality";
+import { MarketDataCacheService } from "./market-data-cache";
+import {
+  MarketDataRateLimitError,
+  MarketDataRequestBudgetService,
+  type MarketDataRequestOptions,
+} from "./market-data-request-budget";
 import type {
   AssetClass, MarketBar, MarketBars, MarketDataProvider, MarketQuote, MarketStatus,
   ProviderHealth, TradableAsset,
@@ -6,13 +12,23 @@ import type {
 
 export const TWELVE_DATA_SECRET_NAME = "TWELVE_DATA_API_KEY";
 type FetchLike = (input: string | URL, init?: RequestInit) => Promise<Response>;
+const sharedMarketDataCache = new MarketDataCacheService();
+const sharedRequestBudget = new MarketDataRequestBudgetService();
 
-interface TwelveDataOptions {
+export interface TwelveDataOptions {
   apiKey?: string;
   fetch?: FetchLike;
   baseUrl?: string;
   now?: () => Date;
   quality?: MarketDataQualityService;
+  cache?: MarketDataCacheService;
+  requestBudget?: MarketDataRequestBudgetService;
+  cacheTtlMs?: Partial<{
+    quote: number;
+    bars: number;
+    historicalBars: number;
+    assetMetadata: number;
+  }>;
 }
 
 export class TwelveDataProvider implements MarketDataProvider {
@@ -22,6 +38,14 @@ export class TwelveDataProvider implements MarketDataProvider {
   private readonly baseUrl: string;
   private readonly now: () => Date;
   private readonly quality: MarketDataQualityService;
+  private readonly cache: MarketDataCacheService;
+  private readonly requestBudget: MarketDataRequestBudgetService;
+  private readonly cacheTtlMs: {
+    quote: number;
+    bars: number;
+    historicalBars: number;
+    assetMetadata: number;
+  };
 
   constructor(options: TwelveDataOptions = {}) {
     this.apiKey = options.apiKey;
@@ -29,6 +53,24 @@ export class TwelveDataProvider implements MarketDataProvider {
     this.baseUrl = options.baseUrl ?? "https://api.twelvedata.com";
     this.now = options.now ?? (() => new Date());
     this.quality = options.quality ?? new MarketDataQualityService();
+    // The route runtime creates lightweight provider adapters on demand. Keep the
+    // production cache and budget at the provider boundary so those adapters
+    // cannot bypass deduplication or collectively create a request storm.
+    const useSharedInfrastructure = options.fetch === undefined && options.now === undefined;
+    this.cache = options.cache ?? (useSharedInfrastructure
+      ? sharedMarketDataCache
+      : new MarketDataCacheService(() => this.now().getTime()));
+    this.requestBudget = options.requestBudget ?? (useSharedInfrastructure
+      ? sharedRequestBudget
+      : new MarketDataRequestBudgetService({ now: () => this.now().getTime() }));
+    this.cacheTtlMs = {
+      quote: options.cacheTtlMs?.quote ?? 5_000,
+      bars: options.cacheTtlMs?.bars ?? 5_000,
+      historicalBars: options.cacheTtlMs?.historicalBars ?? 300_000,
+      // Instrument metadata is reference data, not a market-price freshness
+      // signal. It is cached separately and never used to synthesize quotes.
+      assetMetadata: options.cacheTtlMs?.assetMetadata ?? 3_600_000,
+    };
   }
 
   async getProviderHealth(): Promise<ProviderHealth> {
@@ -37,48 +79,110 @@ export class TwelveDataProvider implements MarketDataProvider {
       requiredSecret: TWELVE_DATA_SECRET_NAME,
       message: `Configure Replit Secret ${TWELVE_DATA_SECRET_NAME}`,
     };
-    return { provider: this.name, configured: true, status: "HEALTHY" };
-  }
-
-  async getQuote(asset: TradableAsset): Promise<MarketQuote> {
-    const raw = await this.request("/quote", { symbol: this.providerSymbol(asset) });
-    const price = number(raw.close ?? raw.price, "quote price");
-    const marketTimestamp = timestamp(raw.last_quote_at ?? raw.timestamp ?? raw.datetime);
-    const retrievedAt = this.now().toISOString();
-    const rawBid = optionalNumber(raw.bid);
-    const rawAsk = optionalNumber(raw.ask);
-    const bidAskAvailable = rawBid !== null && rawAsk !== null && rawBid > 0 && rawAsk >= rawBid;
+    const stats = this.requestBudget.getStats();
     return {
-      provider: this.name, retrievedAt, marketTimestamp,
-      freshness: this.quality.classify(marketTimestamp, asset.assetClass, this.now()),
-      asset,
-      price,
-      bid: bidAskAvailable ? rawBid : null,
-      ask: bidAskAvailable ? rawAsk : null,
-      bidAskStatus: bidAskAvailable ? "AVAILABLE" : "BID_ASK_UNAVAILABLE",
-      volume: optionalNumber(raw.volume),
+      provider: this.name,
+      configured: true,
+      status: stats.state,
+      requestBudget: { ...stats },
     };
   }
 
-  async getBars(asset: TradableAsset, interval: string, outputSize = 30): Promise<MarketBars> {
+  async getQuote(asset: TradableAsset, options: MarketDataRequestOptions = {}): Promise<MarketQuote> {
+    const quote = await this.cache.getOrLoad<MarketQuote>(
+      `quote:${this.assetKey(asset)}`,
+      { ttlMs: this.cacheTtlMs.quote, priority: this.priority(options) },
+      async () => {
+        const raw = await this.request("/quote", { symbol: this.providerSymbol(asset) }, options);
+        const price = number(raw.close ?? raw.price, "quote price");
+        const marketTimestamp = timestamp(raw.last_quote_at ?? raw.timestamp ?? raw.datetime);
+        const retrievedAt = this.now().toISOString();
+        const rawBid = optionalNumber(raw.bid);
+        const rawAsk = optionalNumber(raw.ask);
+        const bidAskAvailable = rawBid !== null && rawAsk !== null && rawBid > 0 && rawAsk >= rawBid;
+        return {
+          provider: this.name, retrievedAt, marketTimestamp,
+          freshness: this.quality.classify(marketTimestamp, asset.assetClass, this.now()),
+          asset,
+          price,
+          bid: bidAskAvailable ? rawBid : null,
+          ask: bidAskAvailable ? rawAsk : null,
+          bidAskStatus: bidAskAvailable ? "AVAILABLE" : "BID_ASK_UNAVAILABLE",
+          volume: optionalNumber(raw.volume),
+        };
+      },
+    );
+    return {
+      ...quote,
+      asset,
+      freshness: this.quality.classify(quote.marketTimestamp, asset.assetClass, this.now()),
+    };
+  }
+
+  async getBars(
+    asset: TradableAsset,
+    interval: string,
+    outputSize = 30,
+    options: MarketDataRequestOptions = {},
+  ): Promise<MarketBars> {
     if (!Number.isInteger(outputSize) || outputSize < 1 || outputSize > 5000) throw new Error("Invalid output size");
-    return this.timeSeries(asset, interval, { outputsize: String(outputSize) }, false);
+    const result = await this.cache.getOrLoad<MarketBars>(
+      `bars:${this.assetKey(asset)}:${interval}:${outputSize}`,
+      { ttlMs: this.cacheTtlMs.bars, priority: this.priority(options) },
+      () => this.timeSeries(asset, interval, { outputsize: String(outputSize) }, false, options),
+    );
+    return {
+      ...result,
+      asset,
+      freshness: this.quality.classify(result.marketTimestamp, asset.assetClass, this.now(), false, interval),
+    };
   }
 
   async getHistoricalBars(
-    asset: TradableAsset, interval: string, start: string, end: string,
+    asset: TradableAsset,
+    interval: string,
+    start: string,
+    end: string,
+    options: MarketDataRequestOptions = {},
   ): Promise<MarketBars> {
     if (!Number.isFinite(Date.parse(start)) || !Number.isFinite(Date.parse(end)) || Date.parse(start) >= Date.parse(end)) {
       throw new Error("A valid chronological historical range is required");
     }
-    return this.timeSeries(asset, interval, { start_date: start, end_date: end, outputsize: "5000" }, true);
+    const result = await this.cache.getOrLoad<MarketBars>(
+      `historical:${this.assetKey(asset)}:${interval}:${start}:${end}`,
+      { ttlMs: this.cacheTtlMs.historicalBars, priority: this.priority(options) },
+      () => this.timeSeries(
+        asset,
+        interval,
+        { start_date: start, end_date: end, outputsize: "5000" },
+        true,
+        options,
+      ),
+    );
+    return {
+      ...result,
+      asset,
+      freshness: this.quality.classify(result.marketTimestamp, asset.assetClass, this.now(), true, interval),
+    };
   }
 
-  async getAssetMetadata(symbol: string, assetClass: AssetClass): Promise<TradableAsset> {
-    const raw = await this.request("/symbol_search", { symbol });
-    const match = array(raw.data).find((item) => this.classify(item.instrument_type) === assetClass);
-    if (!match) throw new Error(`Asset metadata unavailable for ${symbol}`);
-    return this.asset(match, assetClass);
+  async getAssetMetadata(
+    symbol: string,
+    assetClass: AssetClass,
+    options: MarketDataRequestOptions = {},
+  ): Promise<TradableAsset> {
+    const normalizedSymbol = symbol.trim().toUpperCase();
+    if (!normalizedSymbol) throw new Error("Asset symbol is required");
+    return this.cache.getOrLoad<TradableAsset>(
+      `metadata:${assetClass}:${normalizedSymbol}`,
+      { ttlMs: this.cacheTtlMs.assetMetadata, priority: this.priority(options) },
+      async () => {
+        const raw = await this.request("/symbol_search", { symbol: normalizedSymbol }, options);
+        const match = array(raw.data).find((item) => this.classify(item.instrument_type) === assetClass);
+        if (!match) throw new Error(`Asset metadata unavailable for ${symbol}`);
+        return this.asset(match, assetClass);
+      },
+    );
   }
 
   async getMarketStatus(exchange?: string): Promise<MarketStatus> {
@@ -103,12 +207,16 @@ export class TwelveDataProvider implements MarketDataProvider {
   }
 
   private async timeSeries(
-    asset: TradableAsset, interval: string, extra: Record<string, string>, historical: boolean,
+    asset: TradableAsset,
+    interval: string,
+    extra: Record<string, string>,
+    historical: boolean,
+    options: MarketDataRequestOptions,
   ): Promise<MarketBars> {
     if (!interval.trim()) throw new Error("Interval is required");
     const raw = await this.request("/time_series", {
       symbol: this.providerSymbol(asset), interval, order: "ASC", ...extra,
-    });
+    }, options);
     const bars = array(raw.values).map(parseBar).sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
     if (!bars.length) throw new Error("Twelve Data returned no bars");
     const marketTimestamp = bars[bars.length - 1].timestamp;
@@ -122,6 +230,19 @@ export class TwelveDataProvider implements MarketDataProvider {
   private providerSymbol(asset: TradableAsset): string {
     return asset.assetClass === "CRYPTO" && asset.quoteCurrency
       ? `${asset.symbol}/${asset.quoteCurrency}` : asset.symbol;
+  }
+
+  private assetKey(asset: TradableAsset): string {
+    return [
+      asset.assetClass,
+      asset.symbol.trim().toUpperCase(),
+      asset.quoteCurrency?.trim().toUpperCase() ?? "",
+      asset.exchange?.trim().toUpperCase() ?? "",
+    ].join(":");
+  }
+
+  private priority(options: MarketDataRequestOptions): "HIGH" | "NORMAL" | "LOW" {
+    return options.openPosition ? "HIGH" : (options.priority ?? "NORMAL");
   }
 
   private asset(row: Record<string, unknown>, forced?: AssetClass): TradableAsset {
@@ -154,15 +275,27 @@ export class TwelveDataProvider implements MarketDataProvider {
     return "STOCK";
   }
 
-  private async request(path: string, parameters: Record<string, string>): Promise<Record<string, unknown>> {
+  private async request(
+    path: string,
+    parameters: Record<string, string>,
+    options: MarketDataRequestOptions = {},
+  ): Promise<Record<string, unknown>> {
     if (!this.apiKey) throw new Error(`Market data provider not configured: ${TWELVE_DATA_SECRET_NAME} is required`);
     const url = new URL(path, this.baseUrl);
     for (const [key, value] of Object.entries({ ...parameters, apikey: this.apiKey })) url.searchParams.set(key, value);
-    const response = await this.fetcher(url);
-    if (!response.ok) throw new Error(`Twelve Data request failed (${response.status})`);
-    const body = await response.json() as Record<string, unknown>;
-    if (body.status === "error" || body.code) throw new Error(`Twelve Data error: ${String(body.message ?? body.code)}`);
-    return body;
+    return this.requestBudget.execute(path, options, async () => {
+      const response = await this.fetcher(url);
+      if (response.status === 429) throw new MarketDataRateLimitError();
+      if (!response.ok) throw new Error(`Twelve Data request failed (${response.status})`);
+      const body = await response.json() as Record<string, unknown>;
+      if (Number(body.code) === 429) {
+        throw new MarketDataRateLimitError(`Twelve Data error: ${String(body.message ?? body.code)}`);
+      }
+      if (body.status === "error" || body.code) {
+        throw new Error(`Twelve Data error: ${String(body.message ?? body.code)}`);
+      }
+      return body;
+    });
   }
 }
 
