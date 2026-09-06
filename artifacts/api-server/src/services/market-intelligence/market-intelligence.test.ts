@@ -55,7 +55,9 @@ describe("normalized market data and Twelve Data adapter", () => {
     const provider = new TwelveDataProvider({
       apiKey: "test-key", fetch: fetcher as never, now: () => new Date("2026-01-02T00:01:00Z"),
     });
-    expect((await provider.getQuote(asset)).price).toBe(501.25);
+    expect(await provider.getQuote(asset)).toMatchObject({
+      price: 501.25, bid: 501.2, ask: 501.3, bidAskStatus: "AVAILABLE",
+    });
     const result = await provider.getBars(asset, "1day", 2);
     expect(result.bars.map((bar) => bar.close)).toEqual([101, 102]);
     expect(result.asset.assetClass).toBe("ETF");
@@ -67,6 +69,50 @@ describe("normalized market data and Twelve Data adapter", () => {
       fetch: (async () => ({ ok: true, status: 200, json: async () => ({ status: "error", message: "rate limit" }) })) as never,
     });
     await expect(provider.getBars(asset, "1day")).rejects.toThrow("rate limit");
+  });
+
+  it("normalizes official Digital Currency metadata for crypto pairs", async () => {
+    const requestedSymbols: string[] = [];
+    const fetcher = vi.fn(async (input: URL) => {
+      const requested = input.searchParams.get("symbol") ?? "";
+      requestedSymbols.push(requested);
+      if (input.pathname.endsWith("/symbol_search")) {
+        return {
+          ok: true, status: 200,
+          json: async () => ({ data: [{
+            symbol: requested,
+            instrument_name: requested.startsWith("BTC") ? "Bitcoin US Dollar" : "Ethereum US Dollar",
+            instrument_type: "Digital Currency",
+            exchange: "Coinbase Pro",
+            currency: "",
+          }] }),
+        };
+      }
+      return {
+        ok: true, status: 200,
+        json: async () => ({
+          close: "123.45", volume: "42", timestamp: 1767225600,
+        }),
+      };
+    });
+    const provider = new TwelveDataProvider({
+      apiKey: "test-key", fetch: fetcher as never, now: () => new Date("2026-01-02T00:01:00Z"),
+    });
+    const btc = await provider.getAssetMetadata("BTC/USD", "CRYPTO");
+    const eth = await provider.getAssetMetadata("ETH/USD", "CRYPTO");
+    expect(btc).toMatchObject({
+      symbol: "BTC", currency: "BTC", quoteCurrency: "USD", assetClass: "CRYPTO",
+      tradingHoursType: "TWENTY_FOUR_SEVEN",
+      providerMetadata: { symbol: "BTC/USD", instrument_type: "Digital Currency" },
+    });
+    expect(eth).toMatchObject({
+      symbol: "ETH", currency: "ETH", quoteCurrency: "USD", assetClass: "CRYPTO",
+      tradingHoursType: "TWENTY_FOUR_SEVEN",
+      providerMetadata: { symbol: "ETH/USD", instrument_type: "Digital Currency" },
+    });
+    expect((await provider.getQuote(btc)).bidAskStatus).toBe("BID_ASK_UNAVAILABLE");
+    expect((await provider.getQuote(eth)).bidAskStatus).toBe("BID_ASK_UNAVAILABLE");
+    expect(requestedSymbols).toEqual(["BTC/USD", "ETH/USD", "BTC/USD", "ETH/USD"]);
   });
 });
 

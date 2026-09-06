@@ -2,6 +2,7 @@ export type AssetClass = "STOCK" | "ETF" | "CRYPTO";
 export type TradingHoursType = "EXCHANGE_SESSION" | "TWENTY_FOUR_SEVEN" | "UNKNOWN";
 export type FractionalSupport = "SUPPORTED" | "NOT_SUPPORTED" | "UNKNOWN";
 export type DataFreshness = "LIVE_OR_CURRENT" | "DELAYED" | "HISTORICAL" | "STALE" | "UNAVAILABLE";
+export type BidAskStatus = "AVAILABLE" | "BID_ASK_UNAVAILABLE";
 
 export interface LiquidityData {
   averageDailyVolume?: number;
@@ -36,6 +37,7 @@ export interface MarketQuote extends MarketDataEnvelope {
   price: number;
   bid: number | null;
   ask: number | null;
+  bidAskStatus: BidAskStatus;
   volume: number | null;
 }
 

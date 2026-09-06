@@ -1,0 +1,135 @@
+Perform ONE focused repair of the existing JARVIS Economic Engine.
+
+DO NOT redesign anything.
+DO NOT publish.
+DO NOT connect Robinhood.
+DO NOT enable live trading.
+DO NOT add another provider.
+DO NOT purchase or upgrade any service.
+DO NOT change strategy/risk thresholds merely to produce trades.
+DO NOT fabricate spreads, bid/ask values, metadata, prices, or market data.
+
+The previous real-market verification established:
+
+- Twelve Data CONNECTED and HEALTHY
+- AAPL stock data works
+- SPY ETF data works
+- historical OHLCV works
+- stale/unavailable handling works
+- scanner/regime/trade-quality/risk/governor pipeline works
+- live trading remains disabled
+- Robinhood remains disconnected
+- BTC/USD failed with:
+  "Asset metadata unavailable for BTC/USD"
+- AAPL/SPY quote responses did not provide bid/ask
+
+TASK 1 — FIX CRYPTO METADATA
+
+Inspect the existing Twelve Data adapter and determine the actual cause of BTC/USD metadata resolution failure.
+
+Using only officially supported Twelve Data behavior:
+
+- correctly support BTC/USD
+- preserve normalized CRYPTO classification
+- preserve base asset BTC
+- preserve quote currency USD
+- preserve 24/7 crypto behavior
+- do not synthesize provider metadata
+- do not hard-code BTC/USD as a one-off exception if a correct generalized crypto normalization solution is possible
+
+Add focused regression tests for:
+
+BTC/USD
+ETH/USD
+
+and symbol normalization/metadata behavior.
+
+TASK 2 — BID/ASK CAPABILITY
+
+Determine from the actual existing provider response and documented adapter capability whether our current Twelve Data access supplies bid/ask for stocks/ETFs.
+
+If bid/ask is genuinely unavailable:
+
+DO NOT invent it.
+
+Instead ensure the system explicitly represents:
+
+BID_ASK_UNAVAILABLE
+
+and prevents any execution-cost model that requires real bid/ask from pretending the data exists.
+
+If the existing PaperBroker can legitimately use its already-defined modeled slippage/spread methodology without representing those values as real provider bid/ask, preserve that distinction explicitly:
+
+PROVIDER BID/ASK = UNAVAILABLE
+PAPER EXECUTION COST = MODELED
+
+Do not alter assumptions merely to improve simulated performance.
+
+TASK 3 — VERIFY CRYPTO REAL DATA
+
+After the repair, perform a bounded real-data verification for:
+
+BTC/USD
+ETH/USD
+
+Verify:
+
+- metadata
+- CRYPTO classification
+- quote/recent price
+- timestamps
+- freshness
+- historical OHLCV
+- chronological bars
+- 24/7 handling
+
+Do not force a paper trade.
+
+TASK 4 — REGRESSION
+
+Run the complete existing test suite.
+
+The previous verified baseline was 182/182.
+
+All existing tests must continue passing plus the new focused tests.
+
+Run:
+
+- full tests
+- TypeScript validation
+- API production build
+- JARVIS production build
+
+Do not make unrelated changes.
+
+RETURN:
+
+CRYPTO ADAPTER REPAIR: [PASS/FAIL]
+ROOT CAUSE:
+BTC/USD: [PASS/FAIL]
+ETH/USD: [PASS/FAIL]
+CRYPTO CLASSIFICATION:
+24/7 HANDLING:
+CRYPTO HISTORICAL DATA:
+CRYPTO FRESHNESS:
+STOCK/ETF PROVIDER BID/ASK:
+PAPER EXECUTION COST MODEL:
+FABRICATED DATA USED: NO
+TWELVE DATA:
+ROBINHOOD: NOT CONNECTED
+LIVE TRADING: DISABLED
+EXECUTION: PAPER ONLY
+EXISTING TESTS:
+NEW TESTS:
+TOTAL TESTS:
+TYPESCRIPT:
+API PRODUCTION BUILD:
+JARVIS PRODUCTION BUILD:
+CODE CHANGES:
+PLAN/ENTITLEMENT LIMITATIONS:
+NEW COST REQUIRED:
+NEXT RECOMMENDED ACTION:
+
+If fixing crypto requires a paid Twelve Data upgrade, another data provider,
+or a new credential, STOP and report that requirement instead of purchasing,
+upgrading, or working around it.

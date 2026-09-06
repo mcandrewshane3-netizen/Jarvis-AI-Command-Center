@@ -306,6 +306,9 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
         highestPrice: number;
         shouldExit: boolean;
         exitReason: string | null;
+        providerBidAskStatus: "AVAILABLE" | "BID_ASK_UNAVAILABLE";
+        paperExecutionCost: "PROVIDER_BID_ASK_DERIVED" | "MODELED";
+        executionSpreadBps: number;
         filled: ReturnType<PaperBroker["fill"]> | null;
       }> = [];
       const markErrors: Array<{ symbol: string; reason: string }> = [];
@@ -320,11 +323,19 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
           };
           const quote = await provider.getQuote(asset);
           if (!["LIVE_OR_CURRENT", "DELAYED"].includes(quote.freshness)) throw new Error(`DATA_${quote.freshness}`);
-          if (!Number.isFinite(quote.price) || quote.price <= 0 ||
-              quote.bid === null || !Number.isFinite(quote.bid) || quote.bid <= 0 ||
-              quote.ask === null || !Number.isFinite(quote.ask) || quote.ask < quote.bid) {
-            throw new Error("EXECUTABLE_QUOTE_REQUIRED");
+          if (!Number.isFinite(quote.price) || quote.price <= 0) throw new Error("EXECUTABLE_QUOTE_REQUIRED");
+          const providerBidAskAvailable = quote.bidAskStatus === "AVAILABLE";
+          if (providerBidAskAvailable && (
+            quote.bid === null || !Number.isFinite(quote.bid) || quote.bid <= 0 ||
+            quote.ask === null || !Number.isFinite(quote.ask) || quote.ask < quote.bid
+          )) {
+            throw new Error("INVALID_PROVIDER_BID_ASK");
           }
+          const defaultSpreadBps = ({ STOCK: 2, ETF: 1, CRYPTO: 10 } as const)[asset.assetClass];
+          const executionSpreadBps = providerBidAskAvailable
+            ? (quote.ask! - quote.bid!) / quote.price * 10_000
+            : defaultSpreadBps;
+          const paperExecutionCost = providerBidAskAvailable ? "PROVIDER_BID_ASK_DERIVED" as const : "MODELED" as const;
           const evaluation = new ExitEngine().evaluate({
             symbol: position.symbol, assetClass: asset.assetClass, strategyId: position.strategyId,
             strategyVersion: position.strategyVersion, quantity: position.quantity,
@@ -353,9 +364,8 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
           });
           let filled: ReturnType<PaperBroker["fill"]> | null = null;
           if (evaluation.shouldExit && evaluation.reason) {
-            const exitSpreadBps = (quote.ask - quote.bid) / quote.price * 10_000;
             const exitSpreads = { STOCK: 2, ETF: 1, CRYPTO: 10 };
-            exitSpreads[asset.assetClass] = exitSpreadBps;
+            exitSpreads[asset.assetClass] = executionSpreadBps;
             const exitBroker = new PaperBroker({
               feeRate: 0.0005,
               minimumFee: 0,
@@ -377,6 +387,9 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
             highestPrice: Math.max(Number(position.metadata.highestPrice ?? 0), quote.price),
             shouldExit: Boolean(evaluation.shouldExit && evaluation.reason),
             exitReason: evaluation.reason ?? null,
+            providerBidAskStatus: quote.bidAskStatus,
+            paperExecutionCost,
+            executionSpreadBps,
             filled,
           });
         } catch (error) {
@@ -445,6 +458,9 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
                 exitCents: averageFillCents,
                 openedAt: item.position.openedAt.toISOString(),
                 closedAt: item.marketTimestamp,
+                providerBidAskStatus: item.providerBidAskStatus,
+                paperExecutionCost: item.paperExecutionCost,
+                executionSpreadBps: item.executionSpreadBps,
               },
               assetClass: item.position.assetClass,
               strategyId: item.position.strategyId,
@@ -545,7 +561,12 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
     const candidateFreshness = new Map<string, "LIVE_OR_CURRENT" | "DELAYED">();
     const objectiveQuality = new Map<string, Record<string, number>>();
     const researchAgreement = new Map<string, "STRONG_AGREEMENT" | "PARTIAL_AGREEMENT" | "MIXED" | "STRONG_DISAGREEMENT" | "INSUFFICIENT_INFORMATION">();
-    let candidateExecution: { assetClass: "STOCK" | "ETF" | "CRYPTO"; spreadBps: number } | null = null;
+    let candidateExecution: {
+      assetClass: "STOCK" | "ETF" | "CRYPTO";
+      spreadBps: number;
+      providerBidAskStatus: "AVAILABLE";
+      paperExecutionCost: "PROVIDER_BID_ASK_DERIVED";
+    } | null = null;
     for (const item of requested) {
       try {
         const rawAsset = await provider.getAssetMetadata(item.symbol, item.assetClass);
@@ -557,8 +578,14 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
         const averageVolume = bars.bars.reduce((sum, bar) => sum + bar.volume, 0) / bars.bars.length;
         const averageDollarVolume = bars.bars.reduce((sum, bar) => sum + bar.volume * bar.close, 0) / bars.bars.length;
         if (!Number.isFinite(averageVolume) || !Number.isFinite(averageDollarVolume) || averageVolume <= 0 ||
-            averageDollarVolume <= 0 || quote.bid === null || quote.ask === null || quote.bid <= 0 || quote.ask < quote.bid) {
+            averageDollarVolume <= 0) {
           inspected.push({ symbol: item.symbol, reason: "LIQUIDITY_DATA_REQUIRED" }); continue;
+        }
+        if (quote.bidAskStatus === "BID_ASK_UNAVAILABLE") {
+          inspected.push({ symbol: item.symbol, reason: "BID_ASK_UNAVAILABLE" }); continue;
+        }
+        if (quote.bid === null || quote.ask === null || quote.bid <= 0 || quote.ask < quote.bid) {
+          inspected.push({ symbol: item.symbol, reason: "INVALID_PROVIDER_BID_ASK" }); continue;
         }
         const quotedSpreadBps = (quote.ask - quote.bid) / quote.price * 10_000;
         const asset = { ...rawAsset, liquidityData: { averageDailyVolume: averageVolume,
@@ -600,7 +627,12 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
           strategyId: "momentum", strategyVersion: "1.0.0", score: candidate.score, dataTimestamp: quote.marketTimestamp,
           stopPrice: quote.price * (1 - Math.max(candidate.features.atrPercent * 2, 0.002)),
           targetPrice: quote.price * (1 + Math.max(candidate.features.atrPercent * 3, 0.004)) });
-        candidateExecution = { assetClass: asset.assetClass, spreadBps: quotedSpreadBps };
+        candidateExecution = {
+          assetClass: asset.assetClass,
+          spreadBps: quotedSpreadBps,
+          providerBidAskStatus: "AVAILABLE",
+          paperExecutionCost: "PROVIDER_BID_ASK_DERIVED",
+        };
         candidateFreshness.set(
           asset.symbol,
           bars.freshness === "DELAYED" || quote.freshness === "DELAYED" ? "DELAYED" : "LIVE_OR_CURRENT",
@@ -711,8 +743,13 @@ router.post("/economic-engine/paper/autonomous-cycle", async (req, res, next) =>
     }
     for (const order of broker.listOrders().filter((order) => order.status === "FILLED")) {
       await tx.insert(paperExecutions).values({
-        portfolioId: portfolio.id, userId: user.id, orderIntent: { symbol: order.symbol, side: order.side, orderType: order.orderType,
-          entryCents: Math.round((order.averageFillPrice ?? 0) * 100), openedAt: order.submittedAt },
+        portfolioId: portfolio.id, userId: user.id, orderIntent: {
+          symbol: order.symbol, side: order.side, orderType: order.orderType,
+          entryCents: Math.round((order.averageFillPrice ?? 0) * 100), openedAt: order.submittedAt,
+          providerBidAskStatus: candidateExecution?.providerBidAskStatus ?? "BID_ASK_UNAVAILABLE",
+          paperExecutionCost: candidateExecution?.paperExecutionCost ?? "MODELED",
+          executionSpreadBps: candidateExecution?.spreadBps ?? null,
+        },
         assetClass: order.assetClass, strategyId: order.strategyId, strategyVersion: order.strategyVersion,
         status: order.status, paperLabel: "PAPER", requestedQuantity: order.quantity, filledQuantity: order.filledQuantity,
         averageFillCents: Math.round((order.averageFillPrice ?? 0) * 100),

@@ -45,10 +45,17 @@ export class TwelveDataProvider implements MarketDataProvider {
     const price = number(raw.close ?? raw.price, "quote price");
     const marketTimestamp = timestamp(raw.timestamp ?? raw.datetime);
     const retrievedAt = this.now().toISOString();
+    const rawBid = optionalNumber(raw.bid);
+    const rawAsk = optionalNumber(raw.ask);
+    const bidAskAvailable = rawBid !== null && rawAsk !== null && rawBid > 0 && rawAsk >= rawBid;
     return {
       provider: this.name, retrievedAt, marketTimestamp,
       freshness: this.quality.classify(marketTimestamp, asset.assetClass, this.now()),
-      asset, price, bid: optionalNumber(raw.bid), ask: optionalNumber(raw.ask),
+      asset,
+      price,
+      bid: bidAskAvailable ? rawBid : null,
+      ask: bidAskAvailable ? rawAsk : null,
+      bidAskStatus: bidAskAvailable ? "AVAILABLE" : "BID_ASK_UNAVAILABLE",
       volume: optionalNumber(raw.volume),
     };
   }
@@ -119,13 +126,21 @@ export class TwelveDataProvider implements MarketDataProvider {
 
   private asset(row: Record<string, unknown>, forced?: AssetClass): TradableAsset {
     const assetClass = forced ?? this.classify(row.instrument_type);
-    const symbol = text(row.symbol, "symbol");
+    const rawSymbol = text(row.symbol, "symbol");
+    const [pairBase, pairQuote] = rawSymbol.split("/", 2).map((value) => value?.trim().toUpperCase());
+    const symbol = assetClass === "CRYPTO"
+      ? String(row.currency_base ?? pairBase ?? row.currency ?? "").trim().toUpperCase()
+      : rawSymbol;
     const quoteCurrency = assetClass === "CRYPTO"
-      ? String(row.currency_quote ?? row.quote_currency ?? "USD") : null;
+      ? String(row.currency_quote ?? row.quote_currency ?? pairQuote ?? "").trim().toUpperCase()
+      : null;
+    if (assetClass === "CRYPTO" && (!symbol || !quoteCurrency)) {
+      throw new Error(`Twelve Data crypto pair metadata unavailable for ${rawSymbol}`);
+    }
     return {
       symbol, name: String(row.instrument_name ?? row.name ?? symbol), assetClass,
       exchange: typeof row.exchange === "string" ? row.exchange : null,
-      currency: String(row.currency ?? (assetClass === "CRYPTO" ? symbol : "USD")),
+      currency: assetClass === "CRYPTO" ? symbol : String(row.currency ?? "USD"),
       quoteCurrency,
       tradingHoursType: assetClass === "CRYPTO" ? "TWENTY_FOUR_SEVEN" : "EXCHANGE_SESSION",
       fractionalSupport: "UNKNOWN", liquidityData: null, providerMetadata: { ...row },
@@ -135,7 +150,7 @@ export class TwelveDataProvider implements MarketDataProvider {
   private classify(value: unknown): AssetClass {
     const type = String(value ?? "").toUpperCase();
     if (type.includes("ETF")) return "ETF";
-    if (type.includes("CRYPTO")) return "CRYPTO";
+    if (type.includes("CRYPTO") || type.includes("DIGITAL CURRENCY")) return "CRYPTO";
     return "STOCK";
   }
 

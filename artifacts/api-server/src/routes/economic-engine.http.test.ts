@@ -3,7 +3,7 @@ import type { Server } from "node:http";
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { and, eq } from "drizzle-orm";
-import { db, paperPortfolios, paperPositions, users } from "@workspace/db";
+import { db, paperExecutions, paperPortfolios, paperPositions, users } from "@workspace/db";
 
 type MockRequest = { headers: Record<string, string | string[] | undefined>; testAuth?: { userId: string; sessionClaims: { sub: string } } };
 vi.mock("@clerk/express", () => ({
@@ -143,6 +143,7 @@ describe("economic engine HTTP boundaries", () => {
         price: quotePrice,
         bid: quotePrice - 0.01,
         ask: quotePrice + 0.01,
+        bidAskStatus: "AVAILABLE",
         volume: 3_000_000,
       }),
     };
@@ -231,6 +232,7 @@ describe("economic engine HTTP boundaries", () => {
         ...await marketDataProvider.getQuote(),
         bid: null,
         ask: null,
+        bidAskStatus: "BID_ASK_UNAVAILABLE",
       }),
     };
     setRuntime({
@@ -238,13 +240,21 @@ describe("economic engine HTTP boundaries", () => {
       openAIProvider: () => aiProvider,
       grokProvider: () => aiProvider,
     });
+    quotePrice *= 1.5;
     const unavailableMarks = await request("/economic-engine/paper/autonomous-cycle", { user: c, method: "POST" });
     expect(unavailableMarks.status).toBe(201);
     expect((unavailableMarks.body.summary as Record<string, unknown>).reason)
-      .toBe("COMPLETE_POSITION_MARKS_REQUIRED");
+      .toBe("POSITIONS_EXITED");
     const afterUnavailableMarks = await request("/economic-engine/paper/portfolio", { user: c });
-    expect(afterUnavailableMarks.body.cycleVersion).toBe(afterRace.body.cycleVersion);
-    expect((afterUnavailableMarks.body.positions as unknown[])).toHaveLength(1);
+    expect(afterUnavailableMarks.body.cycleVersion).toBe(Number(afterRace.body.cycleVersion) + 1);
+    expect((afterUnavailableMarks.body.positions as unknown[])).toHaveLength(0);
+    const executions = await db.select().from(paperExecutions)
+      .where(eq(paperExecutions.userId, localUser.id));
+    expect(executions.some((execution) =>
+      execution.orderIntent.providerBidAskStatus === "BID_ASK_UNAVAILABLE" &&
+      execution.orderIntent.paperExecutionCost === "MODELED" &&
+      typeof execution.orderIntent.executionSpreadBps === "number",
+    )).toBe(true);
 
     const bearishProvider = {
       ...aiProvider,
