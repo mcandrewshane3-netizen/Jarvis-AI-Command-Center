@@ -58,11 +58,12 @@ export function TechValue({ children, size = 'md', className = '' }: { children:
   return <div className={`tech-value tech-value-${size} ${className}`}>{children}</div>;
 }
 
-export function JARVISCore({ isThinking = false, onClick, processText }: { isThinking?: boolean; onClick?: () => void; processText?: string }) {
+export function JARVISCore({ isThinking = false, onClick, processText, ariaLabel }: { isThinking?: boolean; onClick?: () => void; processText?: string; ariaLabel?: string }) {
   const Wrapper = onClick ? 'button' : 'div';
   return (
     <Wrapper 
       onClick={onClick} 
+      aria-label={onClick ? ariaLabel ?? 'Activate JARVIS core' : undefined}
       className={`relative flex flex-col items-center justify-center group ${onClick ? 'cursor-pointer' : ''}`}
     >
       <div className="relative flex items-center justify-center w-32 h-32 md:w-48 md:h-48 shrink-0">

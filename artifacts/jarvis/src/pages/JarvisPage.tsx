@@ -1,7 +1,9 @@
 import { useEffect, useState, useRef } from 'react';
 import { HolographicPanel, TechLabel, TechValue, Button, StatusDot, JARVISCore } from '@/components/primitives';
-import { Database, CreditCard, Globe2, Sparkles, Send, BrainCircuit } from 'lucide-react';
+import { Database, CreditCard, Globe2, Sparkles, Send, BrainCircuit, Mic, MicOff, AlertTriangle, RotateCcw } from 'lucide-react';
 import { useSettings } from '@/hooks/use-settings';
+import { useVoice } from '@/hooks/use-voice';
+import { VoiceState } from '@/lib/voice';
 
 type AIActivity = {
   stage: 'ROUTING' | 'ANALYZING' | 'SEARCHING' | 'CHALLENGING' | 'SYNTHESIZING' | 'FALLBACK';
@@ -19,7 +21,7 @@ export function JarvisPage() {
   const [lastRun, setLastRun] = useState<{ domain: string; specialists?: string[]; providers: string[]; fallbackUsed: boolean } | null>(null);
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const { reducedMotion } = useSettings();
+  const { reducedMotion, voiceSettings } = useSettings();
 
   useEffect(() => {
     void (async () => {
@@ -119,6 +121,31 @@ export function JarvisPage() {
     }
   };
 
+  const cancelStream = () => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setIsStreaming(false);
+  };
+
+  const voice = useVoice({
+    enabled: voiceSettings.enabled,
+    isThinking: isStreaming,
+    onTranscript: (value) => send(value),
+    onCancelThinking: cancelStream,
+  });
+
+  const voiceStatus: Record<VoiceState, string> = {
+    [VoiceState.VOICE_IDLE]: voiceSettings.enabled ? 'Tap core to speak' : 'Voice input disabled',
+    [VoiceState.VOICE_REQUESTING_PERMISSION]: 'Requesting microphone permission',
+    [VoiceState.VOICE_LISTENING]: 'Listening — tap core to finish',
+    [VoiceState.VOICE_TRANSCRIBING]: 'Transcribing with browser speech recognition',
+    [VoiceState.VOICE_THINKING]: 'Thinking — tap core to cancel',
+    [VoiceState.VOICE_SPEAKING]: 'Speaking — tap core to interrupt',
+    [VoiceState.VOICE_INTERRUPTED]: 'Voice interaction interrupted — tap to retry',
+    [VoiceState.VOICE_ERROR]: 'Voice input error — tap to retry',
+    [VoiceState.VOICE_UNAVAILABLE]: 'Voice input unavailable in this browser',
+  };
+
   return (
     <div className="page-enter stagger-1 h-full flex flex-col md:flex-row gap-6">
       <div className="flex-1 flex flex-col h-[calc(100vh-160px)]">
@@ -187,7 +214,38 @@ export function JarvisPage() {
       
       <div className="w-full md:w-80 flex flex-col gap-6">
         <HolographicPanel title="JARVIS KERNEL" className="flex items-center justify-center py-6">
-          <JARVISCore isThinking={isStreaming} processText={isStreaming ? activities.at(-1)?.stage ?? 'EVALUATING...' : 'READY'} />
+          <div className="w-full flex flex-col items-center px-4">
+            <JARVISCore
+              onClick={voiceSettings.enabled && voice.available ? voice.activate : undefined}
+              ariaLabel={`${voiceStatus[voice.state]}. ${voice.state === VoiceState.VOICE_LISTENING ? 'Stop listening' : 'Activate voice input'}`}
+              isThinking={isStreaming || voice.state === VoiceState.VOICE_LISTENING || voice.state === VoiceState.VOICE_REQUESTING_PERMISSION}
+              processText={voice.state === VoiceState.VOICE_THINKING && isStreaming ? activities.at(-1)?.stage ?? 'EVALUATING...' : voice.state.replace('VOICE_', '').replaceAll('_', ' ')}
+            />
+            <div className="mt-4 w-full border-t border-primary/10 pt-3 text-center" aria-live="polite" role="status">
+              <div className="flex items-center justify-center gap-2 font-mono text-[10px] tracking-wider text-primary">
+                {voice.state === VoiceState.VOICE_LISTENING ? <Mic size={13} /> : <MicOff size={13} />}
+                {voiceStatus[voice.state].toUpperCase()}
+              </div>
+              {voice.transcript ? (
+                <p className="mt-2 text-xs leading-relaxed text-muted-foreground break-words" aria-label="Voice transcript">
+                  “{voice.transcript}”
+                </p>
+              ) : null}
+              {voice.error ? (
+                <div className="mt-2 text-xs text-red-400 flex flex-col items-center gap-2" role="alert">
+                  <span className="flex items-center gap-1"><AlertTriangle size={12} />{voice.error}</span>
+                  {voice.state !== VoiceState.VOICE_UNAVAILABLE && voiceSettings.enabled ? (
+                    <button type="button" onClick={voice.activate} className="font-mono text-[10px] border border-red-500/30 px-2 py-1 hover:bg-red-500/10" aria-label="Retry voice input">
+                      <RotateCcw size={10} className="inline mr-1" /> RETRY
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+              <p className="mt-2 font-mono text-[8px] tracking-wider text-muted-foreground">
+                THIS APP NEVER SAVES OR UPLOADS RAW AUDIO
+              </p>
+            </div>
+          </div>
         </HolographicPanel>
 
         <HolographicPanel title="AI ACTIVITY">

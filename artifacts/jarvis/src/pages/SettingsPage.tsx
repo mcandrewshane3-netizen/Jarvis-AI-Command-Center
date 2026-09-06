@@ -3,6 +3,8 @@ import { useSettings } from '@/hooks/use-settings';
 import { Monitor, Volume2, Shield, BrainCircuit, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useClerk } from '@clerk/react';
 import { AIProvider, IntelligenceMode, ProviderMode, useAIStatus } from '@/hooks/use-ai-status';
+import { browserVoiceSupport } from '@/hooks/use-voice';
+import type { VoiceSettings } from '@/hooks/use-settings';
 
 const intelligenceDescriptions: Record<IntelligenceMode, string> = {
   NORMAL: 'Baseline assistance for direct commands and routine work.',
@@ -29,13 +31,31 @@ function dot(label: string): 'online' | 'amber' | 'red' | 'offline' {
 }
 
 export function SettingsPage() {
-  const { reducedMotion, setReducedMotion } = useSettings();
+  const { reducedMotion, setReducedMotion, voiceSettings, setVoiceSettings } = useSettings();
   const { signOut } = useClerk();
   const { status, loading, saving, error, refresh, update } = useAIStatus();
   const grok = status?.providers.find((provider) => provider.id.toLowerCase() === 'grok' || provider.name.toLowerCase().includes('grok'));
   const openai = status?.providers.find((provider) => provider.id === 'openai');
   const grokAvailable = Boolean(grok?.configured && grok?.available && providerLabel(grok) === 'AVAILABLE');
   const openAIAvailable = Boolean(openai?.configured && openai?.available && providerLabel(openai) === 'AVAILABLE');
+  const voiceSupport = browserVoiceSupport();
+  const voiceToggle = (key: keyof Pick<VoiceSettings, 'enabled' | 'greeting'>, label: string, description: string) => (
+    <div className="flex items-center justify-between gap-5">
+      <div>
+        <div className="font-mono text-xs text-white uppercase tracking-wider">{label}</div>
+        <p className="text-xs text-muted-foreground mt-1">{description}</p>
+      </div>
+      <button
+        type="button"
+        onClick={() => setVoiceSettings({ [key]: !voiceSettings[key] })}
+        aria-label={`${voiceSettings[key] ? 'Disable' : 'Enable'} ${label}`}
+        aria-pressed={voiceSettings[key]}
+        className={`shrink-0 w-14 h-6 border rounded-full relative transition-colors ${voiceSettings[key] ? 'border-primary bg-primary/20' : 'border-muted bg-muted'}`}
+      >
+        <span className={`absolute top-0.5 w-4 h-4 transition-transform ${voiceSettings[key] ? 'translate-x-8 bg-primary' : 'translate-x-1 bg-muted-foreground'}`} />
+      </button>
+    </div>
+  );
 
   return (
     <div className="page-enter stagger-1 pb-12 max-w-4xl mx-auto">
@@ -88,6 +108,50 @@ export function SettingsPage() {
                 </section>
               </div>
             )}
+          </HolographicPanel>
+          <HolographicPanel title="VOICE">
+            <div className="space-y-6">
+              <div className="settings-section-heading">
+                <Volume2 size={18} />
+                <div>
+                  <div className="font-mono text-sm text-white tracking-wider">DEGRADED BROWSER VOICE</div>
+                  <p>JARVIS never persists or uploads raw audio. Browser speech recognition may process microphone audio through the browser vendor's speech service.</p>
+                </div>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div className="provider-row">
+                  <div><strong>BROWSER SPEECH TO TEXT</strong><small>{voiceSupport.stt && voiceSupport.microphone ? 'SUPPORTED BY THIS BROWSER' : 'NOT SUPPORTED BY THIS BROWSER'}</small></div>
+                  <StatusDot status={voiceSupport.stt && voiceSupport.microphone ? 'online' : 'offline'} />
+                </div>
+                <div className="provider-row">
+                  <div><strong>VOICE SYNTHESIS</strong><small>PROVIDER UNAVAILABLE // NO BROWSER TTS</small></div>
+                  <StatusDot status="offline" />
+                </div>
+              </div>
+              {voiceToggle('enabled', 'Voice input', 'Allows tap-to-talk from the central JARVIS core when browser support exists.')}
+              <div className="h-px bg-primary/10" />
+              <label className="block">
+                <span className="font-mono text-xs text-white tracking-wider">VOICE PRESET</span>
+                <input className="tech-input w-full mt-2 opacity-60" value={voiceSettings.preset} readOnly aria-label="Voice preset" />
+              </label>
+              <label className="block">
+                <span className="flex justify-between font-mono text-xs text-white tracking-wider"><span>SPEECH RATE</span><span>{voiceSettings.speechRate.toFixed(1)}×</span></span>
+                <input className="w-full mt-3 accent-cyan-400" type="range" min="0.7" max="1.3" step="0.1" value={voiceSettings.speechRate} onChange={(event) => setVoiceSettings({ speechRate: Number(event.target.value) })} aria-label="Speech rate" />
+              </label>
+              <label className="block">
+                <span className="font-mono text-xs text-white tracking-wider">SPOKEN DETAIL</span>
+                <select className="tech-input w-full mt-2" value={voiceSettings.spokenDetail} onChange={(event) => setVoiceSettings({ spokenDetail: event.target.value as VoiceSettings['spokenDetail'] })} aria-label="Spoken detail">
+                  <option value="BRIEF">BRIEF</option><option value="STANDARD">STANDARD</option><option value="DETAILED">DETAILED</option>
+                </select>
+              </label>
+              {voiceToggle('greeting', 'Optional greeting', 'Stored locally. Playback remains unavailable until a voice provider is connected.')}
+              <div className="grid sm:grid-cols-3 gap-2">
+                {['CONVERSATION MODE // OFF', 'AUTO-SPEAK // OFF', 'SAVE VOICE HISTORY // OFF'].map((item) => (
+                  <div key={item} className="border border-primary/10 bg-black/20 p-3 font-mono text-[9px] text-muted-foreground tracking-wider">{item}</div>
+                ))}
+              </div>
+              <Button testId="button-test-voice" disabled className="w-full justify-center" aria-label="Test voice unavailable">TEST VOICE // UNAVAILABLE</Button>
+            </div>
           </HolographicPanel>
           <HolographicPanel title="DISPLAY & INTERFACE">
             <div className="space-y-6">
