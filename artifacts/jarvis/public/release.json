@@ -1,6 +1,6 @@
 {
-  "release": "jarvis-prototype-rc1-2026-09-07",
-  "baselineCommit": "4f99597a82dc1bff4f3562a40004475756668b46",
+  "release": "jarvis-prototype-rc2-2026-09-07",
+  "baselineCommit": "5bf0edcd3a61ba18d2772c324a21594f3dd4ad23",
   "mode": "PAPER_RESEARCH_ONLY",
   "liveTrading": false
 }
