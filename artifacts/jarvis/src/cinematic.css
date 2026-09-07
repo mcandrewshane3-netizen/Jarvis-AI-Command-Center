@@ -1,0 +1,206 @@
+/* Cinematic machine-intelligence skin: original UI inspired by luminous blue holographic AI
+   and darker red machine-threat accents. No movie assets or copied character artwork. */
+:root {
+  --background: 207 55% 3%;
+  --foreground: 192 55% 92%;
+  --card: 207 55% 5%;
+  --card-foreground: 192 55% 92%;
+  --card-border: 188 100% 38%;
+  --primary: 187 100% 55%;
+  --primary-foreground: 207 70% 4%;
+  --secondary: 203 70% 11%;
+  --muted: 204 48% 9%;
+  --muted-foreground: 191 28% 61%;
+  --accent: 188 100% 55%;
+  --border: 188 100% 22%;
+  --input: 205 55% 10%;
+  --ring: 187 100% 58%;
+  --sidebar: 210 58% 3%;
+  --sidebar-border: 188 100% 20%;
+  --jarvis-glow: 0 0 20px hsla(187,100%,55%,.22), 0 0 60px hsla(205,100%,50%,.08);
+  --jarvis-glow-strong: 0 0 18px hsla(187,100%,62%,.75), 0 0 54px hsla(196,100%,50%,.3);
+  --ultron-red: 0 92% 58%;
+}
+
+body {
+  background:
+    radial-gradient(circle at 62% 45%, hsla(188,100%,45%,.09) 0 1%, transparent 24%),
+    radial-gradient(circle at 18% 15%, hsla(207,100%,55%,.08), transparent 32%),
+    linear-gradient(135deg, hsl(213 62% 2%), hsl(202 56% 5%) 55%, hsl(213 65% 2%));
+}
+
+body::before {
+  opacity: .9;
+  background-image:
+    linear-gradient(to right, hsla(188,100%,55%,.045) 1px, transparent 1px),
+    linear-gradient(to bottom, hsla(188,100%,55%,.035) 1px, transparent 1px),
+    linear-gradient(135deg, transparent 48%, hsla(188,100%,55%,.035) 49%, transparent 50%);
+  background-size: 42px 42px, 42px 42px, 120px 120px;
+}
+
+.cmd-sidebar {
+  background: linear-gradient(180deg, hsla(212,65%,3%,.98), hsla(202,56%,5%,.96));
+  border-right-color: hsla(188,100%,55%,.22);
+  box-shadow: 18px 0 60px rgba(0,0,0,.38), inset -1px 0 hsla(188,100%,55%,.05);
+}
+
+.cmd-header {
+  background: linear-gradient(90deg, hsla(209,65%,3%,.96), hsla(195,55%,6%,.82), hsla(209,65%,3%,.96));
+  border-bottom-color: hsla(188,100%,55%,.18);
+  box-shadow: 0 12px 40px rgba(0,0,0,.28);
+}
+
+.nav-link {
+  position: relative;
+  overflow: hidden;
+}
+.nav-link::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 50%;
+  width: 2px; height: 0;
+  background: hsl(var(--primary));
+  box-shadow: 0 0 10px hsl(var(--primary));
+  transition: height .2s ease, top .2s ease;
+}
+.nav-link.active::before, .nav-link:hover::before { height: 70%; top: 15%; }
+.nav-link.active {
+  background: linear-gradient(90deg, hsla(188,100%,55%,.12), transparent 85%);
+  text-shadow: 0 0 12px hsla(188,100%,55%,.3);
+}
+
+.holo-panel {
+  background:
+    linear-gradient(145deg, hsla(202,62%,8%,.78), hsla(214,70%,2%,.72)),
+    radial-gradient(circle at 20% 10%, hsla(188,100%,55%,.06), transparent 35%);
+  border-color: hsla(188,100%,55%,.22);
+  box-shadow: 0 10px 40px rgba(0,0,0,.48), inset 0 0 30px hsla(188,100%,55%,.025);
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+}
+.holo-panel:hover {
+  border-color: hsla(188,100%,62%,.48);
+  box-shadow: 0 12px 46px rgba(0,0,0,.54), inset 0 0 35px hsla(188,100%,55%,.06), 0 0 26px hsla(188,100%,55%,.06);
+}
+
+.jarvis-conversation-header h1 {
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  text-shadow: 0 0 24px hsla(188,100%,55%,.16);
+}
+
+.chat-bubble.jarvis {
+  border-left: 2px solid hsla(188,100%,60%,.7);
+  background: linear-gradient(90deg, hsla(188,100%,55%,.08), hsla(205,55%,6%,.2));
+  box-shadow: inset 12px 0 28px hsla(188,100%,55%,.035);
+}
+.chat-bubble.user {
+  border-right: 2px solid hsla(198,100%,72%,.45);
+  background: linear-gradient(270deg, hsla(198,100%,55%,.07), transparent);
+}
+
+.tech-input {
+  background: hsla(210,65%,3%,.88);
+  border-color: hsla(188,100%,55%,.28);
+  box-shadow: inset 0 0 20px hsla(188,100%,55%,.025);
+}
+.tech-input:focus {
+  border-color: hsla(188,100%,60%,.8);
+  box-shadow: 0 0 0 1px hsla(188,100%,55%,.24), 0 0 22px hsla(188,100%,55%,.09), inset 0 0 20px hsla(188,100%,55%,.04);
+}
+
+.btn-tech {
+  position: relative;
+  overflow: hidden;
+  clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 7px 100%, 0 calc(100% - 7px));
+}
+.btn-tech::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 20%, hsla(188,100%,75%,.12) 50%, transparent 80%);
+  transform: translateX(-120%);
+  transition: transform .35s ease;
+}
+.btn-tech:hover::after { transform: translateX(120%); }
+
+.jarvis-context-rail .holo-panel:nth-of-type(1) {
+  box-shadow: 0 0 34px hsla(188,100%,55%,.08), inset 0 0 25px hsla(188,100%,55%,.04);
+}
+
+/* Small restrained red machine-threat accent, inspired by hostile-system telemetry. */
+.status-dot.red, .state-badge.danger, .kill-core.active {
+  filter: drop-shadow(0 0 8px hsla(var(--ultron-red),.65));
+}
+
+.cinematic-core {
+  position: relative;
+  width: clamp(150px, 18vw, 230px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  isolation: isolate;
+  filter: drop-shadow(0 0 20px hsla(188,100%,55%,.24));
+}
+.cinematic-core::before,
+.cinematic-core::after {
+  content: '';
+  position: absolute;
+  inset: -12%;
+  border-radius: 50%;
+  border: 1px solid hsla(188,100%,60%,.13);
+  background: conic-gradient(from 30deg, transparent 0 8%, hsla(188,100%,60%,.24) 9% 11%, transparent 12% 27%, hsla(198,100%,70%,.18) 28% 30%, transparent 31% 100%);
+  animation: spin-slow 18s linear infinite;
+  z-index: -2;
+}
+.cinematic-core::after {
+  inset: 5%;
+  animation: spin-slow-reverse 11s linear infinite;
+  opacity: .7;
+}
+.core-orbit-a, .core-orbit-b, .core-orbit-c {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.core-orbit-a { inset: 2%; border: 1px solid hsla(188,100%,55%,.34); border-left-color: transparent; border-bottom-color: transparent; }
+.core-orbit-b { inset: 14%; border: 1px dashed hsla(195,100%,70%,.26); animation: spin-slow-reverse 8s linear infinite; }
+.core-orbit-c { inset: 29%; border: 1px solid hsla(188,100%,65%,.42); box-shadow: inset 0 0 22px hsla(188,100%,55%,.08); }
+.core-reactor {
+  width: 34%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle, hsla(190,100%,96%,.96) 0 7%, hsla(187,100%,70%,.88) 8% 15%, hsla(188,100%,48%,.38) 16% 34%, hsla(205,70%,5%,.7) 35% 100%);
+  border: 1px solid hsla(188,100%,78%,.85);
+  box-shadow: 0 0 16px hsla(188,100%,80%,.85), 0 0 48px hsla(188,100%,55%,.55), inset 0 0 22px hsla(188,100%,85%,.45);
+}
+.cinematic-core.thinking .core-reactor {
+  animation: reactor-pulse .85s ease-in-out infinite alternate;
+}
+.cinematic-core.thinking .core-orbit-a { animation: spin-slow 2.8s linear infinite; }
+.cinematic-core.thinking::before { animation-duration: 4s; }
+
+@keyframes reactor-pulse {
+  from { transform: scale(.9); filter: brightness(.9); box-shadow: 0 0 12px hsla(188,100%,80%,.7), 0 0 34px hsla(188,100%,55%,.4); }
+  to { transform: scale(1.08); filter: brightness(1.25); box-shadow: 0 0 22px hsla(188,100%,90%,1), 0 0 70px hsla(188,100%,55%,.72); }
+}
+
+.cinematic-process {
+  margin-top: 14px;
+  padding: 5px 11px;
+  border: 1px solid hsla(188,100%,55%,.2);
+  background: hsla(210,65%,3%,.72);
+  letter-spacing: .2em;
+  text-shadow: 0 0 10px hsla(188,100%,55%,.45);
+}
+
+@media (max-width: 768px) {
+  .cinematic-core { width: 150px; }
+  .holo-panel { clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 7px 100%, 0 calc(100% - 7px)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cinematic-core::before, .cinematic-core::after, .core-orbit-b, .cinematic-core.thinking .core-reactor, .cinematic-core.thinking .core-orbit-a { animation: none !important; }
+}
