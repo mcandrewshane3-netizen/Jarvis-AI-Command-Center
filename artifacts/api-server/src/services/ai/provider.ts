@@ -1,4 +1,5 @@
 import { openai } from "@workspace/integrations-openai-ai-server";
+import { boundedProviderOutputTokens } from "./cost-controls";
 import { GrokProvider } from "./xai-provider";
 
 export type ProviderId = "openai" | "grok";
@@ -43,6 +44,7 @@ export type ProviderRequest = {
   model?: string;
   tools?: ProviderToolDefinition[];
   signal?: AbortSignal;
+  maxOutputTokens?: number;
 };
 
 export type ProviderStreamEvent =
@@ -160,7 +162,7 @@ export class OpenAIProvider implements AIProvider {
     try {
       const response = await openai.chat.completions.create({
         model,
-        max_completion_tokens: 8192,
+        max_completion_tokens: boundedProviderOutputTokens(request.maxOutputTokens),
         messages: request.messages,
         tools: request.tools?.map((tool) => ({
           type: "function" as const,
@@ -195,7 +197,7 @@ export class OpenAIProvider implements AIProvider {
     try {
       const response = await openai.chat.completions.create({
         model,
-        max_completion_tokens: 8192,
+        max_completion_tokens: boundedProviderOutputTokens(request.maxOutputTokens),
         messages: request.messages,
         tools: request.tools?.map((tool) => ({
           type: "function" as const,
@@ -230,7 +232,7 @@ export class OpenAIProvider implements AIProvider {
     try {
       const response = await openai.chat.completions.create({
         model,
-        max_completion_tokens: 8192,
+        max_completion_tokens: boundedProviderOutputTokens(request.maxOutputTokens),
         messages: [
           {
             role: "system",
