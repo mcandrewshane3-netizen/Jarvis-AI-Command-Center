@@ -1,5 +1,5 @@
 import React from 'react';
-import { Power, ShieldAlert, Cpu, Sparkles } from 'lucide-react';
+import { Power, ShieldAlert, Cpu } from 'lucide-react';
 
 export function HolographicPanel({ 
   children, 
@@ -38,7 +38,7 @@ export function StatusDot({
   pulse = false 
 }: { 
   status?: 'online' | 'amber' | 'red' | 'offline';
-  pulse?: boolean;
+  pulse?: boolean 
 }) {
   return (
     <div className={`status-indicator`}>
@@ -61,25 +61,24 @@ export function TechValue({ children, size = 'md', className = '' }: { children:
 export function JARVISCore({ isThinking = false, onClick, processText, ariaLabel }: { isThinking?: boolean; onClick?: () => void; processText?: string; ariaLabel?: string }) {
   const Wrapper = onClick ? 'button' : 'div';
   return (
-    <Wrapper 
-      onClick={onClick} 
+    <Wrapper
+      onClick={onClick}
       aria-label={onClick ? ariaLabel ?? 'Activate JARVIS core' : undefined}
       className={`relative flex flex-col items-center justify-center group ${onClick ? 'cursor-pointer' : ''}`}
     >
-      <div className="relative flex items-center justify-center w-32 h-32 md:w-48 md:h-48 shrink-0">
-        {/* Outer Ring */}
-        <div className={`absolute inset-0 rounded-full border border-primary/20 border-t-primary/60 border-l-primary/60 ${isThinking ? 'animate-[spin-slow_2s_linear_infinite]' : 'animate-[spin-slow_10s_linear_infinite]'}`} />
-        
-        {/* Middle Ring */}
-        <div className={`absolute inset-4 rounded-full border border-primary/10 border-b-primary/50 border-r-primary/50 ${isThinking ? 'animate-[spin-slow-reverse_3s_linear_infinite]' : 'animate-[spin-slow-reverse_15s_linear_infinite]'}`} />
-        
-        {/* Inner Core */}
-        <div className={`absolute inset-10 rounded-full bg-primary/10 backdrop-blur-sm border border-primary/30 flex items-center justify-center shadow-[0_0_30px_hsla(185,100%,50%,0.2)] ${isThinking ? 'animate-[pulse-ring_1.5s_ease-in-out_infinite]' : 'animate-[pulse-ring_4s_ease-in-out_infinite]'} ${onClick ? 'group-hover:bg-primary/20 transition-colors' : ''}`}>
-          <Sparkles className={`w-8 h-8 md:w-12 md:h-12 text-primary ${isThinking ? 'opacity-100' : 'opacity-60'}`} />
+      <div className={`cinematic-core ${isThinking ? 'thinking' : ''}`} aria-hidden="true">
+        <div className="core-orbit-a" />
+        <div className="core-orbit-b" />
+        <div className="core-orbit-c" />
+        <div className="absolute inset-[23%] rounded-full border border-primary/20 bg-black/25 backdrop-blur-sm" />
+        <div className="absolute inset-[31%] rounded-full border border-primary/30 shadow-[inset_0_0_22px_hsla(188,100%,55%,0.12)]" />
+        <div className={`core-reactor ${onClick ? 'group-hover:scale-105 transition-transform duration-200' : ''}`}>
+          <div className="w-[22%] aspect-square rounded-full bg-white shadow-[0_0_12px_white]" />
         </div>
+        <div className="absolute inset-[41%] rounded-full border border-white/40" />
       </div>
       {processText && (
-        <div className={`mt-4 font-mono text-[10px] uppercase tracking-widest text-primary/70 ${isThinking ? 'animate-pulse' : ''}`}>
+        <div className={`cinematic-process font-mono text-[10px] uppercase text-primary/80 ${isThinking ? 'animate-pulse' : ''}`}>
           {processText}
         </div>
       )}
