@@ -7,6 +7,7 @@ import {
   type VoiceEvent,
   VoiceState,
 } from '@/lib/voice';
+import { getSharedAudioElement, waitForAudioPlaybackUnlock } from '@/lib/audio-playback';
 
 interface RecognitionResultLike {
   isFinal: boolean;
@@ -83,6 +84,7 @@ export function useVoice({
   const audioUrlRef = useRef<string | null>(null);
   const fallbackUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const speechAbortRef = useRef<AbortController | null>(null);
+  const playbackCancelRef = useRef<(() => void) | null>(null);
   const finalTranscriptRef = useRef('');
   const submitRef = useRef(onTranscript);
 
@@ -98,6 +100,9 @@ export function useVoice({
   }, []);
 
   const releasePlayback = useCallback(() => {
+    const cancelPendingPlayback = playbackCancelRef.current;
+    playbackCancelRef.current = null;
+    cancelPendingPlayback?.();
     speechAbortRef.current?.abort();
     speechAbortRef.current = null;
     const audio = audioRef.current;
@@ -249,21 +254,46 @@ export function useVoice({
     }
 
     window.speechSynthesis.cancel();
+    window.speechSynthesis.resume();
     const utterance = new SpeechSynthesisUtterance(spoken);
     fallbackUtteranceRef.current = utterance;
     utterance.lang = navigator.language || 'en-US';
     utterance.rate = Math.min(1.3, Math.max(0.7, speechRate));
+    let settled = false;
+    let keepAlive = 0;
+    let timeout = 0;
+    const maximumDuration = Math.max(20_000, Math.min(120_000, spoken.length * 120));
+    const finish = (failure?: Error) => {
+      if (settled) return;
+      settled = true;
+      window.clearInterval(keepAlive);
+      window.clearTimeout(timeout);
+      utterance.onstart = null;
+      utterance.onend = null;
+      utterance.onerror = null;
+      fallbackUtteranceRef.current = null;
+      playbackCancelRef.current = null;
+      if (failure) reject(failure);
+      else {
+        move('RESPONSE_FINISHED');
+        resolve();
+      }
+    };
+    playbackCancelRef.current = () => finish(new DOMException('Voice playback interrupted.', 'AbortError'));
+    keepAlive = window.setInterval(() => window.speechSynthesis.resume(), 4_000);
+    timeout = window.setTimeout(() => finish(new Error('Device voice playback timed out.')), maximumDuration);
     utterance.onstart = () => move('PLAYBACK_STARTED');
     utterance.onend = () => {
-      fallbackUtteranceRef.current = null;
-      move('RESPONSE_FINISHED');
-      resolve();
+      finish();
     };
     utterance.onerror = () => {
-      fallbackUtteranceRef.current = null;
-      reject(new Error('Device voice playback failed.'));
+      finish(new Error('Device voice playback failed.'));
     };
-    window.speechSynthesis.speak(utterance);
+    try {
+      window.speechSynthesis.speak(utterance);
+    } catch {
+      finish(new Error('Device voice playback failed.'));
+    }
   }), [move]);
 
   const speak = useCallback(async (text: string, detail: SpokenDetail, speechRate: number) => {
@@ -274,6 +304,7 @@ export function useVoice({
     setError(null);
     stateRef.current = VoiceState.VOICE_THINKING;
     setState(VoiceState.VOICE_THINKING);
+    await waitForAudioPlaybackUnlock();
     const controller = new AbortController();
     speechAbortRef.current = controller;
     try {
@@ -292,25 +323,51 @@ export function useVoice({
       if (!blob.size) throw new Error('Voice synthesis returned no audio.');
       const url = URL.createObjectURL(blob);
       audioUrlRef.current = url;
-      const audio = new Audio(url);
+      const audio = getSharedAudioElement();
       audioRef.current = audio;
+      audio.src = url;
       audio.playbackRate = Math.min(1.3, Math.max(0.7, speechRate));
-      audio.onplay = () => move('PLAYBACK_STARTED');
-      audio.onended = () => {
-        releasePlayback();
-        move('RESPONSE_FINISHED');
-      };
-      audio.onerror = () => fail('Cloud voice playback failed. The full text response remains available.');
-      await audio.play();
+      await new Promise<void>((resolve, reject) => {
+        let settled = false;
+        let timeout = 0;
+        const maximumDuration = Math.max(20_000, Math.min(120_000, spoken.length * 120));
+        const finish = (failure?: Error) => {
+          if (settled) return;
+          settled = true;
+          window.clearTimeout(timeout);
+          audio.onplay = null;
+          audio.onended = null;
+          audio.onerror = null;
+          playbackCancelRef.current = null;
+          if (failure) reject(failure);
+          else resolve();
+        };
+        timeout = window.setTimeout(
+          () => finish(new Error('Cloud voice playback timed out.')),
+          maximumDuration,
+        );
+        playbackCancelRef.current = () => finish(new DOMException('Voice playback interrupted.', 'AbortError'));
+        audio.onplay = () => move('PLAYBACK_STARTED');
+        audio.onended = () => finish();
+        audio.onerror = () => finish(new Error('Cloud voice playback failed.'));
+        audio.load();
+        void audio.play().catch(() => finish(new Error('Cloud voice playback was blocked.')));
+      });
+      releasePlayback();
+      move('RESPONSE_FINISHED');
     } catch (caught) {
       if (caught instanceof DOMException && caught.name === 'AbortError') return;
       const cloudError = caught instanceof Error ? caught.message : 'Cloud voice synthesis is unavailable.';
       speechAbortRef.current = null;
+      releasePlayback();
       try {
         setError('Cloud voice is temporarily unavailable. Using the iPad/device voice instead.');
         await speakWithDevice(spoken, speechRate);
-      } catch {
-        fail(`${cloudError} Device voice is also unavailable. The full text response remains available.`);
+      } catch (deviceError) {
+        if (deviceError instanceof DOMException && deviceError.name === 'AbortError') return;
+        releasePlayback();
+        setError(`${cloudError} Device voice is also unavailable. The full text response remains available.`);
+        move('RESPONSE_FINISHED');
       }
     }
   }, [enabled, fail, move, releaseCapture, releasePlayback, speakWithDevice]);
