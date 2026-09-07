@@ -10,6 +10,7 @@ import {
   clerkProxyMiddleware,
   getClerkProxyHost,
 } from "./middlewares/clerkProxyMiddleware";
+import { streamRecoveryPersistence } from "./middlewares/streamRecoveryPersistence";
 
 const app: Express = express();
 
@@ -131,6 +132,7 @@ app.use(
     ),
   })),
 );
+app.use(streamRecoveryPersistence);
 
 app.use("/api", router);
 
