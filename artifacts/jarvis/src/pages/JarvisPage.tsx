@@ -4,6 +4,7 @@ import { AlertTriangle, BriefcaseBusiness, Globe2, Home, Landmark, LockKeyhole, 
 import { useSettings } from '@/hooks/use-settings';
 import { useVoice } from '@/hooks/use-voice';
 import { VoiceState } from '@/lib/voice';
+import { waitForAudioPlaybackUnlock } from '@/lib/audio-playback';
 
 type AIActivity = {
   stage: 'ROUTING' | 'ANALYZING' | 'SEARCHING' | 'CHALLENGING' | 'SYNTHESIZING' | 'FALLBACK';
@@ -36,7 +37,6 @@ export function JarvisPage() {
   const handsFreeReadyRef = useRef(false);
   const voiceActivateRef = useRef<() => void>(() => {});
   const voiceSpeakRef = useRef<(text: string, detail: typeof voiceSettings.spokenDetail, rate: number) => Promise<void>>(async () => {});
-  const voiceStateRef = useRef<VoiceState>(VoiceState.VOICE_IDLE);
   const { reducedMotion, voiceSettings } = useSettings();
 
   useEffect(() => {
@@ -169,7 +169,6 @@ export function JarvisPage() {
 
   voiceActivateRef.current = voice.activate;
   voiceSpeakRef.current = voice.speak;
-  voiceStateRef.current = voice.state;
 
   const displayedVoiceState = isStreaming && voice.state === VoiceState.VOICE_IDLE ? VoiceState.VOICE_THINKING : voice.state;
   const voiceStatus: Record<VoiceState, string> = {
@@ -192,10 +191,12 @@ export function JarvisPage() {
     const salutation = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
 
     const begin = async () => {
+      await waitForAudioPlaybackUnlock();
+      if (cancelled) return;
       try {
         await voiceSpeakRef.current(`${salutation}, Shane. JARVIS online. How can I help?`, voiceSettings.spokenDetail, voiceSettings.speechRate);
       } catch {
-        // Browser autoplay restrictions can block the spoken greeting. Continue to microphone startup.
+        // Playback owns its fallback/error state and only settles after completion or definitive failure.
       }
       if (cancelled) return;
       handsFreeReadyRef.current = true;
@@ -204,15 +205,8 @@ export function JarvisPage() {
 
     void begin();
 
-    const unlockOnFirstGesture = () => {
-      if (cancelled || voiceStateRef.current === VoiceState.VOICE_LISTENING || isStreaming) return;
-      handsFreeReadyRef.current = true;
-      voiceActivateRef.current();
-    };
-    document.addEventListener('pointerdown', unlockOnFirstGesture, { once: true, capture: true });
     return () => {
       cancelled = true;
-      document.removeEventListener('pointerdown', unlockOnFirstGesture, true);
     };
   }, [isOnline, isStreaming, voice.available, voiceSettings.enabled, voiceSettings.speechRate, voiceSettings.spokenDetail]);
 

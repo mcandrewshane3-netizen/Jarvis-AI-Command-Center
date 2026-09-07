@@ -2,10 +2,13 @@ import { createRoot } from 'react-dom/client';
 
 import App from './App';
 import { ErrorBoundary } from '@/components/error-boundary';
+import { installAudioPlaybackUnlock } from '@/lib/audio-playback';
 
 import './index.css';
 import './cinematic.css';
 import './core-first.css';
+
+installAudioPlaybackUnlock();
 
 createRoot(document.getElementById('root')!, {
   onCaughtError: (error, errorInfo) => {
