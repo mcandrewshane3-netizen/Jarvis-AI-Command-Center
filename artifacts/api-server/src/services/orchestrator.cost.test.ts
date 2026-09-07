@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
-import type { AIProvider, ProviderId } from "./ai/provider";
+import type { AIProvider, ProviderCapability, ProviderId } from "./ai/provider";
 import { buildOrchestrationPlan } from "./orchestrator";
 
 function provider(id: ProviderId): AIProvider {
+  const capabilities = new Set<ProviderCapability>(["REASONING", "CODING"]);
   return {
     id,
     name: id,
     defaultModel: `${id}-test`,
-    capabilities: new Set(["REASONING", "CODING"]),
+    capabilities,
     status: () => ({
       id,
       name: id,
@@ -15,7 +16,7 @@ function provider(id: ProviderId): AIProvider {
       available: true,
       health: "AVAILABLE",
       reason: null,
-      capabilities: ["REASONING", "CODING"],
+      capabilities: [...capabilities],
     }),
     checkHealth: async function () { return this.status(); },
     supports(capability) { return this.capabilities.has(capability); },
