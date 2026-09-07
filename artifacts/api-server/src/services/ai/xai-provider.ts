@@ -7,6 +7,7 @@ import type {
   ProviderStatus,
   ProviderStreamEvent,
 } from "./provider";
+import { boundedProviderOutputTokens } from "./cost-controls";
 
 const XAI_CAPABILITIES: ProviderCapability[] = [
   "REASONING",
@@ -68,6 +69,7 @@ export class GrokProvider implements AIProvider {
     try {
       await this.request({
         messages: [{ role: "user", content: "Reply OK." }],
+        maxOutputTokens: 256,
       }, false);
     } catch {
       grokRuntimeHealth = {
@@ -97,6 +99,7 @@ export class GrokProvider implements AIProvider {
         messages: request.messages,
         tools: request.tools?.map((tool) => ({ type: "function", function: tool })),
         response_format: structured ? { type: "json_object" } : undefined,
+        max_tokens: boundedProviderOutputTokens(request.maxOutputTokens),
         stream,
       }),
       signal: request.signal,
