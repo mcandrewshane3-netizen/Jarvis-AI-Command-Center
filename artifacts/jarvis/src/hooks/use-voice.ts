@@ -46,12 +46,16 @@ function recognitionConstructor(): RecognitionConstructor | undefined {
 }
 
 export function browserVoiceSupport() {
+  const browserTts = typeof window !== 'undefined'
+    && 'speechSynthesis' in window
+    && typeof SpeechSynthesisUtterance !== 'undefined';
+
   return {
     stt: typeof window !== 'undefined' && Boolean(recognitionConstructor()),
     microphone: typeof navigator !== 'undefined'
       && Boolean(navigator.mediaDevices?.getUserMedia)
       && typeof MediaRecorder !== 'undefined',
-    tts: typeof Audio !== 'undefined',
+    tts: typeof Audio !== 'undefined' || browserTts,
   };
 }
 
@@ -77,6 +81,7 @@ export function useVoice({
   const streamRef = useRef<MediaStream | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
+  const fallbackUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const speechAbortRef = useRef<AbortController | null>(null);
   const finalTranscriptRef = useRef('');
   const submitRef = useRef(onTranscript);
@@ -107,6 +112,10 @@ export function useVoice({
     }
     if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
     audioUrlRef.current = null;
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    fallbackUtteranceRef.current = null;
   }, []);
 
   const releaseCapture = useCallback((abortRecognition = false) => {
@@ -229,6 +238,34 @@ export function useVoice({
     else if (action === 'START_CAPTURE') void start();
   }, [interrupt, isThinking, start, state, stop]);
 
+  const speakWithDevice = useCallback((spoken: string, speechRate: number) => new Promise<void>((resolve, reject) => {
+    if (
+      typeof window === 'undefined'
+      || !('speechSynthesis' in window)
+      || typeof SpeechSynthesisUtterance === 'undefined'
+    ) {
+      reject(new Error('Device voice synthesis is unavailable.'));
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(spoken);
+    fallbackUtteranceRef.current = utterance;
+    utterance.lang = navigator.language || 'en-US';
+    utterance.rate = Math.min(1.3, Math.max(0.7, speechRate));
+    utterance.onstart = () => move('PLAYBACK_STARTED');
+    utterance.onend = () => {
+      fallbackUtteranceRef.current = null;
+      move('RESPONSE_FINISHED');
+      resolve();
+    };
+    utterance.onerror = () => {
+      fallbackUtteranceRef.current = null;
+      reject(new Error('Device voice playback failed.'));
+    };
+    window.speechSynthesis.speak(utterance);
+  }), [move]);
+
   const speak = useCallback(async (text: string, detail: SpokenDetail, speechRate: number) => {
     const spoken = createSpokenSummary(text, detail);
     if (!enabled || !spoken) return;
@@ -263,13 +300,20 @@ export function useVoice({
         releasePlayback();
         move('RESPONSE_FINISHED');
       };
-      audio.onerror = () => fail('OpenAI voice playback failed. The full text response remains available.');
+      audio.onerror = () => fail('Cloud voice playback failed. The full text response remains available.');
       await audio.play();
     } catch (caught) {
       if (caught instanceof DOMException && caught.name === 'AbortError') return;
-      fail(caught instanceof Error ? caught.message : 'OpenAI voice synthesis is unavailable.');
+      const cloudError = caught instanceof Error ? caught.message : 'Cloud voice synthesis is unavailable.';
+      speechAbortRef.current = null;
+      try {
+        setError('Cloud voice is temporarily unavailable. Using the iPad/device voice instead.');
+        await speakWithDevice(spoken, speechRate);
+      } catch {
+        fail(`${cloudError} Device voice is also unavailable. The full text response remains available.`);
+      }
     }
-  }, [enabled, fail, move, releaseCapture, releasePlayback]);
+  }, [enabled, fail, move, releaseCapture, releasePlayback, speakWithDevice]);
 
   useEffect(() => {
     if (isThinking && stateRef.current === VoiceState.VOICE_IDLE) move('RESPONSE_STARTED');
