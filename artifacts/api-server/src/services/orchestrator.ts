@@ -5,6 +5,7 @@ import type {
   ProviderMessage,
   ProviderUsage,
 } from "./ai/provider";
+import { outputBudgetForMode } from "./ai/cost-controls";
 import { routeSpecialists, type SpecialistDomain } from "./specialists/registry";
 
 export type JarvisDomain = SpecialistDomain;
@@ -87,8 +88,9 @@ export function buildOrchestrationPlan(input: {
     if (domain === "SOFTWARE") return Number(b.supports("CODING")) - Number(a.supports("CODING"));
     return a.id === "openai" ? -1 : b.id === "openai" ? 1 : 0;
   });
+  // SMART/AUTO stays single-provider for predictable spend and uses bounded fallback.
+  // Multiple paid calls happen only when the operator explicitly selects MULTI_AI or MAX.
   const wantsMultiple = input.providerMode === "MULTI_AI" ||
-    (input.intelligenceMode === "SMART" && complexity === "HIGH_IMPACT") ||
     (input.intelligenceMode === "MAX" && complexity !== "SIMPLE");
   const multiProvider = wantsMultiple && sorted.length > 1;
   const infeasibleExplicitMulti = input.providerMode === "MULTI_AI" && sorted.length < 2;
@@ -142,15 +144,16 @@ export class MultiAIOrchestrator {
       providerMode: input.providerMode,
       providers: this.providers,
     });
+    const maxOutputTokens = outputBudgetForMode(input.intelligenceMode);
     yield { type: "activity", stage: "ROUTING", domain: plan.domain, detail: plan.complexity };
     if (plan.providerIds.length === 0) {
       throw new Error("NO_CONFIGURED_PROVIDER_SUPPORTS_REQUEST");
     }
     if (plan.multiProvider) {
-      yield* this.streamMultiProvider(input, plan);
+      yield* this.streamMultiProvider(input, plan, maxOutputTokens);
       return;
     }
-    yield* this.streamSingleProvider(input, plan);
+    yield* this.streamSingleProvider(input, plan, maxOutputTokens);
   }
 
   private async *streamSingleProvider(
@@ -159,6 +162,7 @@ export class MultiAIOrchestrator {
       signal?: AbortSignal;
     },
     plan: OrchestrationPlan,
+    maxOutputTokens: number,
   ): AsyncIterable<OrchestratorEvent> {
     const candidates = [...plan.providerIds, ...plan.fallbackProviderIds];
     let fallbackUsed = false;
@@ -178,7 +182,11 @@ export class MultiAIOrchestrator {
       let emittedContent = false;
       let usage: ProviderUsage = {};
       try {
-        for await (const event of provider.stream({ messages: input.messages, signal: input.signal })) {
+        for await (const event of provider.stream({
+          messages: input.messages,
+          signal: input.signal,
+          maxOutputTokens,
+        })) {
           if (event.type === "content") {
             emittedContent = true;
             yield event;
@@ -209,6 +217,7 @@ export class MultiAIOrchestrator {
       signal?: AbortSignal;
     },
     plan: OrchestrationPlan,
+    maxOutputTokens: number,
   ): AsyncIterable<OrchestratorEvent> {
     for (const providerId of plan.providerIds) {
       yield {
@@ -230,6 +239,7 @@ export class MultiAIOrchestrator {
       const result = await provider.complete({
         messages: [{ role: "system", content: role }, ...input.messages],
         signal: input.signal,
+        maxOutputTokens,
       });
       return { providerId, result };
     }));
@@ -264,7 +274,11 @@ export class MultiAIOrchestrator {
       },
     ];
     let synthesisUsage: ProviderUsage = {};
-    for await (const event of synthesizer.stream({ messages: synthesisMessages, signal: input.signal })) {
+    for await (const event of synthesizer.stream({
+      messages: synthesisMessages,
+      signal: input.signal,
+      maxOutputTokens,
+    })) {
       if (event.type === "content") yield event;
       else synthesisUsage = event.usage;
     }
