@@ -27,4 +27,20 @@ describe("JARVIS iPad PWA", () => {
     expect(worker).toContain('url.pathname.startsWith("/sign-in")');
     expect(worker).toContain('url.pathname.startsWith("/sign-up")');
   });
+
+  it("preloads a secure offline boot state instead of hanging on auth initialization", async () => {
+    const workerPath = resolve(import.meta.dirname, "../../../../jarvis/public/sw.js");
+    const worker = await readFile(workerPath, "utf8");
+    expect(worker).toContain('"./offline-boot.js"');
+
+    const indexPath = resolve(import.meta.dirname, "../../../../jarvis/index.html");
+    const index = await readFile(indexPath, "utf8");
+    expect(index).toContain('src="./offline-boot.js"');
+
+    const offlineBootPath = resolve(import.meta.dirname, "../../../../jarvis/public/offline-boot.js");
+    const offlineBoot = await readFile(offlineBootPath, "utf8");
+    expect(offlineBoot).toContain("navigator.onLine");
+    expect(offlineBoot).toContain("jarvis-offline-boot");
+    expect(offlineBoot).toContain("will not expose cached private conversations");
+  });
 });

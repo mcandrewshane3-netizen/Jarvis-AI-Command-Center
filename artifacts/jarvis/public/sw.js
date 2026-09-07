@@ -1,6 +1,15 @@
-const CACHE = "jarvis-shell-v3";
+const CACHE = "jarvis-shell-v4";
 const SHELL_URL = "./";
-const SHELL = [SHELL_URL, "./manifest.webmanifest", "./favicon.svg", "./logo.svg", "./pwa-192.png", "./pwa-512.png"];
+const SHELL = [
+  SHELL_URL,
+  "./manifest.webmanifest",
+  "./favicon.svg",
+  "./logo.svg",
+  "./apple-touch-icon.png",
+  "./pwa-192.png",
+  "./pwa-512.png",
+  "./offline-boot.js",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)));
