@@ -38,6 +38,9 @@ interface SpeechRecognitionLike {
 
 type RecognitionConstructor = new () => SpeechRecognitionLike;
 
+const SILENCE_TO_SUBMIT_MS = 1_100;
+const MAX_LISTENING_MS = 20_000;
+
 function recognitionConstructor(): RecognitionConstructor | undefined {
   const speechWindow = window as typeof window & {
     SpeechRecognition?: RecognitionConstructor;
@@ -85,7 +88,10 @@ export function useVoice({
   const fallbackUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const speechAbortRef = useRef<AbortController | null>(null);
   const playbackCancelRef = useRef<(() => void) | null>(null);
+  const silenceTimerRef = useRef(0);
+  const maxListeningTimerRef = useRef(0);
   const finalTranscriptRef = useRef('');
+  const liveTranscriptRef = useRef('');
   const submitRef = useRef(onTranscript);
 
   useEffect(() => { submitRef.current = onTranscript; }, [onTranscript]);
@@ -123,7 +129,15 @@ export function useVoice({
     fallbackUtteranceRef.current = null;
   }, []);
 
+  const clearCaptureTimers = useCallback(() => {
+    window.clearTimeout(silenceTimerRef.current);
+    window.clearTimeout(maxListeningTimerRef.current);
+    silenceTimerRef.current = 0;
+    maxListeningTimerRef.current = 0;
+  }, []);
+
   const releaseCapture = useCallback((abortRecognition = false) => {
+    clearCaptureTimers();
     const recognition = recognitionRef.current;
     recognitionRef.current = null;
     if (recognition) {
@@ -139,7 +153,7 @@ export function useVoice({
     }
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
-  }, []);
+  }, [clearCaptureTimers]);
 
   const fail = useCallback((message: string) => {
     releaseCapture(true);
@@ -149,16 +163,36 @@ export function useVoice({
   }, [move, releaseCapture, releasePlayback]);
 
   const submitTranscript = useCallback(() => {
-    const final = finalTranscriptRef.current.trim();
+    const final = (finalTranscriptRef.current.trim() || liveTranscriptRef.current.trim());
     releaseCapture();
     if (!final) {
       fail('No speech was recognized. Check microphone access and try again.');
       return;
     }
+    finalTranscriptRef.current = final;
+    liveTranscriptRef.current = final;
     setTranscript(final);
     move('TRANSCRIPT_READY');
     void submitRef.current(final);
   }, [fail, move, releaseCapture]);
+
+  const stopRecognitionForSubmission = useCallback(() => {
+    if (stateRef.current !== VoiceState.VOICE_LISTENING) return;
+    move('STOP_LISTENING');
+    try {
+      recognitionRef.current?.stop();
+    } catch {
+      submitTranscript();
+    }
+  }, [move, submitTranscript]);
+
+  const scheduleSpeechEndpoint = useCallback(() => {
+    window.clearTimeout(silenceTimerRef.current);
+    if (!liveTranscriptRef.current.trim()) return;
+    silenceTimerRef.current = window.setTimeout(() => {
+      stopRecognitionForSubmission();
+    }, SILENCE_TO_SUBMIT_MS);
+  }, [stopRecognitionForSubmission]);
 
   const start = useCallback(async () => {
     if (!enabled) {
@@ -175,6 +209,8 @@ export function useVoice({
     setError(null);
     setTranscript('');
     finalTranscriptRef.current = '';
+    liveTranscriptRef.current = '';
+    clearCaptureTimers();
     releasePlayback();
     move('REQUEST_MIC');
     try {
@@ -200,7 +236,10 @@ export function useVoice({
           if (result.isFinal) finalTranscriptRef.current += `${result[0].transcript} `;
           else interim += result[0].transcript;
         }
-        setTranscript(`${finalTranscriptRef.current}${interim}`.trim());
+        const live = `${finalTranscriptRef.current}${interim}`.trim();
+        liveTranscriptRef.current = live;
+        setTranscript(live);
+        scheduleSpeechEndpoint();
       };
       recognition.onerror = (event) => {
         if (event.error === 'aborted') return;
@@ -208,6 +247,7 @@ export function useVoice({
         fail(permission ? 'Microphone or speech recognition permission was denied.' : `Speech recognition failed: ${event.message || event.error}.`);
       };
       recognition.onend = () => {
+        clearCaptureTimers();
         if (stateRef.current === VoiceState.VOICE_LISTENING || stateRef.current === VoiceState.VOICE_TRANSCRIBING) {
           stateRef.current = VoiceState.VOICE_TRANSCRIBING;
           setState(VoiceState.VOICE_TRANSCRIBING);
@@ -217,17 +257,23 @@ export function useVoice({
       recognitionRef.current = recognition;
       recognition.start();
       move('PERMISSION_GRANTED');
+      maxListeningTimerRef.current = window.setTimeout(() => {
+        if (liveTranscriptRef.current.trim()) {
+          stopRecognitionForSubmission();
+          return;
+        }
+        fail('No speech was recognized. JARVIS stopped listening so the microphone cannot remain open indefinitely.');
+      }, MAX_LISTENING_MS);
     } catch (caught) {
       const denied = caught instanceof DOMException && (caught.name === 'NotAllowedError' || caught.name === 'SecurityError');
       fail(denied ? 'Microphone permission was denied. Allow access, then retry.' : 'The microphone could not be started.');
     }
-  }, [available, enabled, fail, move, releasePlayback, submitTranscript]);
+  }, [available, clearCaptureTimers, enabled, fail, move, releasePlayback, scheduleSpeechEndpoint, stopRecognitionForSubmission, submitTranscript]);
 
   const stop = useCallback(() => {
     if (stateRef.current !== VoiceState.VOICE_LISTENING) return;
-    move('STOP_LISTENING');
-    try { recognitionRef.current?.stop(); } catch { submitTranscript(); }
-  }, [move, submitTranscript]);
+    stopRecognitionForSubmission();
+  }, [stopRecognitionForSubmission]);
 
   const interrupt = useCallback(() => {
     releaseCapture(true);
