@@ -1,0 +1,71 @@
+name: JARVIS CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jarvis-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Typecheck, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PORT: 5173
+      BASE_PATH: /
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jarvis_test
+      AI_INTEGRATIONS_OPENAI_BASE_URL: http://127.0.0.1:9/v1
+      AI_INTEGRATIONS_OPENAI_API_KEY: test-key
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: jarvis_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d jarvis_test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Initialize test schema
+        run: pnpm --filter @workspace/db push-force
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: API tests
+        run: pnpm --filter @workspace/api-server test
+
+      - name: Build
+        run: pnpm run build
