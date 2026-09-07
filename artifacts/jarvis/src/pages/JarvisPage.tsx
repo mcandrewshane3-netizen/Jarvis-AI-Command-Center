@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { HolographicPanel, TechLabel, StatusDot, JARVISCore } from '@/components/primitives';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, BriefcaseBusiness, Globe2, Home, Landmark, LockKeyhole, Search, UserRound } from 'lucide-react';
 import { useSettings } from '@/hooks/use-settings';
 import { useVoice } from '@/hooks/use-voice';
 import { VoiceState } from '@/lib/voice';
@@ -11,6 +11,16 @@ type AIActivity = {
   domain?: string;
   detail?: string;
 };
+
+const hudModules = [
+  { key: 'GLOBAL', icon: Globe2, detail: 'Markets · News · Travel' },
+  { key: 'BUSINESS', icon: BriefcaseBusiness, detail: 'Strategy · Operations · Growth' },
+  { key: 'PERSONAL', icon: UserRound, detail: 'Schedule · Goals · Ideas' },
+  { key: 'HOME', icon: Home, detail: 'Devices · Climate · Automation' },
+  { key: 'FINANCE', icon: Landmark, detail: 'Accounts · Spending · Planning' },
+  { key: 'SECURITY', icon: LockKeyhole, detail: 'Privacy · Alerts · System health' },
+  { key: 'RESEARCH', icon: Search, detail: 'Analyze · Summarize · Solve' },
+] as const;
 
 export function JarvisPage() {
   const [message, setMessage] = useState('');
@@ -183,13 +193,13 @@ export function JarvisPage() {
 
     const begin = async () => {
       try {
-        await voiceSpeakRef.current(`${salutation}, Shane. JARVIS online. I'm listening.`, voiceSettings.spokenDetail, voiceSettings.speechRate);
+        await voiceSpeakRef.current(`${salutation}, Shane. JARVIS online. How can I help?`, voiceSettings.spokenDetail, voiceSettings.speechRate);
       } catch {
         // Browser autoplay restrictions can block the spoken greeting. Continue to microphone startup.
       }
       if (cancelled) return;
       handsFreeReadyRef.current = true;
-      window.setTimeout(() => voiceActivateRef.current(), 180);
+      window.setTimeout(() => voiceActivateRef.current(), 120);
     };
 
     void begin();
@@ -209,12 +219,21 @@ export function JarvisPage() {
   useEffect(() => {
     if (!handsFreeReadyRef.current || !voiceSettings.enabled || !voice.available || !isOnline || isStreaming) return;
     if (voice.state !== VoiceState.VOICE_IDLE && voice.state !== VoiceState.VOICE_INTERRUPTED) return;
-    const timer = window.setTimeout(() => voiceActivateRef.current(), 450);
+    const timer = window.setTimeout(() => voiceActivateRef.current(), 300);
     return () => window.clearTimeout(timer);
   }, [isOnline, isStreaming, voice.available, voice.state, voiceSettings.enabled]);
 
+  const activeDomain = activities.at(-1)?.domain?.toUpperCase() ?? '';
+  const stateClass = displayedVoiceState === VoiceState.VOICE_LISTENING
+    ? 'jarvis-is-listening'
+    : displayedVoiceState === VoiceState.VOICE_SPEAKING
+      ? 'jarvis-is-speaking'
+      : displayedVoiceState === VoiceState.VOICE_THINKING || isStreaming
+        ? 'jarvis-is-thinking'
+        : 'jarvis-is-idle';
+
   return (
-    <div className="page-enter jarvis-workspace jarvis-handsfree" data-testid="jarvis-workspace">
+    <div className={`page-enter jarvis-workspace jarvis-handsfree ${stateClass}`} data-testid="jarvis-workspace">
       <section className="jarvis-conversation" aria-label="JARVIS interface">
         <div className="jarvis-conversation-header">
           <div>
@@ -225,14 +244,33 @@ export function JarvisPage() {
         </div>
 
         <div className="jarvis-core-stage">
+          <div className="jarvis-hud jarvis-hud-left" aria-hidden="true">
+            {hudModules.slice(0, 4).map(({ key, icon: Icon, detail }) => (
+              <div className={`jarvis-hud-module ${activeDomain === key ? 'active' : ''}`} key={key}>
+                <Icon size={15} /><div><strong>{key}</strong><span>{detail}</span></div>
+              </div>
+            ))}
+          </div>
+
           <div className="jarvis-core-primary">
             <JARVISCore
               isThinking={displayedVoiceState === VoiceState.VOICE_THINKING || displayedVoiceState === VoiceState.VOICE_LISTENING || displayedVoiceState === VoiceState.VOICE_REQUESTING_PERMISSION}
               processText={displayedVoiceState === VoiceState.VOICE_THINKING && isStreaming ? activities.at(-1)?.stage ?? 'EVALUATING...' : voiceStatus[displayedVoiceState]}
             />
           </div>
+
+          <div className="jarvis-hud jarvis-hud-right" aria-hidden="true">
+            {hudModules.slice(4).map(({ key, icon: Icon, detail }) => (
+              <div className={`jarvis-hud-module ${activeDomain === key ? 'active' : ''}`} key={key}>
+                <Icon size={15} /><div><strong>{key}</strong><span>{detail}</span></div>
+              </div>
+            ))}
+            <div className="jarvis-hud-module systems"><span className="jarvis-mini-orbit"/><div><strong>SYSTEMS</strong><span>Voice · Memory · Providers</span></div></div>
+          </div>
+
           <div className="jarvis-core-status" aria-live="polite">
-            {voiceStatus[displayedVoiceState]}
+            <div className="jarvis-voice-wave" aria-hidden="true">{Array.from({ length: 19 }, (_, index) => <i key={index} />)}</div>
+            <div>{voiceStatus[displayedVoiceState]}</div>
             {voice.transcript ? <div className="mt-2 text-white/65 normal-case tracking-normal">“{voice.transcript}”</div> : null}
             {voice.error ? <div className="voice-error-compact"><AlertTriangle size={11} className="inline mr-1" />{voice.error}</div> : null}
           </div>
