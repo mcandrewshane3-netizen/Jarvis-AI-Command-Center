@@ -3,19 +3,19 @@ import { boundedProviderOutputTokens, outputBudgetForMode, providerOutputCeiling
 
 describe("JARVIS provider cost controls", () => {
   it("uses a conservative default provider ceiling", () => {
-    expect(providerOutputCeiling("")).toBe(4096);
+    expect(providerOutputCeiling("")).toBe(3000);
   });
 
   it("clamps configured ceilings to safe bounds", () => {
     expect(providerOutputCeiling("100")).toBe(256);
     expect(providerOutputCeiling("99999")).toBe(8192);
-    expect(providerOutputCeiling("not-a-number")).toBe(4096);
+    expect(providerOutputCeiling("not-a-number")).toBe(3000);
   });
 
   it("assigns smaller budgets to normal and smart operation", () => {
-    expect(outputBudgetForMode("NORMAL", "8192")).toBe(1536);
-    expect(outputBudgetForMode("SMART", "8192")).toBe(3072);
-    expect(outputBudgetForMode("MAX", "8192")).toBe(4096);
+    expect(outputBudgetForMode("NORMAL", "8192")).toBe(900);
+    expect(outputBudgetForMode("SMART", "8192")).toBe(1800);
+    expect(outputBudgetForMode("MAX", "8192")).toBe(3000);
   });
 
   it("never lets an individual provider request exceed the configured ceiling", () => {
